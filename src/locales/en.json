@@ -1,0 +1,382 @@
+{
+  "common": {
+    "appName": "moniger.net",
+    "loading": "Loading...",
+    "profile": "Profile",
+    "saveChanges": "Save Changes",
+    "security": "Security",
+    "settings": "Settings",
+    "theme": {
+      "dark": "Dark",
+      "light": "Light"
+    }
+  },
+  "auth": {
+    "acceptInvite": {
+      "acceptedMessage": "This invitation has already been accepted. Sign in with the invited account to open the workspace.",
+      "acceptInvitation": "Accept invitation",
+      "createAccount": "Create account",
+      "expires": "Expires",
+      "invitedEmail": "Invited email",
+      "loading": "Loading invitation details...",
+      "missingToken": "This invitation link is missing its token. Open the original email again and use the full invitation link.",
+      "notFound": "This invitation could not be found. It may have been replaced or revoked.",
+      "pendingSignedInAs": "Signed in as the invited account: {{email}}",
+      "pendingSignInPrompt": "Sign in or create an account with {{email}} to accept this invite.",
+      "roleDescription": "{{inviterName}} invited you as {{role}}.",
+      "status": {
+        "accepted": "Accepted",
+        "pending": "Pending",
+        "unavailable": "Unavailable"
+      },
+      "subtitle": "Review the invite details below, then sign in or create an account with the invited email to accept it.",
+      "switchAccount": "Use the invited account instead",
+      "switchAccountError": "Unable to switch accounts",
+      "title": "Workspace Invitation",
+      "toastAccepted": "Invitation accepted",
+      "toastAcceptedDescription": "You now have {{role}} access to {{businessName}}.",
+      "tryAgain": "Please try again.",
+      "useDifferentAccountMessage": "You are signed in as {{currentEmail}}, but this invite is for {{invitedEmail}}.",
+      "inactiveMessage": "This invitation is no longer active. Ask a workspace admin to send a new one.",
+      "backToHome": "Back to Home",
+      "signInToAccept": "Sign in to accept",
+      "unableToAccept": "Unable to accept invitation"
+    },
+    "login": {
+      "email": "Email",
+      "errors": {
+        "loginFailed": "Login failed",
+        "mfaVerificationFailed": "MFA verification failed",
+        "noAuthenticatorFactor": "No verified authenticator factor is available for this account.",
+        "recoveryVerificationFailed": "Recovery code verification failed",
+        "switchAccountFailed": "Unable to switch accounts"
+      },
+      "forgotPassword": "Forgot password?",
+      "hidePassword": "Hide password",
+      "logIn": "Log in",
+      "loggingIn": "Logging in...",
+      "mfa": {
+        "authenticatorApp": "Authenticator App",
+        "authenticatorCode": "Authenticator Code",
+        "authenticatorHelp": "Enter the current 6-digit code from your authenticator app.",
+        "authenticatorPlaceholder": "123456",
+        "chooseAuthenticator": "Choose an authenticator",
+        "mfaRequiredMessage": "Your account requires an authenticator app code before protected pages can open.",
+        "passwordAcceptedMessage": "Your password was accepted. Finish sign-in with your authenticator app code.",
+        "recoveryActiveMessage": "A recovery code already unlocked this session. You can continue signing in or go back to Security later to regenerate your backup codes.",
+        "recoveryCode": "Recovery Code",
+        "recoveryHelp": "Enter one unused backup code. Using it will temporarily bypass MFA for this current session.",
+        "recoveryPlaceholder": "ABCD-1234-EF56",
+        "subtitles": {
+          "aal1Authenticator": "Open your authenticator app and enter the 6-digit code to finish signing in.",
+          "aal1Recovery": "Enter one of your backup recovery codes to regain access to this session.",
+          "defaultAuthenticator": "Verify your authenticator app code to continue.",
+          "defaultRecovery": "Use one of your saved backup codes. This will temporarily bypass MFA for the current session."
+        },
+        "useAnotherAccount": "Use another account",
+        "useRecoveryCode": "Use recovery code",
+        "verifyAndContinue": "Verify and continue",
+        "verifyTitle": "Verify it's you",
+        "verifying": "Verifying..."
+      },
+      "openAccount": "Open Account",
+      "password": "Password",
+      "registrationMessage": "Check {{email}} to confirm your account before logging in.",
+      "showPassword": "Show password",
+      "subtitle": "Welcome back. Sign in to manage invoices, vendor payments, and your team workspace."
+    },
+    "register": {
+      "accountCreated": "Account created successfully",
+      "accountReady": "Your moniger.net account is ready for {{email}}.",
+      "agreement": {
+        "consentSuffix": "and consent to receive product and account updates.",
+        "prefix": "By creating your account, you agree to moniger.net's",
+        "privacyPolicy": "Privacy Policy",
+        "termsOfUse": "Terms of Use"
+      },
+      "back": "Back",
+      "planSelection": "Plan selection",
+      "businessDetails": "Business details",
+      "businessName": "Business name",
+      "businessNamePlaceholder": "Business name",
+      "checkInbox": "Check your inbox",
+      "completeFields": "Complete the remaining fields to create your account.",
+      "confirmPassword": "Confirm password",
+      "confirmPasswordPlaceholder": "Confirm password",
+      "createAccount": "Create Account",
+      "createPassword": "Create a password",
+      "creating": "Creating...",
+      "emailAvailable": "Email is available.",
+      "emailCouldNotVerify": "We could not verify this email right now. You can still try submitting.",
+      "emailTaken": "Email already taken.",
+      "emailTakenLogin": "Email already taken. Try logging in instead.",
+      "enterValidEmail": "Enter a valid email address.",
+      "fullName": "Full name",
+      "fullNameHelp": "Use at least first and last name.",
+      "fullNamePlaceholder": "Full name",
+      "goToLogin": "Go to Login",
+      "inboxHelp": "If you do not see the message yet, check spam or promotions and wait a minute before requesting a new one.",
+      "loginDetails": "Login details",
+      "logIn": "Log in",
+      "minimumPassword": "Minimum 8 characters",
+      "nameCharactersOnly": "Name can contain letters, spaces, apostrophes, and hyphens only.",
+      "next": "Next",
+      "openDashboardNow": "Open Dashboard Now",
+      "passwordMismatch": "Passwords do not match.",
+      "passwordStrength": {
+        "fair": "Fair",
+        "strong": "Strong",
+        "weak": "Weak"
+      },
+      "rateLimited": "Signup email delivery is currently rate-limited by Supabase. Their default hosted email service allows only a small project-wide quota, so earlier tests can exhaust it. Wait for the quota to reset, or disable Confirm email for development / configure custom SMTP.",
+      "redirecting": "Redirecting you to the dashboard in {{seconds}}s.",
+      "registrationFailed": "Registration failed",
+      "step1of3": "Step 1 of 3",
+      "step2of3": "Step 2 of 3",
+      "step3of3": "Step 3 of 3",
+      "planSelectionTitle": "Choose your plan",
+      "planSelectionSubtitle": "Select the workspace plan that fits your business.",
+      "stepOneSubtitle": "Tell us a little about your business before you continue.",
+      "stepOneTitle": "Get started",
+      "stepTwoSubtitle": "You will use this email and password to log in across devices.",
+      "stepTwoTitle": "Create your account",
+      "successCreatedFor": "Your moniger.net account was created for {{email}}. Confirm the email before signing in.",
+      "useAnotherEmail": "Use another email",
+      "validation": {
+        "accountExists": "An account already exists for this email. Try logging in instead.",
+        "businessNameRequired": "Enter your business name to continue.",
+        "businessNameTooShort": "Business name must be at least 2 characters.",
+        "enterFullName": "Enter your full name to continue.",
+        "enterFirstAndLastName": "Enter at least your first and last name.",
+        "invalidEmail": "Enter a valid email address and try again.",
+        "passwordMessage": "{{message}}",
+        "useLongerNames": "Use at least 2 letters each for your first and last name."
+      },
+      "workEmail": "Work email",
+      "workEmailPlaceholder": "Work email",
+      "checkingAvailability": "Checking email availability..."
+    }
+  },
+  "dashboard": {
+    "empty": {
+      "dueThisWeekDescription": "You're caught up on scheduled payments for now.",
+      "dueThisWeekTitle": "No bills due this week",
+      "recentActivityDescription": "Activity will appear here once invoices, bills, payments, and directory updates start moving.",
+      "recentActivityTitle": "No recent activity yet"
+    },
+    "quickActions": {
+      "addVendor": "Add Vendor",
+      "newInvoice": "New Invoice",
+      "payBill": "Pay a Bill"
+    },
+    "recentActivity": "Recent Activity",
+    "summary": {
+      "collectedThisMonth": "Collected This Month",
+      "overdueItems": "Overdue Items",
+      "totalPayable": "Total Payable",
+      "totalReceivable": "Total Receivable"
+    },
+    "titles": {
+      "dueThisWeek": "Due This Week"
+    }
+  },
+  "export": {
+    "eyebrow": "Moniger Export",
+    "generatedAt": "Generated {{timestamp}}"
+  },
+  "header": {
+    "accountMenu": {
+      "open": "Open account menu",
+      "profile": "Profile",
+      "security": "Security",
+      "settings": "Settings",
+      "signOut": "Sign Out"
+    },
+    "homeLink": "Go to home page",
+    "theme": {
+      "switchToDark": "Switch to dark mode",
+      "switchToLight": "Switch to light mode"
+    },
+    "toggleSidebar": "Toggle sidebar navigation"
+  },
+  "notifications": {
+    "center": {
+      "all": "All",
+      "allCaughtUp": "All caught up",
+      "empty": {
+        "allDescription": "Invoice, payment, report, and team updates will appear here as your workspace changes.",
+        "allTitle": "No notifications yet",
+        "showAll": "Show all",
+        "unreadDescription": "You're caught up for now. Switch back to all notifications to review earlier activity.",
+        "unreadTitle": "No unread notifications"
+      },
+      "loadError": "We could not load notifications right now.",
+      "markAllRead": "Mark all read",
+      "title": "Notifications",
+      "triggerLabel": "View notifications",
+      "triggerWithUnread": "View notifications ({{count}} unread)",
+      "type": {
+        "bill": "Bill",
+        "invoice": "Invoice",
+        "payment": "Payment",
+        "report": "Report",
+        "system": "System",
+        "team": "Team"
+      },
+      "unread": "Unread",
+      "unreadSingular": "1 unread update",
+      "unreadPlural": "{{count}} unread updates"
+    }
+  },
+  "layout": {
+    "mobileNav": {
+      "more": "More"
+    },
+    "quickActions": {
+      "addVendor": "Add Vendor",
+      "close": "Close quick actions",
+      "newInvoice": "New Invoice",
+      "open": "Open quick actions",
+      "payBill": "Pay Bill"
+    }
+  },
+  "locale": {
+    "currencyPreview": "Currency preview",
+    "datePreview": "Date preview",
+    "inheritLocale": "Use workspace default",
+    "inheritLanguage": "Use workspace default",
+    "labels": {
+      "businessDefaultLocale": "Default locale",
+      "businessDefaultLanguage": "Default language",
+      "locale": "Locale",
+      "language": "Language"
+    },
+    "numberPreview": "Number preview",
+    "sections": {
+      "businessDescription": "Set the workspace language and formatting defaults for teammates who have not chosen personal overrides.",
+      "businessEyebrow": "Workspace defaults",
+      "businessTitle": "Language and formatting defaults",
+      "profileDescription": "Choose your personal language and formatting preferences. Leaving a value on workspace default will follow your business settings.",
+      "profileEyebrow": "Language and region",
+      "profileTitle": "Personal language and formatting"
+    }
+  },
+  "navigation": {
+    "auditTrail": "Audit Trail",
+    "bills": "Bills",
+    "customers": "Customers",
+    "dashboard": "Dashboard",
+    "home": "Home",
+    "invoices": "Invoices",
+    "payments": "Payments",
+    "reports": "Reports",
+    "settings": "Settings",
+    "team": "Team",
+    "vendors": "Vendors",
+    "workspaceFallback": "My Business"
+  },
+  "pages": {
+    "auditTrail": "Audit Trail",
+    "bills": "Bills",
+    "customers": "Customers",
+    "dashboard": "Dashboard",
+    "invoices": "Invoices",
+    "payments": "Payments",
+    "reports": "Reports",
+    "settings": "Settings",
+    "team": "Team",
+    "vendors": "Vendors"
+  },
+  "search": {
+    "clearRecentSearches": "Clear recent searches",
+    "description": "Search workspace records, jump to pages, and review recent searches.",
+    "empty": {
+      "keepTypingDescription": "Type at least 2 characters to search invoices, bills, customers, vendors, and payments.",
+      "keepTypingTitle": "Keep typing to search",
+      "noMatchesDescription": "We could not find anything for \"{{query}}\". Try an invoice number, customer name, payment reference, or page title.",
+      "noMatchesTitle": "No matching records",
+      "searching": "Searching your workspace..."
+    },
+    "groups": {
+      "jumpTo": "Jump To",
+      "pages": "Pages",
+      "recentSearches": "Recent Searches",
+      "searchIn": "Search \"{{query}}\" In"
+    },
+    "inputAriaLabel": "Search records, pages, and settings",
+    "inputPlaceholder": "Search records, pages, and settings...",
+    "jump": {
+      "audit": {
+        "subtitle": "Review workspace activity and change history",
+        "title": "Audit Trail"
+      },
+      "bills": {
+        "subtitle": "Track payable bills and due dates",
+        "title": "Bills"
+      },
+      "businessSettings": {
+        "subtitle": "Business details and workspace defaults",
+        "title": "Business Settings"
+      },
+      "customers": {
+        "subtitle": "Customer directory and balances",
+        "title": "Customers"
+      },
+      "dashboard": {
+        "subtitle": "Overview, KPIs, and recent activity",
+        "title": "Dashboard"
+      },
+      "invoices": {
+        "subtitle": "Manage receivables and invoice drafts",
+        "title": "Invoices"
+      },
+      "notificationSettings": {
+        "subtitle": "Notification preferences, digest email, and delivery options",
+        "title": "Notification Settings"
+      },
+      "payments": {
+        "subtitle": "Review receivable and payable activity",
+        "title": "Payments"
+      },
+      "profileSettings": {
+        "subtitle": "Profile and account preferences",
+        "title": "Profile Settings"
+      },
+      "reports": {
+        "subtitle": "Financial trends and reporting views",
+        "title": "Reports"
+      },
+      "securitySettings": {
+        "subtitle": "Session visibility, password updates, MFA, privacy, and data export",
+        "title": "Security Settings"
+      },
+      "team": {
+        "subtitle": "Invite teammates, send access emails, and manage access",
+        "title": "Team"
+      },
+      "vendors": {
+        "subtitle": "Directory of suppliers and payout details",
+        "title": "Vendors"
+      }
+    },
+    "openCommandPalette": "Open command palette",
+    "searchPageTargets": {
+      "bills": "Search Bills",
+      "customers": "Search Customers",
+      "filterDescription": "Filter the page with this search",
+      "invoices": "Search Invoices",
+      "payments": "Search Payments",
+      "vendors": "Search Vendors"
+    },
+    "title": "Global command palette",
+    "triggerPlaceholder": "Search records or jump to a page..."
+  },
+  "settings": {
+    "tabs": {
+      "business": "Business",
+      "notifications": "Notifications",
+      "profile": "Profile",
+      "security": "Security"
+    }
+  }
+}

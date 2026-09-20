@@ -1,0 +1,382 @@
+{
+  "common": {
+    "appName": "moniger.net",
+    "loading": "Chargement...",
+    "profile": "Profil",
+    "saveChanges": "Enregistrer les modifications",
+    "security": "Sécurité",
+    "settings": "Paramètres",
+    "homeLink": "Aller Ã  la page d'accueil",
+    "theme": {
+      "dark": "Sombre",
+      "light": "Clair"
+    }
+  },
+  "auth": {
+    "acceptInvite": {
+      "acceptedMessage": "Cette invitation a déjà été acceptée. Connectez-vous avec le compte invité pour ouvrir l'espace de travail.",
+      "acceptInvitation": "Accepter l'invitation",
+      "backToHome": "Retour à l'accueil",
+      "createAccount": "Créer un compte",
+      "expires": "Expire le",
+      "inactiveMessage": "Cette invitation n'est plus active. Demandez à un administrateur d'en envoyer une nouvelle.",
+      "invitedEmail": "E-mail invité",
+      "loading": "Chargement des détails de l'invitation...",
+      "missingToken": "Ce lien d'invitation ne contient pas de jeton. Ouvrez l'e-mail d'origine et utilisez le lien complet.",
+      "notFound": "Cette invitation est introuvable. Elle a peut-être été remplacée ou révoquée.",
+      "pendingSignedInAs": "Connecté avec le compte invité : {{email}}",
+      "pendingSignInPrompt": "Connectez-vous ou créez un compte avec {{email}} pour accepter cette invitation.",
+      "roleDescription": "{{inviterName}} vous a invité en tant que {{role}}.",
+      "signInToAccept": "Se connecter pour accepter",
+      "status": {
+        "accepted": "Acceptée",
+        "pending": "En attente",
+        "unavailable": "Indisponible"
+      },
+      "subtitle": "Vérifiez les détails de l'invitation ci-dessous, puis connectez-vous ou créez un compte avec l'e-mail invité pour l'accepter.",
+      "switchAccount": "Utiliser plutôt le compte invité",
+      "switchAccountError": "Impossible de changer de compte",
+      "title": "Invitation à l'espace de travail",
+      "toastAccepted": "Invitation acceptée",
+      "toastAcceptedDescription": "Vous avez maintenant un accès {{role}} à {{businessName}}.",
+      "tryAgain": "Veuillez réessayer.",
+      "unableToAccept": "Impossible d'accepter l'invitation",
+      "useDifferentAccountMessage": "Vous êtes connecté avec {{currentEmail}}, mais cette invitation est destinée à {{invitedEmail}}."
+    },
+    "login": {
+      "email": "E-mail",
+      "errors": {
+        "loginFailed": "Échec de la connexion",
+        "mfaVerificationFailed": "Échec de la vérification MFA",
+        "noAuthenticatorFactor": "Aucun facteur authentificateur vérifié n'est disponible pour ce compte.",
+        "recoveryVerificationFailed": "Échec de la vérification du code de récupération",
+        "switchAccountFailed": "Impossible de changer de compte"
+      },
+      "forgotPassword": "Mot de passe oublié ?",
+      "hidePassword": "Masquer le mot de passe",
+      "logIn": "Se connecter",
+      "loggingIn": "Connexion en cours...",
+      "mfa": {
+        "authenticatorApp": "Application d'authentification",
+        "authenticatorCode": "Code d'authentification",
+        "authenticatorHelp": "Saisissez le code actuel à 6 chiffres de votre application d'authentification.",
+        "authenticatorPlaceholder": "123456",
+        "chooseAuthenticator": "Choisir un authentificateur",
+        "mfaRequiredMessage": "Votre compte exige un code d'application d'authentification avant d'ouvrir les pages protégées.",
+        "passwordAcceptedMessage": "Votre mot de passe a été accepté. Terminez la connexion avec le code de votre application d'authentification.",
+        "recoveryActiveMessage": "Un code de récupération a déjà déverrouillé cette session. Vous pouvez poursuivre la connexion ou revenir plus tard dans Sécurité pour régénérer vos codes de secours.",
+        "recoveryCode": "Code de récupération",
+        "recoveryHelp": "Saisissez un code de secours inutilisé. Son utilisation contournera temporairement la MFA pour cette session.",
+        "recoveryPlaceholder": "ABCD-1234-EF56",
+        "subtitles": {
+          "aal1Authenticator": "Ouvrez votre application d'authentification et saisissez le code à 6 chiffres pour terminer la connexion.",
+          "aal1Recovery": "Saisissez l'un de vos codes de récupération pour retrouver l'accès à cette session.",
+          "defaultAuthenticator": "Vérifiez le code de votre application d'authentification pour continuer.",
+          "defaultRecovery": "Utilisez l'un de vos codes de secours enregistrés. Cela contournera temporairement la MFA pour cette session."
+        },
+        "useAnotherAccount": "Utiliser un autre compte",
+        "useRecoveryCode": "Utiliser un code de récupération",
+        "verifyAndContinue": "Vérifier et continuer",
+        "verifyTitle": "Vérifions votre identité",
+        "verifying": "Vérification..."
+      },
+      "openAccount": "Créer un compte",
+      "password": "Mot de passe",
+      "registrationMessage": "Consultez {{email}} pour confirmer votre compte avant de vous connecter.",
+      "showPassword": "Afficher le mot de passe",
+      "subtitle": "Bon retour. Connectez-vous pour gérer les factures, les paiements fournisseurs et l'espace de travail de votre équipe."
+    },
+    "register": {
+      "accountCreated": "Compte créé avec succès",
+      "accountReady": "Votre compte moniger.net est prêt pour {{email}}.",
+      "agreement": {
+        "consentSuffix": "et acceptez de recevoir les mises à jour produit et compte.",
+        "prefix": "En créant votre compte, vous acceptez les",
+        "privacyPolicy": "Politique de confidentialité",
+        "termsOfUse": "Conditions d'utilisation"
+      },
+      "back": "Retour",
+      "planSelection": "Sélection du forfait",
+      "businessDetails": "Informations sur l'entreprise",
+      "businessName": "Nom de l'entreprise",
+      "businessNamePlaceholder": "Nom de l'entreprise",
+      "checkInbox": "Vérifiez votre boîte de réception",
+      "checkingAvailability": "Vérification de la disponibilité de l'e-mail...",
+      "completeFields": "Complétez les champs restants pour créer votre compte.",
+      "confirmPassword": "Confirmer le mot de passe",
+      "confirmPasswordPlaceholder": "Confirmer le mot de passe",
+      "createAccount": "Créer un compte",
+      "createPassword": "Créer un mot de passe",
+      "creating": "Création en cours...",
+      "emailAvailable": "L'e-mail est disponible.",
+      "emailCouldNotVerify": "Nous n'avons pas pu vérifier cet e-mail pour le moment. Vous pouvez quand même essayer.",
+      "emailTaken": "E-mail déjà utilisé.",
+      "emailTakenLogin": "E-mail déjà utilisé. Essayez plutôt de vous connecter.",
+      "enterValidEmail": "Saisissez une adresse e-mail valide.",
+      "fullName": "Nom complet",
+      "fullNameHelp": "Utilisez au moins le prénom et le nom.",
+      "fullNamePlaceholder": "Nom complet",
+      "goToLogin": "Aller à la connexion",
+      "inboxHelp": "Si vous ne voyez pas encore le message, vérifiez les spams ou promotions et attendez une minute avant d'en demander un nouveau.",
+      "loginDetails": "Informations de connexion",
+      "logIn": "Se connecter",
+      "minimumPassword": "Minimum 8 caractères",
+      "nameCharactersOnly": "Le nom ne peut contenir que des lettres, espaces, apostrophes et traits d'union.",
+      "next": "Suivant",
+      "openDashboardNow": "Ouvrir le tableau de bord",
+      "passwordMismatch": "Les mots de passe ne correspondent pas.",
+      "passwordStrength": {
+        "fair": "Moyen",
+        "strong": "Fort",
+        "weak": "Faible"
+      },
+      "rateLimited": "L'envoi des e-mails d'inscription est actuellement limité par Supabase. Leur service e-mail hébergé par défaut autorise seulement un faible quota global, donc des tests précédents peuvent l'épuiser. Attendez la réinitialisation du quota, ou désactivez la confirmation e-mail en développement / configurez un SMTP personnalisé.",
+      "redirecting": "Redirection vers le tableau de bord dans {{seconds}}s.",
+      "registrationFailed": "Échec de l'inscription",
+      "step1of3": "Étape 1 sur 3",
+      "step2of3": "Étape 2 sur 3",
+      "step3of3": "Étape 3 sur 3",
+      "planSelectionTitle": "Choisissez votre forfait",
+      "planSelectionSubtitle": "Sélectionnez le forfait adapté à votre entreprise.",
+      "stepOneSubtitle": "Parlez-nous un peu de votre entreprise avant de continuer.",
+      "stepOneTitle": "Commençons",
+      "stepTwoSubtitle": "Vous utiliserez cet e-mail et ce mot de passe pour vous connecter sur tous vos appareils.",
+      "stepTwoTitle": "Créez votre compte",
+      "successCreatedFor": "Votre compte moniger.net a été créé pour {{email}}. Confirmez l'e-mail avant de vous connecter.",
+      "useAnotherEmail": "Utiliser un autre e-mail",
+      "validation": {
+        "accountExists": "Un compte existe déjà pour cet e-mail. Essayez plutôt de vous connecter.",
+        "businessNameRequired": "Saisissez le nom de votre entreprise pour continuer.",
+        "businessNameTooShort": "Le nom de l'entreprise doit contenir au moins 2 caractères.",
+        "enterFullName": "Saisissez votre nom complet pour continuer.",
+        "enterFirstAndLastName": "Saisissez au moins votre prénom et votre nom.",
+        "invalidEmail": "Saisissez une adresse e-mail valide puis réessayez.",
+        "passwordMessage": "{{message}}",
+        "useLongerNames": "Utilisez au moins 2 lettres pour le prénom et le nom."
+      },
+      "workEmail": "E-mail professionnel",
+      "workEmailPlaceholder": "E-mail professionnel"
+    }
+  },
+  "dashboard": {
+    "empty": {
+      "dueThisWeekDescription": "Vous êtes à jour sur les paiements planifiés pour le moment.",
+      "dueThisWeekTitle": "Aucune facture due cette semaine",
+      "recentActivityDescription": "L’activité apparaîtra ici lorsque les factures, paiements et répertoires commenceront à évoluer.",
+      "recentActivityTitle": "Aucune activité récente"
+    },
+    "quickActions": {
+      "addVendor": "Ajouter un fournisseur",
+      "newInvoice": "Nouvelle facture",
+      "payBill": "Payer une facture"
+    },
+    "recentActivity": "Activité récente",
+    "summary": {
+      "collectedThisMonth": "Encaissements du mois",
+      "overdueItems": "Éléments en retard",
+      "totalPayable": "Total à payer",
+      "totalReceivable": "Total à recevoir"
+    },
+    "titles": {
+      "dueThisWeek": "Échéances de la semaine"
+    }
+  },
+  "export": {
+    "eyebrow": "Export Moniger",
+    "generatedAt": "Généré le {{timestamp}}"
+  },
+  "header": {
+    "accountMenu": {
+      "open": "Ouvrir le menu du compte",
+      "profile": "Profil",
+      "security": "Sécurité",
+      "settings": "Paramètres",
+      "signOut": "Se déconnecter"
+    },
+    "theme": {
+      "switchToDark": "Passer en mode sombre",
+      "switchToLight": "Passer en mode clair"
+    },
+    "toggleSidebar": "Afficher ou masquer la barre latérale"
+  },
+  "notifications": {
+    "center": {
+      "all": "Toutes",
+      "allCaughtUp": "Vous êtes à jour",
+      "empty": {
+        "allDescription": "Les mises à jour de factures, paiements, rapports et équipe apparaîtront ici selon l'activité de votre espace.",
+        "allTitle": "Aucune notification pour le moment",
+        "showAll": "Afficher tout",
+        "unreadDescription": "Vous êtes à jour pour le moment. Revenez à toutes les notifications pour consulter l'activité précédente.",
+        "unreadTitle": "Aucune notification non lue"
+      },
+      "loadError": "Impossible de charger les notifications pour le moment.",
+      "markAllRead": "Tout marquer comme lu",
+      "title": "Notifications",
+      "triggerLabel": "Afficher les notifications",
+      "triggerWithUnread": "Afficher les notifications ({{count}} non lues)",
+      "type": {
+        "bill": "Facture fournisseur",
+        "invoice": "Facture",
+        "payment": "Paiement",
+        "report": "Rapport",
+        "system": "Système",
+        "team": "Équipe"
+      },
+      "unread": "Non lues",
+      "unreadSingular": "1 mise à jour non lue",
+      "unreadPlural": "{{count}} mises à jour non lues"
+    }
+  },
+  "layout": {
+    "mobileNav": {
+      "more": "Plus"
+    },
+    "quickActions": {
+      "addVendor": "Ajouter un fournisseur",
+      "close": "Fermer les actions rapides",
+      "newInvoice": "Nouvelle facture",
+      "open": "Ouvrir les actions rapides",
+      "payBill": "Payer une facture"
+    }
+  },
+  "locale": {
+    "currencyPreview": "Aperçu de devise",
+    "datePreview": "Aperçu de date",
+    "inheritLocale": "Utiliser la valeur par défaut de l’espace de travail",
+    "inheritLanguage": "Utiliser la langue par défaut de l’espace de travail",
+    "labels": {
+      "businessDefaultLocale": "Langue régionale par défaut",
+      "businessDefaultLanguage": "Langue par défaut",
+      "locale": "Paramètre régional",
+      "language": "Langue"
+    },
+    "numberPreview": "Aperçu numérique",
+    "sections": {
+      "businessDescription": "Définissez la langue et le formatage par défaut pour les coéquipiers qui n’ont pas choisi de préférence personnelle.",
+      "businessEyebrow": "Valeurs par défaut de l’espace de travail",
+      "businessTitle": "Langue et formatage par défaut",
+      "profileDescription": "Choisissez votre langue personnelle et vos préférences de formatage. L’option par défaut suit les réglages de votre espace de travail.",
+      "profileEyebrow": "Langue et région",
+      "profileTitle": "Langue et formatage personnels"
+    }
+  },
+  "navigation": {
+    "auditTrail": "Journal d’audit",
+    "bills": "Factures fournisseurs",
+    "customers": "Clients",
+    "dashboard": "Tableau de bord",
+    "home": "Accueil",
+    "invoices": "Factures",
+    "payments": "Paiements",
+    "reports": "Rapports",
+    "settings": "Paramètres",
+    "team": "Équipe",
+    "vendors": "Fournisseurs",
+    "workspaceFallback": "Mon entreprise"
+  },
+  "pages": {
+    "auditTrail": "Journal d’audit",
+    "bills": "Factures fournisseurs",
+    "customers": "Clients",
+    "dashboard": "Tableau de bord",
+    "invoices": "Factures",
+    "payments": "Paiements",
+    "reports": "Rapports",
+    "settings": "Paramètres",
+    "team": "Équipe",
+    "vendors": "Fournisseurs"
+  },
+  "search": {
+    "clearRecentSearches": "Effacer les recherches récentes",
+    "description": "Recherchez des enregistrements, accédez aux pages et consultez les recherches récentes.",
+    "empty": {
+      "keepTypingDescription": "Saisissez au moins 2 caractères pour rechercher des factures, clients, fournisseurs et paiements.",
+      "keepTypingTitle": "Continuez à saisir pour rechercher",
+      "noMatchesDescription": "Aucun résultat pour \"{{query}}\". Essayez un numéro de facture, un nom de client, une référence de paiement ou un titre de page.",
+      "noMatchesTitle": "Aucun enregistrement correspondant",
+      "searching": "Recherche dans votre espace de travail..."
+    },
+    "groups": {
+      "jumpTo": "Aller à",
+      "pages": "Pages",
+      "recentSearches": "Recherches récentes",
+      "searchIn": "Rechercher \"{{query}}\" dans"
+    },
+    "inputAriaLabel": "Rechercher des enregistrements, des pages et des paramètres",
+    "inputPlaceholder": "Rechercher des enregistrements, ou accéder à une page...",
+    "jump": {
+      "audit": {
+        "subtitle": "Consultez l’activité et l’historique des changements",
+        "title": "Journal d’audit"
+      },
+      "bills": {
+        "subtitle": "Suivez les factures fournisseurs et les échéances",
+        "title": "Factures fournisseurs"
+      },
+      "businessSettings": {
+        "subtitle": "Détails de l’entreprise et valeurs par défaut",
+        "title": "Paramètres de l’entreprise"
+      },
+      "customers": {
+        "subtitle": "Répertoire clients et soldes",
+        "title": "Clients"
+      },
+      "dashboard": {
+        "subtitle": "Vue d’ensemble, indicateurs et activité récente",
+        "title": "Tableau de bord"
+      },
+      "invoices": {
+        "subtitle": "Gérez les créances et les brouillons de facture",
+        "title": "Factures"
+      },
+      "notificationSettings": {
+        "subtitle": "Préférences de notification, digest et livraison email",
+        "title": "Paramètres de notification"
+      },
+      "payments": {
+        "subtitle": "Consultez les encaissements et paiements",
+        "title": "Paiements"
+      },
+      "profileSettings": {
+        "subtitle": "Profil et préférences du compte",
+        "title": "Paramètres du profil"
+      },
+      "reports": {
+        "subtitle": "Tendances financières et rapports",
+        "title": "Rapports"
+      },
+      "securitySettings": {
+        "subtitle": "Sessions, mot de passe, MFA, confidentialité et export",
+        "title": "Paramètres de sécurité"
+      },
+      "team": {
+        "subtitle": "Invitez l’équipe et gérez les accès",
+        "title": "Équipe"
+      },
+      "vendors": {
+        "subtitle": "Répertoire des fournisseurs et coordonnées de paiement",
+        "title": "Fournisseurs"
+      }
+    },
+    "openCommandPalette": "Ouvrir la palette de commandes",
+    "searchPageTargets": {
+      "bills": "Rechercher dans les factures fournisseurs",
+      "customers": "Rechercher dans les clients",
+      "filterDescription": "Filtrer la page avec cette recherche",
+      "invoices": "Rechercher dans les factures",
+      "payments": "Rechercher dans les paiements",
+      "vendors": "Rechercher dans les fournisseurs"
+    },
+    "title": "Palette de commandes globale",
+    "triggerPlaceholder": "Rechercher un enregistrement ou une page..."
+  },
+  "settings": {
+    "tabs": {
+      "business": "Entreprise",
+      "notifications": "Notifications",
+      "profile": "Profil",
+      "security": "Sécurité"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>Moniger mark</title>
+  <defs>
+    <linearGradient id="bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5B67F7"/>
+      <stop offset="1" stop-color="#253B80"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#bg)"/>
+  <path d="M16 44V20h7.5l8.5 11.56L40.5 20H48v24h-7V30.9l-7.42 9.98h-3.16L23 30.9V44H16Z" fill="#fff"/>
+</svg>
