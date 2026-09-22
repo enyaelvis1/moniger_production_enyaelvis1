@@ -96,7 +96,7 @@ npm run create:admin-test-users
 
 ### Edge Function secrets for customer communications
 
-- `CONTACT_RECIPIENT_EMAIL` — recipient for Contact Us messages; defaults to `support@moniger.net` when omitted.
+- `CONTACT_RECIPIENT_EMAILS` — comma-separated recipients for Contact Us messages; defaults to `admin@moniger.net,foxyrule@gmail.com` when omitted. `CONTACT_RECIPIENT_EMAIL` remains supported for backward compatibility.
 - `SIGNUP_ALERT_RECIPIENTS` — comma-separated signup-alert recipients; defaults to `foxyrule@gmail.com,admin@moniger.net`.
 - `APP_ENVIRONMENT` — environment label included in signup alerts, for example `production`, `staging`, or `qa`.
 - QA accounts created with `ALLOW_TEST_DATA=true APP_ENVIRONMENT=qa npm run create:test-user` or `ALLOW_TEST_DATA=true APP_ENVIRONMENT=qa npm run create:admin-test-users` receive explicit test metadata and appear under the Admin Users test-user filter. These scripts refuse to run without both an explicit opt-in and a non-production environment label.
