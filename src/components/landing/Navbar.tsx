@@ -232,6 +232,13 @@ const mobilePricingItems: MenuItem[] = [
     iconClassName: "bg-[#E8E4DF] text-[#4A5568]",
     to: "/pricing",
   },
+  {
+    title: "Business",
+    desc: "Advanced plan for established teams",
+    icon: CreditCard,
+    iconClassName: "bg-[#EDE9FE] text-[#7C3AED]",
+    to: "/pricing",
+  },
 ];
 
 const mobileCompanyItems: MenuItem[] = [
@@ -659,7 +666,7 @@ const Navbar = () => {
               </button>
               <div
                 style={{
-                  maxHeight: expandedMobile.pricing ? "256px" : "0px",
+                  maxHeight: expandedMobile.pricing ? "384px" : "0px",
                   overflow: "hidden",
                   transition: "max-height 300ms ease-in-out",
                   flexShrink: 0,
