@@ -118,7 +118,7 @@ Current state: **Implemented with restrictions.** Admin Users has a delete actio
 
 Current state: **Implemented in this branch; deployment and provider delivery verification are pending.** The page now calls the `contact-message` Edge Function, which validates and rate-limits requests, applies honeypot protection, stores a minimal delivery record, and sends via Resend.
 
-- [x] Choose the recipient, currently configurable with `CONTACT_RECIPIENT_EMAIL` and defaulting to `support@moniger.net`.
+- [x] Configure Contact Us delivery for multiple recipients with `CONTACT_RECIPIENT_EMAILS`, currently defaulting to `admin@moniger.net,foxyrule@gmail.com`.
 - [x] Add a server-side contact-message endpoint/Edge Function using Resend or the approved email provider.
 - [x] Add validation, rate limiting, honeypot protection, confirmation feedback, and failure guidance.
 - [x] Store a minimal support ticket/delivery log without storing unnecessary sensitive content.

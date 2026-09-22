@@ -30,7 +30,7 @@ const getClientIp = (request: Request) =>
 const sendEmail = async ({
   fromAddress,
   html,
-  recipientEmail,
+  recipients,
   replyTo,
   resendApiKey,
   subject,
@@ -38,7 +38,7 @@ const sendEmail = async ({
 }: {
   fromAddress: string;
   html: string;
-  recipientEmail: string;
+  recipients: string[];
   replyTo: string;
   resendApiKey: string;
   subject: string;
@@ -47,7 +47,7 @@ const sendEmail = async ({
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: fromAddress, to: [recipientEmail], reply_to: replyTo, subject, html, text }),
+    body: JSON.stringify({ from: fromAddress, to: recipients, reply_to: replyTo, subject, html, text }),
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -80,8 +80,9 @@ Deno.serve(async (request) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? "";
     const resendApiKey = Deno.env.get("RESEND_API_KEY")?.trim() ?? "";
     const fromAddress = Deno.env.get("EMAIL_FROM_ADDRESS")?.trim() ?? "";
-    const recipient = Deno.env.get("CONTACT_RECIPIENT_EMAIL")?.trim() || "support@moniger.net";
-    if (!supabaseUrl || !serviceRoleKey || !resendApiKey || !fromAddress) {
+    const configuredRecipients = Deno.env.get("CONTACT_RECIPIENT_EMAILS")?.trim() || Deno.env.get("CONTACT_RECIPIENT_EMAIL")?.trim() || "admin@moniger.net,foxyrule@gmail.com";
+    const recipients = configuredRecipients.split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
+    if (!supabaseUrl || !serviceRoleKey || !resendApiKey || !fromAddress || recipients.length === 0 || recipients.some((item) => !isValidEmail(item))) {
       return json({ error: "Contact delivery is not configured." }, 500);
     }
 
@@ -104,7 +105,7 @@ Deno.serve(async (request) => {
       bodyHtml: `<p><strong>From:</strong> ${escapeHtml(fullName)} &lt;${escapeHtml(email)}&gt;</p><div style="margin-top:16px; white-space:normal;">${escapeHtml(message).replace(/\n/g, "<br />")}</div>`,
       footerText: "Reply to this email to respond to the visitor.",
     });
-    const providerMessageId = await sendEmail({ ...emailContent, fromAddress, recipientEmail: recipient, replyTo: email, resendApiKey });
+    const providerMessageId = await sendEmail({ ...emailContent, fromAddress, recipients, replyTo: email, resendApiKey });
     await adminClient.from("contact_messages").update({ delivery_status: "sent", delivered_at: new Date().toISOString(), provider_message_id: providerMessageId }).eq("id", contactMessageId);
     return json({ ok: true, message: "Your message was sent. We will respond within 24 hours." });
   } catch (error) {
