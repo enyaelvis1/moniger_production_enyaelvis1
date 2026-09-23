@@ -110,7 +110,7 @@ const AdminSettingsPage = () => {
   const [testDataReason, setTestDataReason] = useState("");
   const [testDataPreview, setTestDataPreview] = useState<{ confirmationCount?: number; blocked?: { payments?: Array<{ id: string; reason: string }>; payouts: Array<{ id: string; status: string }> }; deletable?: { payments: number; payouts: number; receivables?: number }; other?: { announcements: number; bills: number; businesses: number; checkoutSessions: number; content: number; customers: number; invoices: number; signupAlerts: number; users: number; vendors: number; blocked: number } } | null>(null);
   const [isCleaningTestData, setIsCleaningTestData] = useState(false);
-  const [isRevokingAdmin, setIsRevokingAdmin] = useState(false);
+  const [revokingAdminUserId, setRevokingAdminUserId] = useState<string | null>(null);
   const testDataDeletionCount = testDataPreview?.confirmationCount ?? 0;
 
   const previewTestData = useCallback(async (resource = testDataResource) => {
@@ -162,7 +162,7 @@ const AdminSettingsPage = () => {
   };
 
   const revokeAdminAccess = async (adminUser: AdminSettingsResponse["adminUsers"][number]) => {
-    if (adminUser.userId === adminAccess.userId || isRevokingAdmin) {
+    if (adminUser.userId === adminAccess.userId || revokingAdminUserId) {
       return;
     }
 
@@ -170,7 +170,7 @@ const AdminSettingsPage = () => {
       return;
     }
 
-    setIsRevokingAdmin(true);
+    setRevokingAdminUserId(adminUser.adminUserId);
 
     try {
       await invokeAdminConsole("settings.adminUser", {
@@ -182,7 +182,7 @@ const AdminSettingsPage = () => {
     } catch (error) {
       toast({ title: "Unable to revoke admin access", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
     } finally {
-      setIsRevokingAdmin(false);
+      setRevokingAdminUserId(null);
     }
   };
 
@@ -204,6 +204,9 @@ const AdminSettingsPage = () => {
         <TabsContent value="admins" className="mt-4">
           <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
             <AdminSectionCard title="Current Admins">
+              <p className="mb-4 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/60">
+                Super admins can remove another admin&apos;s console access here. The account, workspace, and business data remain unchanged.
+              </p>
               <div className="space-y-3">
                 {(settingsQuery.data?.adminUsers ?? []).map((adminUser) => (
                   <div key={adminUser.adminUserId} className="rounded-xl border border-white/5 bg-[#0F1621] p-4">
@@ -232,10 +235,11 @@ const AdminSettingsPage = () => {
                       <Button
                         variant="ghost"
                         className="h-8 rounded-lg border border-[#EF4444]/20 bg-[#EF4444]/10 text-[#FCA5A5] hover:bg-[#EF4444]/20"
-                        disabled={adminUser.userId === adminAccess.userId || isRevokingAdmin}
+                        disabled={adminUser.userId === adminAccess.userId || Boolean(revokingAdminUserId)}
+                        title={adminUser.userId === adminAccess.userId ? "You cannot remove your own access" : "Remove this admin's console access"}
                         onClick={() => void revokeAdminAccess(adminUser)}
                       >
-                        {adminUser.userId === adminAccess.userId ? "Your access" : isRevokingAdmin ? "Revoking..." : "Revoke access"}
+                        {adminUser.userId === adminAccess.userId ? "Your access" : revokingAdminUserId === adminUser.adminUserId ? "Removing..." : "Remove admin access"}
                       </Button>
                     </div>
                   </div>
