@@ -255,3 +255,13 @@ Live cutover checklist after Paystack approval:
 1. Close production rollout verification for the already-implemented Paystack invoice and subscription flows.
 2. Close production rollout details for marketplace routing, especially live secrets, webhook visibility, and deployment settings.
 3. Resolve paid-plan switching rules before additional billing complexity is added.
+
+### 2026-09-23 — Client feedback hardening in local validation
+
+- [x] Added shared Vendor and Business phone validation that rejects alphabetic and unsupported characters in the browser and database trigger paths.
+- [x] Added same-workspace relationship checks for invoices, bills, payments, and payout records in the local migration set.
+- [x] Added a bounded Supabase request timeout so Dashboard, Payments, Reports, and Audit Trail requests resolve to an error state instead of spinning indefinitely.
+- [x] Separated unresolved subscription status from the `Starter` display fallback and added retry/error handling for subscription-gated pages.
+- [x] Authenticated multi-company isolation and Starter/Growth/Business page rendering now have local UAT evidence; full entitlement coverage and multi-workspace switching remain open.
+- [ ] A visible workspace selector is still required before multi-membership workspace-switch acceptance can be completed.
+- [ ] The new migrations are applied to the local Supabase instance only; remote migration and production deployment remain intentionally pending approval.

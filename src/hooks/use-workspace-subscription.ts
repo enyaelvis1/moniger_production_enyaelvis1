@@ -57,7 +57,7 @@ const fetchWorkspaceSubscription = async (businessId: string): Promise<Workspace
   };
 };
 
-const getEntitlements = (subscription: WorkspaceSubscription | null): WorkspaceSubscriptionEntitlements => {
+export const getWorkspaceSubscriptionEntitlements = (subscription: WorkspaceSubscription | null): WorkspaceSubscriptionEntitlements => {
   const isPaidPlan = Boolean(subscription && subscription.plan !== "starter");
   const isActive = Boolean(subscription && ["active", "trial"].includes(subscription.status));
   const isGracePeriod = Boolean(subscription && subscription.status === "past_due");
@@ -86,7 +86,7 @@ export const useWorkspaceSubscription = () => {
     staleTime: 60_000,
   });
 
-  const entitlements = getEntitlements(query.data);
+  const entitlements = getWorkspaceSubscriptionEntitlements(query.data);
 
   return {
     entitlements,

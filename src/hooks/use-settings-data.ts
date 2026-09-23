@@ -96,6 +96,7 @@ export type BusinessUpdateInput = {
   default_locale: string;
   fiscal_year_start_month: number;
   name: string;
+  phone: string | null;
   rc_number: string | null;
   tax_id: string | null;
 };

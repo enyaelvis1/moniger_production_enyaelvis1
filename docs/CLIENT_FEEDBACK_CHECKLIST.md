@@ -2,7 +2,7 @@
 
 Tracking checklist for the issues/questions raised by the client (May 2026). Each item includes a concrete test plan to run after the fix.
 
-Branching rules (required): `feature/*` or `fix/*` branches start from `dev` and merge back into `dev` first (see `docs/BRANCHING_STRATEGY.md`).
+Branching rules (required): `feature/*` or `fix/*` branches start from `develop` and merge back into `develop` first (see `docs/BRANCHING_STRATEGY.md`).
 
 Current implementation branch: `develop`
 
@@ -493,3 +493,121 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 4. Separately run one workspace subscription checkout and confirm subscription synchronization.
 5. Stop immediately if the amount, recipient, status, callback, or webhook result is unexpected.
 6. Update this checklist, the UAT guide, and the source-of-truth document with the dated evidence before declaring live testing complete.
+
+---
+
+## 22) Latest client feedback: input validation, plan isolation, and test-account cleanup
+
+**Status: [ ] In progress — local authenticated UAT completed for 22A–E; workspace switching and provider checkout remain open**
+
+### Local implementation evidence
+
+- [x] Shared phone parsing now rejects alphabetic characters, unsupported symbols, misplaced/repeated `+`, and invalid digit lengths instead of silently stripping them.
+- [x] Business settings now includes a validated Business Phone field; Vendor phone inputs use telephone input behavior and the same shared validator.
+- [x] Supabase requests have a bounded 15-second timeout so Dashboard, Payments, Reports, and Audit Trail can reach an error/retry state instead of spinning indefinitely.
+- [x] Subscription-gated pages now distinguish subscription loading, subscription errors, and a genuine missing subscription; a failed subscription read no longer appears as Starter forever.
+- [x] Local-only database migrations add Business/Vendor phone enforcement and cross-workspace link validation for invoices, bills, payments, and payouts.
+- [x] Production migrations and deployment are intentionally not performed in this task.
+- [x] Authenticated two-company isolation and three-tier browser acceptance were tested locally; see `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.
+
+### A. Restrict Vendor and Business phone fields to numbers
+
+- [x] Confirm every Vendor phone and Business phone input accepts digits only, with the agreed international format support (for example, `+2348012345678`).
+- [x] Prevent alphabetic characters and unsupported symbols in the UI.
+- [x] Enforce the same validation and normalization server-side so requests cannot bypass the browser.
+- [x] Apply the rule consistently to create and edit forms.
+
+### Test A
+
+1. Open Vendor and Business create/edit forms.
+2. Enter letters into the phone field; confirm they are rejected or removed.
+3. Enter a valid Nigerian number and confirm it saves and displays correctly.
+4. Submit an invalid phone value through a direct request; confirm the server rejects it.
+
+### B. Correct Growth and Business subscription display
+
+- [ ] Reproduce the `foxyrule@yahoo.com` Growth account issue in a safe test environment without exposing credentials in source control or logs.
+- [ ] Confirm Profile → Personal Information displays `Growth` after successful checkout and webhook synchronization.
+- [ ] Confirm the workspace subscription record, selected workspace, and UI plan status all agree.
+- [ ] Repeat the same flow for a Business subscription and confirm it displays `Business`.
+- [ ] Confirm Starter accounts continue to display `Starter` and are not upgraded accidentally.
+
+### Test B
+
+1. Sign in to the Growth test account and record the selected workspace ID and subscription reference.
+2. Open Profile → Personal Information and confirm the plan is `Growth`.
+3. Refresh, sign out, and sign back in; confirm it remains `Growth`.
+4. Repeat for Business and confirm it shows `Business`.
+5. Confirm Admin → Subscriptions shows the same plan for the same workspace.
+
+### C. Verify company data isolation
+
+- [ ] Review workspace/business scoping in all customer, vendor, invoice, bill, payment, receivable, payout, subscription, and dashboard queries.
+- [ ] Confirm every create, read, update, delete, export, and realtime query is scoped to the active business/workspace.
+- [ ] Confirm server-side authorization prevents a user from reading or mutating another company’s records by changing an ID in a request.
+- [ ] Check admin views separately: platform admins may see cross-business data only through explicitly authorized admin endpoints.
+- [ ] Add or update automated isolation tests for at least two companies.
+
+### Test C
+
+1. Create Company A and Company B with distinct customers, vendors, invoices, and payments.
+2. Sign in as a member of Company A and confirm no Company B records appear in lists, search, exports, dashboards, or detail routes.
+3. Attempt direct requests using Company B record IDs; confirm reads and mutations are rejected.
+4. Repeat from Company B and confirm the inverse isolation.
+5. Confirm admin reporting labels every record with the correct company.
+
+### D. Keep Starter, Growth, and Business entitlements separate
+
+- [ ] Compare the pricing catalog, feature gates, server-side entitlement checks, navigation visibility, limits, and exports for all three plans.
+- [ ] Confirm plan checks use the selected workspace’s current subscription, not a user-wide or cached plan value.
+- [ ] Confirm Starter cannot access Growth/Business-only features without an active upgrade.
+- [ ] Confirm Growth receives Growth features but not Business-only features.
+- [ ] Confirm Business receives the Business feature set.
+- [ ] Confirm failed, cancelled, expired, and pending subscriptions do not grant paid entitlements.
+
+### Test D
+
+1. Test the same user/workflow in separate Starter, Growth, and Business workspaces.
+2. Record visible menus, feature gates, limits, and server responses for each plan.
+3. Refresh and sign out/in between checks to rule out stale client cache.
+4. Confirm changing one workspace’s plan does not change another workspace’s menus or permissions.
+
+### E. Investigate dashboard, Payments, Reports, and Audit Trail loading
+
+- [x] Reproduce the persistent spinner for Starter, Growth, and Business accounts.
+- [x] Capture browser console errors, failed network requests, response status codes, and the affected workspace ID.
+- [x] Verify loading states always resolve on success, empty results, authorization errors, and API errors.
+- [x] Confirm each page uses the correct workspace scope and does not wait indefinitely for unrelated data.
+- [ ] Add targeted tests for success, empty, and error states for Dashboard, Payments, Reports, and Audit Trail.
+
+### Test E
+
+1. Sign in to each approved test account using credentials supplied securely outside the repository.
+2. Open Dashboard, Payments, Reports, and Audit Trail.
+3. Confirm each page either renders data, shows an empty state, or shows a useful error within a reasonable time.
+4. Check the browser console and Network tab for failed requests or HTML returned where JSON is expected.
+5. Repeat after a hard refresh and after signing out/in.
+
+### F. Remove the three temporary business accounts
+
+**Destructive action — requires explicit confirmation immediately before execution.**
+
+- [ ] Confirm the exact business IDs and owner accounts for:
+  - `Moniger Starter Limited`
+  - `Moniger Growth Limited`
+  - `Moniger Business Limited`
+- [ ] Export a backup/manifest and record linked vendors, customers, invoices, bills, payments, subscriptions, and users.
+- [ ] Confirm these are marked test accounts and are not live customer or financial records.
+- [ ] Resolve or document dependencies that prevent safe deletion.
+- [ ] Delete only the three named test businesses and their eligible linked test data.
+- [ ] Confirm the owner accounts can be reused or are handled according to the auth-account deletion policy.
+- [ ] Verify no unrelated businesses, users, subscriptions, financial records, audit logs, or live data were removed.
+
+### Test F
+
+1. Preview the cleanup in `Admin → Settings → Danger Zone`.
+2. Verify the preview contains exactly the three named businesses and approved linked test records.
+3. Confirm the typed confirmation, cleanup reason, audit entry, and deletion manifest are required.
+4. Execute the cleanup only after the business IDs and counts are reviewed.
+5. Search for the three business names and confirm they no longer appear.
+6. Confirm unrelated production data and audit history remain intact.

@@ -18,12 +18,16 @@ const SessionTimeoutContext = createContext<SessionTimeoutContextValue>({
 const clampSessionTimeoutMinutes = (value: number) =>
   Math.min(MAX_SESSION_TIMEOUT_MINUTES, Math.max(MIN_SESSION_TIMEOUT_MINUTES, Math.round(value)));
 
-const readStoredSessionTimeoutMinutes = () => {
+export const readStoredSessionTimeoutMinutes = () => {
   if (typeof window === "undefined") {
     return DEFAULT_SESSION_TIMEOUT_MINUTES;
   }
 
   const rawValue = window.localStorage.getItem(SESSION_TIMEOUT_STORAGE_KEY);
+  if (rawValue === null || rawValue.trim() === "") {
+    return DEFAULT_SESSION_TIMEOUT_MINUTES;
+  }
+
   const parsedValue = Number(rawValue);
 
   if (!Number.isFinite(parsedValue)) {

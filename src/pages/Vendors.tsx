@@ -24,7 +24,7 @@ import {
   type AdvancedFilterState,
 } from "@/lib/advanced-filters";
 import { createFormValidator, getFriendlyErrorMessage, ValidationRules } from "@/lib/error-handling";
-import { normalizePhoneNumber, phonePlaceholder } from "@/lib/phone";
+import { filterPhoneInput, normalizePhoneNumber, phonePlaceholder } from "@/lib/phone";
 
 const billStatusVariant = (status: VendorDirectoryItem["bills"][number]["status"]) => {
   const variants = {
@@ -775,10 +775,12 @@ const VendorsPage = () => {
                             })}
                             id="vendor-phone"
                             type="tel"
+                            inputMode="tel"
+                            pattern="[+0-9 ()\\-]+"
                             value={form.phone}
                             onChange={(event) => {
                               clearFormError("phone");
-                              setForm((current) => ({ ...current, phone: event.target.value }));
+                              setForm((current) => ({ ...current, phone: filterPhoneInput(event.target.value) }));
                             }}
                             className={`rounded-lg ${formErrors.phone ? inputErrorClassName : ""}`}
                             placeholder={phonePlaceholder}

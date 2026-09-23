@@ -79,7 +79,7 @@ import {
   formatNumberValue,
 } from "@/lib/localization";
 import { defaultNotificationPreferences } from "@/lib/notifications";
-import { normalizePhoneNumber, phonePlaceholder } from "@/lib/phone";
+import { filterPhoneInput, normalizePhoneNumber, phonePlaceholder } from "@/lib/phone";
 import { defaultPrivacyPreferences, type PrivacyPreferenceState } from "@/lib/privacy";
 import { createFormValidator, getFriendlyErrorMessage, ValidationRules } from "@/lib/error-handling";
 import { type AppMfaFactor, type AuthenticatorAssuranceLevel, validateTotpCode } from "@/lib/mfa";
@@ -451,7 +451,7 @@ const roleOptions: Array<{
 type SettingsTab = "business" | "notifications" | "profile" | "security";
 type SettingsPageSection = SettingsTab | "team";
 type ProfileFormErrors = Partial<Record<"fullName" | "phone", string>>;
-type BusinessFormErrors = Partial<Record<"name", string>>;
+type BusinessFormErrors = Partial<Record<"name" | "phone", string>>;
 type InviteFormErrors = Partial<Record<"email", string>>;
 type SecurityAction = Extract<AuthSignOutScope, "global" | "others">;
 type PasswordFormState = {
@@ -489,6 +489,7 @@ const profileFormValidator = createFormValidator({
 });
 const businessFormValidator = createFormValidator({
   name: [ValidationRules.trimmedRequired()],
+  phone: [ValidationRules.optional(ValidationRules.phone())],
 });
 const inviteFormValidator = createFormValidator({
   email: [ValidationRules.trimmedRequired(), ValidationRules.email()],
@@ -646,6 +647,7 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
     language: defaultBusinessLanguage,
     locale: defaultBusinessLocale,
     name: "",
+    phone: "",
     taxId: "",
   });
   const [notificationPreferences, setNotificationPreferences] =
@@ -731,6 +733,7 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
       language: settings?.business?.default_language ?? defaultBusinessLanguage,
       locale: settings?.business?.default_locale ?? defaultBusinessLocale,
       name: settings?.business?.name ?? "",
+      phone: settings?.business?.phone ?? "",
       rcNumber: settings?.business?.rc_number ?? "",
       taxId: settings?.business?.tax_id ?? "",
     }),
@@ -741,6 +744,7 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
       settings?.business?.default_locale,
       settings?.business?.fiscal_year_start_month,
       settings?.business?.name,
+      settings?.business?.phone,
       settings?.business?.rc_number,
       settings?.business?.tax_id,
       settings?.profile?.default_currency,
@@ -789,6 +793,7 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
         settings?.business?.id ?? "missing",
         settings?.business?.updated_at ?? "missing",
         businessSnapshot.name,
+        businessSnapshot.phone,
         businessSnapshot.address,
         businessSnapshot.rcNumber,
         businessSnapshot.taxId,
@@ -804,6 +809,7 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
       businessSnapshot.language,
       businessSnapshot.locale,
       businessSnapshot.name,
+      businessSnapshot.phone,
       businessSnapshot.rcNumber,
       businessSnapshot.taxId,
       settings?.business?.id,
@@ -900,6 +906,7 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
     profile.locale !== profileSnapshot.locale;
   const isBusinessDirty =
     business.name !== businessSnapshot.name ||
+    business.phone !== businessSnapshot.phone ||
     business.address !== businessSnapshot.address ||
     business.rcNumber !== businessSnapshot.rcNumber ||
     business.taxId !== businessSnapshot.taxId ||
@@ -1216,6 +1223,7 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
 
     const validationErrors = businessFormValidator({
       name: business.name,
+      phone: business.phone.trim(),
     }) as BusinessFormErrors;
 
     if (Object.keys(validationErrors).length > 0) {
@@ -1235,6 +1243,7 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
           default_locale: business.locale,
           fiscal_year_start_month: monthNameToNumber(business.fiscalYear),
           name: normalizedBusinessName,
+          phone: normalizePhoneNumber(business.phone),
           rc_number: normalizeOptionalText(business.rcNumber),
           tax_id: normalizeOptionalText(business.taxId),
         },
@@ -2031,14 +2040,20 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
   const isAnyMfaBusy = mfaLoading || mfaEnrollPending || mfaVerifyPending;
   const isMfaDisableBusy = isAnyMfaBusy || mfaDisablePending;
   const unverifiedMfaFactorCount = mfaFactors.filter((factor) => factor.status === "unverified").length;
-  const currentWorkspacePlan: SubscriptionPlan = workspaceSubscriptionQuery.subscription?.plan ?? "starter";
+  const currentWorkspacePlan: SubscriptionPlan | null = workspaceSubscriptionQuery.subscription?.plan ?? null;
   const availableUpgradePlans: SubscriptionPlan[] =
     currentWorkspacePlan === "starter"
       ? ["growth", "business"]
       : currentWorkspacePlan === "growth"
         ? ["business"]
         : [];
-  const profileSubscriptionActionLabel = availableUpgradePlans.length > 0 ? "Upgrade now" : "Manage subscription";
+  const profileSubscriptionActionLabel = workspaceSubscriptionQuery.isLoading
+    ? "Checking plan…"
+    : workspaceSubscriptionQuery.isError
+      ? "Retry plan check"
+      : availableUpgradePlans.length > 0
+        ? "Upgrade now"
+        : "Manage subscription";
   const getPlanCatalog = (plan: SubscriptionPlan) => pricingCatalog?.[plan] ?? subscriptionCatalog[plan];
   const visibleUpgradePlans: SubscriptionPlan[] = availableUpgradePlans;
 
@@ -2493,7 +2508,11 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
                           : "bg-[#ECFDF3] text-[#16A34A]"
                     }`}
                   >
-                    {workspaceSubscriptionQuery.isError ? "Unavailable" : workspaceSubscriptionQuery.subscription?.plan ?? "starter"}
+                    {workspaceSubscriptionQuery.isLoading
+                      ? "Loading"
+                      : workspaceSubscriptionQuery.isError
+                        ? "Unavailable"
+                        : workspaceSubscriptionQuery.subscription?.plan ?? "Starter"}
                   </Badge>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -2534,9 +2553,15 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
                   <DialogHeader>
                     <DialogTitle>Compare plans before upgrading</DialogTitle>
                     <DialogDescription>
-                      Your current plan is{" "}
-                      <span className="font-semibold text-foreground capitalize">{currentWorkspacePlan}</span>. Choose a
-                      plan below to continue to secure billing.
+                      {currentWorkspacePlan ? (
+                        <>
+                          Your current plan is{" "}
+                          <span className="font-semibold text-foreground capitalize">{currentWorkspacePlan}</span>. Choose a
+                          plan below to continue to secure billing.
+                        </>
+                      ) : (
+                        "We could not confirm the current workspace plan yet. Refresh the subscription status before upgrading."
+                      )}
                     </DialogDescription>
                   </DialogHeader>
                   {visibleUpgradePlans.length > 0 ? (
@@ -3764,6 +3789,32 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
                     onChange={(event) => setBusiness((current) => ({ ...current, address: event.target.value }))}
                     disabled={isInitialLoading || updateBusinessMutation.isPending || !settings?.business}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="settings-business-phone">Business Phone</Label>
+                  <Input
+                    {...getFormFieldAriaProps({
+                      error: businessErrors.phone,
+                      id: "settings-business-phone",
+                      type: "tel",
+                    })}
+                    inputMode="tel"
+                    pattern="[+0-9 ()\\-]+"
+                    value={business.phone}
+                    onChange={(event) => {
+                      clearBusinessError("phone");
+                      setBusiness((current) => ({ ...current, phone: filterPhoneInput(event.target.value) }));
+                    }}
+                    placeholder={phonePlaceholder}
+                    className={businessErrors.phone ? inputErrorClassName : ""}
+                    disabled={isInitialLoading || updateBusinessMutation.isPending || !settings?.business}
+                  />
+                  <p className="text-xs text-muted-foreground">Use digits and an optional leading +, for example {phonePlaceholder}.</p>
+                  {businessErrors.phone ? (
+                    <p id="settings-business-phone-error" className={inlineErrorClassName} role="alert">
+                      {businessErrors.phone}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="settings-rc-number">RC Number</Label>
