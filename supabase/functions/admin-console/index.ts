@@ -3627,6 +3627,46 @@ Deno.serve(async (request) => {
 
         const type = asString(payload.type);
 
+        if (type === "update" || type === "remove") {
+          const targetAdminUserId = asString(payload.adminUserId);
+          const targetAdminResponse = await adminClient
+            .from("admin_users")
+            .select("id, user_id, role")
+            .eq("id", targetAdminUserId)
+            .maybeSingle();
+
+          if (targetAdminResponse.error) {
+            throw targetAdminResponse.error;
+          }
+
+          if (!targetAdminResponse.data) {
+            return json({ error: "That admin account could not be found." }, 404);
+          }
+
+          if (targetAdminResponse.data.user_id === user.id) {
+            return json({ error: "You cannot remove or downgrade your own admin access." }, 400);
+          }
+
+          const isDowngradingLastSuperAdmin =
+            targetAdminResponse.data.role === "super_admin" &&
+            (type === "remove" || asString(payload.role) === "support");
+
+          if (isDowngradingLastSuperAdmin) {
+            const superAdminCountResponse = await adminClient
+              .from("admin_users")
+              .select("id", { count: "exact", head: true })
+              .eq("role", "super_admin");
+
+            if (superAdminCountResponse.error) {
+              throw superAdminCountResponse.error;
+            }
+
+            if ((superAdminCountResponse.count ?? 0) <= 1) {
+              return json({ error: "The last super admin cannot be removed or downgraded." }, 400);
+            }
+          }
+        }
+
         if (type === "add") {
           const email = normalizeSearch(payload.email);
           const role = asString(payload.role) || "support";
@@ -3671,9 +3711,13 @@ Deno.serve(async (request) => {
         }
 
         if (type === "update") {
-          await adminClient.from("admin_users").update({
+          const updateResponse = await adminClient.from("admin_users").update({
             role: asString(payload.role),
           }).eq("id", asString(payload.adminUserId));
+
+          if (updateResponse.error) {
+            throw updateResponse.error;
+          }
 
           await insertAdminAuditLog({
             action: "admin_access_role_updated",
@@ -3693,7 +3737,11 @@ Deno.serve(async (request) => {
         }
 
         if (type === "remove") {
-          await adminClient.from("admin_users").delete().eq("id", asString(payload.adminUserId));
+          const removeResponse = await adminClient.from("admin_users").delete().eq("id", asString(payload.adminUserId));
+
+          if (removeResponse.error) {
+            throw removeResponse.error;
+          }
 
           await insertAdminAuditLog({
             action: "admin_access_revoked",
