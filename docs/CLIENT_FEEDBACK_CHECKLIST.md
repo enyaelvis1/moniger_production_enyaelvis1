@@ -506,6 +506,8 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 - [x] Business settings now includes a validated Business Phone field; Vendor phone inputs use telephone input behavior and the same shared validator.
 - [x] Supabase requests have a bounded 15-second timeout so Dashboard, Payments, Reports, and Audit Trail can reach an error/retry state instead of spinning indefinitely.
 - [x] Subscription-gated pages now distinguish subscription loading, subscription errors, and a genuine missing subscription; a failed subscription read no longer appears as Starter forever.
+- [x] Lazy-route and protected-route full-page loading now share one authoritative `RouteLoadingScreen`, avoiding inconsistent loader handoffs during navigation.
+- [x] Paid Growth signup was completed through local Paystack TEST checkout on the configured `localhost:8080` origin and returned directly to the new workspace dashboard; detailed evidence is in `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.
 - [x] Local-only database migrations add Business/Vendor phone enforcement and cross-workspace link validation for invoices, bills, payments, and payouts.
 - [x] Production migrations and deployment are intentionally not performed in this task.
 - [x] Authenticated two-company isolation and three-tier browser acceptance were tested locally; see `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.

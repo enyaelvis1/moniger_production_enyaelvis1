@@ -55,6 +55,19 @@ User C was added as a viewer to Companies A and B. Each plan workspace received 
 | OBS-002 | Settings → Security | Missing local timeout storage was converted with `Number(null)` and clamped to 1 minute. | High | Fixed in `SessionTimeoutContext.tsx`; fresh browser and unit test now show 20 minutes. |
 | OBS-003 | Multi-workspace User C | The app has no visible workspace selector and settings chooses one membership. | High / product capability | Open; do not claim workspace-switch acceptance. |
 | OBS-004 | Browser console | React Router future-flag warnings remain. | Low / baseline | Not introduced by this task; no application errors remained in retested flows. |
+| OBS-005 | Route transitions | Suspense and protected-route transitions used different full-page loader implementations, creating a visible loader handoff risk. | Medium | Fixed in `App.tsx` by using the shared `RouteLoadingScreen` for both transitions; landing-page `fetchPriority` warning also removed from `HeroSection.tsx`. |
+
+### Follow-up browser UAT — 2026-09-23
+
+- Paid Growth registration was completed through the real local UI using a disposable `example.com` address and Paystack TEST checkout.
+- Checkout opened automatically after account/workspace creation for `Growth` at `NGN 29,000`.
+- On the configured `http://localhost:8080` origin, the successful Paystack return went directly to `/dashboard` with no pricing detour.
+- Dashboard showed the new workspace and subscription activity; Settings → Personal Information showed `Growth`, `Active`, monthly billing, and a renewal date.
+- Payments, Reports, Audit Trail, and Workspace Settings rendered successfully after navigation; no application console errors were observed. Existing React Router future-flag warnings remain.
+- A separate run from `127.0.0.1:8080` correctly exposed a local-origin mismatch: the callback is configured for `localhost:8080`, so per-tab session storage was not available on the different host. Local UAT must use the configured host.
+- The `.test` paid-signup attempt was rejected by the intended Paystack email-domain guard before checkout; it did not create a paid checkout.
+- The UI-created disposable signup accounts/workspaces remain only in local Supabase for review; no production accounts or data were changed.
+- Screenshots are retained as ignored local artifacts under `output/playwright/phase2-local/`; no credentials or tokens are stored in the repository.
 
 ## Migration preflight
 

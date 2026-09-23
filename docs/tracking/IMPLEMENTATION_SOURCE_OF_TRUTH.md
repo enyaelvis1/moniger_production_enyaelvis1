@@ -262,6 +262,7 @@ Live cutover checklist after Paystack approval:
 - [x] Added same-workspace relationship checks for invoices, bills, payments, and payout records in the local migration set.
 - [x] Added a bounded Supabase request timeout so Dashboard, Payments, Reports, and Audit Trail requests resolve to an error state instead of spinning indefinitely.
 - [x] Separated unresolved subscription status from the `Starter` display fallback and added retry/error handling for subscription-gated pages.
+- [x] Consolidated lazy-route and protected-route full-page loading into the shared `RouteLoadingScreen`; removed the invalid landing-page image priority prop that produced a React console warning.
 - [x] Authenticated multi-company isolation and Starter/Growth/Business page rendering now have local UAT evidence; full entitlement coverage and multi-workspace switching remain open.
 - [ ] A visible workspace selector is still required before multi-membership workspace-switch acceptance can be completed.
 - [ ] The new migrations are applied to the local Supabase instance only; remote migration and production deployment remain intentionally pending approval.
