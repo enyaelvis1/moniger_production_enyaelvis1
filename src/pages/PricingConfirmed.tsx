@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import PublicPageShell from "@/components/public/PublicPageShell";
@@ -53,6 +54,7 @@ const waitForVerificationRetry = (delayMs: number) =>
 
 const PricingConfirmedPage = () => {
   const { isSessionLoading, session } = useSupabaseSession();
+  const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -141,8 +143,9 @@ const PricingConfirmedPage = () => {
       return;
     }
 
+    void queryClient.invalidateQueries({ queryKey: ["workspace-subscription", result.subscription.businessId] });
     navigate("/dashboard", { replace: true });
-  }, [navigate, result, session]);
+  }, [navigate, queryClient, result, session]);
 
   const verifiedSubscription =
     result && (result.kind === "verified" || result.kind === "activated") ? result.subscription : null;

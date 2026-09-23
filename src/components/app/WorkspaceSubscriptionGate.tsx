@@ -6,7 +6,7 @@ import WorkspaceUpgradePrompt from "@/components/app/WorkspaceUpgradePrompt";
 const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
   const { entitlements, isLoading, subscription } = useWorkspaceSubscription();
 
-  if (isLoading) {
+  if (isLoading || !subscription) {
     return (
       <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-[#DCE2F2] bg-white shadow-[0_18px_50px_rgba(16,32,63,0.06)]">
         <div className="flex flex-col items-center gap-3 text-center">
