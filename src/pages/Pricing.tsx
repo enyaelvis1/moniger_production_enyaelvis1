@@ -139,7 +139,7 @@ const PricingPage = () => {
     }
 
     const intentKey = `${autoSubscribePlan}:${autoSubscribeBillingCycle}:${autoSubscribeRetryCount}`;
-    if (attemptedIntentRef.current === intentKey || isLoading) {
+    if (attemptedIntentRef.current === intentKey) {
       return;
     }
 
@@ -207,7 +207,6 @@ const PricingPage = () => {
     autoSubscribePlan,
     autoSubscribeRetryCount,
     handleSubscribe,
-    isLoading,
     navigate,
     searchParams,
     session,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   initializeWorkspaceSubscriptionCheckout,
   updateWorkspaceSubscription,
@@ -72,7 +72,7 @@ export const useSubscriptionManagement = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubscribe = async (formState: SubscriptionFormState) => {
+  const handleSubscribe = useCallback(async (formState: SubscriptionFormState) => {
     setIsLoading(true);
     setError(null);
 
@@ -86,9 +86,9 @@ export const useSubscriptionManagement = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleUpgrade = async (formState: SubscriptionFormState) => {
+  const handleUpgrade = useCallback(async (formState: SubscriptionFormState) => {
     setIsLoading(true);
     setError(null);
 
@@ -102,7 +102,7 @@ export const useSubscriptionManagement = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   return {
     error,
