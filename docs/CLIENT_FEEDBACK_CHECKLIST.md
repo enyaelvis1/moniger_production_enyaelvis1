@@ -22,6 +22,12 @@ Current implementation branch: `develop`
   - Sign in as an admin user.
   - Visit `/admin/*` pages: Users, Payments, Businesses, Settings.
   - Confirm non-admin users cannot access `/admin/*` (redirect or 403).
+- [x] Allow a Super Admin to revoke another admin's console access without deleting the user's account or workspace.
+- [x] Protect the current Super Admin account and prevent removal or downgrade of the last Super Admin.
+- **Test admin access removal**
+  - Sign in as a Super Admin and open Admin -> Settings -> Admin Users.
+  - Choose another admin and click `Revoke access`, then confirm the action.
+  - Confirm the admin can no longer open `/admin/*` while their account and workspace remain unchanged.
 
 ---
 
@@ -38,7 +44,7 @@ Current implementation branch: `develop`
   - Stop interacting with the app completely.
   - Confirm a warning appears before timeout.
   - Confirm the app signs out after the selected duration and redirects to `/login`.
-  - Repeat with `10` minutes and confirm the same behavior still applies.
+  - Repeat with `20` minutes and confirm the same behavior still applies.
   - Confirm the app signs out and redirects to `/login`.
   - Confirm you cannot navigate back to protected routes without signing in again.
   - (If warning modal added) wait to warning time, click “Stay signed in”, confirm session remains active.
@@ -368,7 +374,7 @@ This item should cover public invoice collection and workspace subscription bill
 
 ## 21) Starter, Growth, and Business acceptance milestone
 
-**Status: [ ] In progress — cache refresh and workspace subscription read fixes implemented; Paystack acceptance test still pending**
+**Status: [ ] In progress — paid signup checkout, dashboard return, subscription visibility, and 20-minute timeout confirmed; full tier acceptance still pending**
 
 ### A. Fix workspace upgrade and status display
 
@@ -379,14 +385,14 @@ This item should cover public invoice collection and workspace subscription bill
 - [ ] Confirm the workspace status card changes from `Starter` to `Growth` after callback, webhook sync, and a full page refresh.
 - [ ] Confirm the upgrade page does not remain visible after the plan becomes active.
 - [x] Invalidate the cached workspace subscription query before redirecting after successful verification.
-- [x] Route paid registrations into the pricing intent so the signed-in session automatically starts Paystack checkout.
+- [x] Route paid registrations directly into Paystack checkout after the account and workspace are created.
 - [x] Allow active workspace members to read their own subscription so the plan status and premium feature gates render correctly after checkout.
 - [x] Prevent a fresh `null` subscription placeholder from suppressing the first real subscription fetch while workspace settings load.
 - [x] Keep the post-registration Paystack redirect alive when subscription checkout toggles its loading state.
 - [x] Send a newly registered paid-plan user directly into Paystack checkout after the account and workspace are created, without an intermediate pricing-page handoff.
 - [ ] Confirm a delayed provider response leaves the checkout retryable and does not create a false failure.
-- [ ] Repeat the same checks for `Business`.
-- [ ] Confirm signed-in users return to their workspace dashboard after successful confirmation.
+- [x] Repeat the same checks for `Business`.
+- [x] Confirm signed-in users return to their workspace dashboard after successful confirmation.
 - [ ] Confirm signed-out confirmation remains read-only and does not expose private workspace details.
 
 ### Test A — upgrade status
@@ -399,7 +405,7 @@ This item should cover public invoice collection and workspace subscription bill
 6. Refresh, sign out and back in, and confirm the plan remains `Growth`.
 7. Repeat with a separate workspace and the `Business` plan.
 8. Confirm `/admin/subscriptions` shows the correct workspace, plan, provider reference, amount, and renewal state.
-9. Start a fresh registration from `/register?subscribe=growth` and confirm the account flow continues to the Growth Paystack checkout intent instead of stopping at the dashboard.
+9. Start a fresh paid registration and confirm the account flow opens the Paystack checkout directly instead of stopping on the pricing page.
 
 ### B. Create the retained test businesses and vendors
 
