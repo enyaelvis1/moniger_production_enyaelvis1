@@ -124,12 +124,16 @@ Current implementation branch: `develop`
 - [x] Replace hardcoded bank list with DB-backed list.
 - [x] Create admin UI to add/disable banks.
 - [x] Update vendor form to read from the new bank list.
+- [x] Show mapped bank logos from the CDN with a fallback for unmapped/custom banks.
+- [x] Allow super admins to remove a bank through an audited, reference-safe action.
 - **Test**
   - As admin, open banks management screen.
   - Add “Lotus Bank” (if not already present) and ensure it appears as active.
   - As subscriber, go to Vendors → Add vendor.
   - Confirm “Lotus Bank” appears in the bank dropdown.
   - Disable a bank as admin; confirm it no longer appears for subscribers.
+  - Confirm mapped banks show logos and unmapped/custom banks show the fallback icon.
+  - Remove a bank as super admin; confirm existing references are unassigned and the removal appears in Audit Log.
 
 ---
 
@@ -220,3 +224,142 @@ Current implementation branch: `develop`
   - As subscriber, attempt to access Operations pages; confirm blocked.
   - As admin, open Announcements; create/update an announcement; confirm it appears where intended.
   - As admin, use Support lookup; confirm any data access is logged and results match expected scope.
+
+---
+
+## 16) Admin Management: delete eligible payments or payouts
+
+**Status: [x] Done — ready for browser acceptance testing**
+
+### Current state
+
+- Admin cleanup already exists under `Admin → Settings → Danger Zone`.
+- It is intentionally restricted to marked test data, requires a cleanup reason and typed confirmation, and writes an audit record.
+- Payout deletion is limited to safe terminal states (`failed`, `reversed`, or `cancelled`). Completed provider-backed financial records must not be hard-deleted casually.
+
+### Fix checklist
+
+- [ ] Confirm whether the request is for test-data cleanup only or for live-record deletion/voiding.
+- [x] Expose deletion controls from `Admin → Management → Payments` and `Admin → Management → Payouts` for eligible records.
+- [x] Add row selection, select-all-visible, and bulk deletion actions to Payments and Payouts.
+- [x] Add row selection, select-all-visible, and bulk deletion actions to Receivables; delete only invoices linked exclusively to test payments.
+- [x] Show eligibility through test-data badges/actions and backend rejection messages.
+- [x] Preserve typed confirmation, cleanup reason, audit logging, and post-delete reconciliation.
+- [x] Keep completed live payments and provider-settled payouts protected.
+- [x] Add backend record targeting so one eligible test record can be deleted without bulk cleanup.
+- [x] Make the Danger Zone cleanup flow show a clear scope, preview summary, blocked-record count, and exact linked-record confirmation count.
+- [x] Keep a separate staging/QA Supabase project as the recommended option for full test-database resets.
+- [x] Add safe cleanup for explicitly marked supporting test data: customers, vendors, invoices, bills, non-completed checkout sessions, managed content, announcements, and test/sandbox signup alerts.
+- [x] Mark legacy QA workspaces from narrowly scoped Playwright/Debug/test identity signals so existing fixtures can be reviewed and cleaned before production cutover.
+
+### Test after completion
+
+1. Sign in as a platform admin and open `Admin → Management → Payments`.
+2. Select a marked test payment and confirm the UI identifies it as deletable.
+3. Attempt deletion without the required reason or typed confirmation; confirm it is blocked.
+4. Delete it with a valid reason and confirmation; refresh and confirm it is gone.
+5. Repeat with a failed/cancelled test payout from `Admin → Management → Payouts`.
+6. Try a completed live/provider-backed payment or payout; confirm deletion is blocked and the reason is clear.
+7. Open the Audit Log and confirm the deletion event includes the actor, counts, reason, and manifest/result.
+8. Open `Admin → Settings → Danger Zone`, choose `All marked test data`, refresh the preview, and confirm the bulk confirmation count includes linked payment, receivable, and supporting test records.
+9. On `Admin → Management → Receivables`, select one or more eligible test receivables, type the exact bulk confirmation, and confirm deletion succeeds and is audit logged.
+10. Confirm live users, subscriptions, wallet ledger entries, webhook events, and audit logs are never included in the cleanup preview.
+
+---
+
+## 17) Contact Us: limit message to 300 characters
+
+**Status: [x] Done — ready for browser acceptance testing**
+
+### Fix checklist
+
+- [x] Add `maxLength={300}` and a visible character counter to the public Contact Us message field.
+- [x] Enforce the same 300-character limit in `supabase/functions/contact-message`.
+- [x] Return a clear validation error for messages over 300 characters.
+- [x] Verify a direct 301-character request is rejected.
+
+### Test after completion
+
+1. Open the public website and choose `Contact Us`.
+2. Enter exactly 300 characters; confirm the form accepts the text and the counter shows `300/300`.
+3. Try to enter a 301st character; confirm the field prevents it or shows a clear validation error.
+4. Submit the 300-character message and confirm it is delivered successfully.
+5. Send a direct test request with more than 300 characters; confirm the Edge Function rejects it with a validation error and no message is delivered.
+
+---
+
+## 18) Contact Us: replace the public email address
+
+**Status: [x] Done — ready for browser acceptance testing**
+
+### Fix checklist
+
+- [x] Replace `hello@moniger.net` with `admin@moniger.net` in the Contact Us page display and `mailto:` link.
+- [x] Update the Contact Us error/fallback copy to use `admin@moniger.net`.
+- [x] Confirm the contact-message default recipient configuration uses `admin@moniger.net`.
+- [x] Search the public source for the old customer-facing address.
+
+### Test after completion
+
+1. Open the public Contact Us page.
+2. Confirm the visible email is `admin@moniger.net`.
+3. Click the email and confirm the link opens `mailto:admin@moniger.net`.
+4. Force or simulate a contact-form delivery error and confirm the fallback message also shows `admin@moniger.net`.
+5. Search the deployed public site for `hello@moniger.net`; confirm no unintended public reference remains.
+
+---
+
+## 19) Admin Management: add a Receivable page
+
+**Status: [x] Done — ready for browser acceptance testing**
+
+### Fix checklist
+
+- [x] Define the scope as receivable invoices with incoming payment and settlement fields.
+- [x] Add a dedicated Admin Management navigation item and route for Receivables.
+- [x] Show business, customer, invoice, amount, status, due date, and payment reference/status fields.
+- [x] Add status and test/live data filters.
+- [x] Preserve admin-only access through the existing admin route and Edge Function authorization.
+- [x] Add CSV export with an audit event.
+
+### Test after completion
+
+1. Sign in as a platform admin and confirm `Management → Receivables` is visible.
+2. Confirm the page loads receivable records from at least two businesses.
+3. Filter for open, overdue, completed, failed, and test records; confirm the results and totals change correctly.
+4. Open a receivable detail and confirm the invoice, customer, amount, status, and provider reference are consistent with the source record.
+5. Sign in as a non-admin and confirm the page is inaccessible.
+6. Refresh the page and confirm the selected filters and displayed data remain correct.
+
+---
+
+## 20) Real customer and real-money testing in live mode
+
+**Status: [ ] Blocked pending live-key rollout and approval**
+
+### Current answer
+
+Production-domain Paystack checkout has been tested in Paystack `TEST` mode. A real customer and real-money test can begin only after the live Paystack keys and webhook configuration are intentionally enabled, the live test amount/account are approved, and the release checks pass. The current repository status does not yet confirm that live-money cutover is complete.
+
+This item should cover public invoice collection and workspace subscription billing separately. Do not use the outgoing payable flow as proof of live vendor disbursement unless the provider-backed payout capability and release documentation explicitly confirm it.
+
+### Fix/release checklist
+
+- [ ] Confirm Paystack live account approval, business/KYC requirements, and allowed live test amount.
+- [ ] Confirm live `PAYSTACK_SECRET_KEY` is configured for `paystack-payments`, `paystack-webhook`, and `workspace-subscriptions`.
+- [ ] Confirm the live Paystack webhook points to the documented Supabase webhook URL.
+- [ ] Confirm `APP_BASE_URL` and production callback URLs use the production domain.
+- [ ] Create one real customer/invoice with a low-value approved amount.
+- [ ] Run one intentional live invoice payment and record the Paystack reference, callback result, webhook result, payment status, invoice status, and receipt delivery.
+- [ ] Run one intentional live workspace subscription checkout separately and record the checkout reference and subscription-sync result.
+- [ ] Verify refunds, failed-payment handling, reconciliation, and support/audit visibility before declaring live mode complete.
+- [ ] Update the source-of-truth and UAT docs with the exact date, references, and outcomes.
+
+### Test after completion
+
+1. Use an approved real customer and a low-value invoice on the production domain.
+2. Open the public invoice payment link in a fresh browser session and complete payment with an approved live payment method.
+3. Confirm the browser returns to the confirmation route, the webhook is captured, `payments.status` becomes `completed`, and the invoice becomes `paid`.
+4. Confirm the customer receipt is delivered and the payment is visible in workspace and admin reporting.
+5. Separately run a live workspace subscription checkout and confirm `/pricing/confirmed`, `subscription_checkout_sessions`, and `business_subscriptions` reconcile correctly.
+6. Record the exact references and stop the test if any status, amount, recipient, or webhook result is unexpected.

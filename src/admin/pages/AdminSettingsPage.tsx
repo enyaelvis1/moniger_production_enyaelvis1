@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertTriangle, CheckCircle2, Database, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -103,17 +104,33 @@ const AdminSettingsPage = () => {
   );
   const [sessionTimeoutInput, setSessionTimeoutInput] = useState(() => String(sessionTimeoutMinutes));
   const [exportConfirmation, setExportConfirmation] = useState("");
-  const [testDataResource, setTestDataResource] = useState<"all" | "payments" | "payouts">("all");
+  const [testDataResource, setTestDataResource] = useState<"all" | "payments" | "payouts" | "other">("all");
   const [testDataConfirmation, setTestDataConfirmation] = useState("");
   const [testDataBulkConfirmation, setTestDataBulkConfirmation] = useState("");
   const [testDataReason, setTestDataReason] = useState("");
-  const [testDataPreview, setTestDataPreview] = useState<{ blocked?: { payments?: Array<{ id: string; reason: string }>; payouts: Array<{ id: string; status: string }> }; deletable?: { payments: number; payouts: number } } | null>(null);
+  const [testDataPreview, setTestDataPreview] = useState<{ confirmationCount?: number; blocked?: { payments?: Array<{ id: string; reason: string }>; payouts: Array<{ id: string; status: string }> }; deletable?: { payments: number; payouts: number; receivables?: number }; other?: { announcements: number; bills: number; businesses: number; checkoutSessions: number; content: number; customers: number; invoices: number; signupAlerts: number; users: number; vendors: number; blocked: number } } | null>(null);
   const [isCleaningTestData, setIsCleaningTestData] = useState(false);
-  const testDataDeletionCount = (testDataPreview?.deletable?.payments ?? 0) + (testDataPreview?.deletable?.payouts ?? 0);
+  const testDataDeletionCount = testDataPreview?.confirmationCount ?? 0;
+
+  const previewTestData = useCallback(async (resource = testDataResource) => {
+    try {
+      const result = await invokeAdminConsole<typeof testDataPreview>("testData.preview", { resource });
+      setTestDataPreview(result);
+    } catch (error) {
+      setTestDataPreview(null);
+      toast({ title: "Preview failed", description: error instanceof Error ? error.message : "Unable to preview marked test data.", variant: "destructive" });
+    }
+  }, [testDataResource, toast]);
 
   useEffect(() => {
     setSessionTimeoutInput(String(sessionTimeoutMinutes));
   }, [sessionTimeoutMinutes]);
+
+  useEffect(() => {
+    if (adminAccess.role === "super_admin") {
+      void previewTestData(testDataResource);
+    }
+  }, [adminAccess.role, previewTestData, testDataResource]);
 
   useEffect(() => {
     setAdminPageSize(String(configByKey.get("admin_page_size")?.value ?? 25));
@@ -482,97 +499,149 @@ const AdminSettingsPage = () => {
                   </Button>
                 </div>
 
-                <div className="rounded-xl border border-[#EF4444]/20 bg-[#EF4444]/10 p-4">
-                  <p className="font-medium text-[#FEE2E2]">Delete marked test payments and payouts</p>
-                  <p className="mt-1 text-sm text-[#FCA5A5]">
-                    Only records explicitly marked as test or sandbox data are eligible. Active or settled payouts are never deleted by this action.
-                  </p>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <select
-                      value={testDataResource}
-                      onChange={(event) => setTestDataResource(event.target.value as typeof testDataResource)}
-                      className="h-11 rounded-md border border-[#EF4444]/20 bg-[#7F1D1D]/20 px-3 text-white"
-                      aria-label="Test data type"
-                    >
-                      <option value="all">Payments and payouts</option>
-                      <option value="payments">Payments only</option>
-                      <option value="payouts">Payouts only</option>
-                    </select>
-                    <Button
-                      variant="ghost"
-                      className="h-11 border border-[#FCA5A5]/30 bg-[#7F1D1D]/20 text-[#FEE2E2] hover:bg-[#7F1D1D]/40"
-                      onClick={async () => {
-                        try {
-                          const result = await invokeAdminConsole<typeof testDataPreview>("testData.preview", { resource: testDataResource });
-                          setTestDataPreview(result);
-                        } catch (error) {
-                          toast({ title: "Preview failed", description: error instanceof Error ? error.message : "Unable to preview test data.", variant: "destructive" });
-                        }
-                      }}
-                    >
-                      Preview eligible records
-                    </Button>
+                <div className="overflow-hidden rounded-2xl border border-[#EF4444]/25 bg-gradient-to-br from-[#2A1720] via-[#1B1720] to-[#121722] shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
+                  <div className="border-b border-white/10 px-5 py-5 sm:px-6">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-xl border border-[#FCA5A5]/20 bg-[#EF4444]/10 p-2.5 text-[#FCA5A5]">
+                        <Trash2 className="h-5 w-5" aria-hidden="true" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-semibold text-[#FFF1F2]">Test data cleanup</h3>
+                          <AdminBadge tone="danger">Super admin</AdminBadge>
+                        </div>
+                          <p className="mt-1 max-w-3xl text-sm leading-6 text-[#FDA4AF]">
+                          Remove marked QA fixtures from the selected scope. Live financial records, production users, active payouts, and records without test proof remain protected.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex gap-3 rounded-xl border border-[#F59E0B]/20 bg-[#F59E0B]/10 p-3 text-sm text-[#FCD34D]">
+                      <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                      <p>For a complete database reset, use a separate staging/QA Supabase project. This control is intentionally limited to safe, marked test data.</p>
+                    </div>
                   </div>
-                  {testDataPreview?.deletable ? (
-                    <p className="mt-3 text-sm text-[#FEE2E2]">
-                      Eligible for deletion: {testDataPreview.deletable.payments} payment(s), {testDataPreview.deletable.payouts} payout(s).
-                      {testDataPreview.blocked?.payouts.length ? ` ${testDataPreview.blocked.payouts.length} payout(s) blocked because they are active or settled.` : ""}
-                      {testDataPreview.blocked?.payments?.length ? ` ${testDataPreview.blocked.payments.length} payment(s) blocked because they are linked to financial records or lack sandbox provider proof.` : ""}
-                    </p>
-                  ) : null}
-                  <div className="mt-3 max-w-sm space-y-2">
-                    <Label htmlFor="danger-test-data-reason" className="text-[#FEE2E2]">Reason for cleanup</Label>
-                    <Textarea
-                      id="danger-test-data-reason"
-                      value={testDataReason}
-                      onChange={(event) => setTestDataReason(event.target.value)}
-                      placeholder="Example: Remove QA payment fixtures after release verification"
-                      className="min-h-[88px] border-[#EF4444]/20 bg-[#7F1D1D]/20 text-white placeholder:text-[#FCA5A5]/60"
-                    />
-                    <Label htmlFor="danger-test-data-confirm" className="text-[#FEE2E2]">Type DELETE TEST DATA to continue</Label>
-                    <Input
-                      id="danger-test-data-confirm"
-                      value={testDataConfirmation}
-                      onChange={(event) => setTestDataConfirmation(event.target.value)}
-                      placeholder="DELETE TEST DATA"
-                      className="border-[#EF4444]/20 bg-[#7F1D1D]/20 text-white placeholder:text-[#FCA5A5]/60"
-                    />
-                    {testDataDeletionCount > 1 ? (
-                      <>
-                        <Label htmlFor="danger-test-data-bulk-confirm" className="text-[#FEE2E2]">
-                          Type {buildBulkTestDataConfirmation(testDataDeletionCount)} to confirm all {testDataDeletionCount} records
-                        </Label>
-                        <Input
-                          id="danger-test-data-bulk-confirm"
-                          value={testDataBulkConfirmation}
-                          onChange={(event) => setTestDataBulkConfirmation(event.target.value)}
-                          placeholder={buildBulkTestDataConfirmation(testDataDeletionCount)}
-                          className="border-[#EF4444]/20 bg-[#7F1D1D]/20 text-white placeholder:text-[#FCA5A5]/60"
-                        />
-                      </>
-                    ) : null}
+
+                  <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[0.9fr_1.1fr]">
+                    <div className="space-y-5">
+                      <div>
+                        <Label htmlFor="danger-test-data-resource" className="text-[#FFE4E6]">Cleanup scope</Label>
+                        <select
+                          id="danger-test-data-resource"
+                          value={testDataResource}
+                          onChange={(event) => {
+                            const nextResource = event.target.value as typeof testDataResource;
+                            setTestDataResource(nextResource);
+                            setTestDataPreview(null);
+                          }}
+                          className="mt-2 h-11 w-full rounded-lg border border-[#FCA5A5]/25 bg-[#120F16] px-3 text-sm text-white outline-none transition focus:border-[#FCA5A5] focus:ring-2 focus:ring-[#FCA5A5]/20"
+                        >
+                          <option value="all">All marked test data</option>
+                          <option value="payments">Marked payments only</option>
+                          <option value="payouts">Marked payouts only</option>
+                          <option value="other">Other marked test data</option>
+                        </select>
+                        <p className="mt-2 text-xs leading-5 text-white/45">Receivables linked to marked payments are included. Test users are removed only when every owned workspace is marked test.</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        className="h-10 w-full border border-[#FCA5A5]/30 bg-[#7F1D1D]/20 text-[#FFE4E6] hover:bg-[#7F1D1D]/40"
+                        onClick={() => void previewTestData()}
+                      >
+                        <Database className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Refresh preview
+                      </Button>
+
+                      {testDataPreview?.deletable ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            ["Payments", testDataPreview.deletable.payments],
+                            ["Receivables", testDataPreview.deletable.receivables ?? 0],
+                            ["Payouts", testDataPreview.deletable.payouts],
+                            ["Other records", Object.values(testDataPreview.other ?? {}).reduce((sum, value) => sum + (typeof value === "number" ? value : 0), 0) - (testDataPreview.other?.blocked ?? 0)],
+                            ["Blocked", (testDataPreview.blocked?.payments?.length ?? 0) + (testDataPreview.blocked?.payouts?.length ?? 0) + (testDataPreview.other?.blocked ?? 0)],
+                          ].map(([label, count]) => (
+                            <div key={label} className="rounded-xl border border-white/10 bg-black/15 p-3">
+                              <p className="text-xs text-white/45">{label}</p>
+                              <p className="mt-1 text-xl font-semibold text-white">{count}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-white/10 bg-black/15 p-4 text-sm text-white/55">Preview the selected scope to see what can be removed.</div>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-black/15 p-4 sm:p-5">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-[#FCA5A5]" aria-hidden="true" />
+                        <h4 className="font-medium text-[#FFF1F2]">Confirm deletion</h4>
+                      </div>
+                      {testDataPreview?.deletable ? (
+                        <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#22C55E]/20 bg-[#22C55E]/10 p-3 text-sm text-[#BBF7D0]">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                          <p>{testDataDeletionCount ? `${testDataDeletionCount} linked record(s) will be deleted after confirmation.` : "No deletable records found in this scope."}</p>
+                        </div>
+                      ) : null}
+                      <div className="mt-4 space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="danger-test-data-reason" className="text-[#FFE4E6]">Reason for cleanup</Label>
+                          <Textarea
+                            id="danger-test-data-reason"
+                            value={testDataReason}
+                            onChange={(event) => setTestDataReason(event.target.value)}
+                            placeholder="Example: Remove QA fixtures after release verification"
+                            className="min-h-[108px] w-full resize-y border-[#FCA5A5]/20 bg-[#120F16] text-white placeholder:text-[#FCA5A5]/50"
+                          />
+                          <p className="text-xs text-white/40">Use at least 10 characters so the cleanup is traceable in the audit log.</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="danger-test-data-confirm" className="text-[#FFE4E6]">Type DELETE TEST DATA</Label>
+                          <Input
+                            id="danger-test-data-confirm"
+                            value={testDataConfirmation}
+                            onChange={(event) => setTestDataConfirmation(event.target.value)}
+                            placeholder="DELETE TEST DATA"
+                            className="border-[#FCA5A5]/20 bg-[#120F16] text-white placeholder:text-[#FCA5A5]/50"
+                          />
+                        </div>
+                        {testDataDeletionCount > 1 ? (
+                          <div className="space-y-2">
+                            <Label htmlFor="danger-test-data-bulk-confirm" className="text-[#FFE4E6]">Type {buildBulkTestDataConfirmation(testDataDeletionCount)}</Label>
+                            <Input
+                              id="danger-test-data-bulk-confirm"
+                              value={testDataBulkConfirmation}
+                              onChange={(event) => setTestDataBulkConfirmation(event.target.value)}
+                              placeholder={buildBulkTestDataConfirmation(testDataDeletionCount)}
+                              className="border-[#FCA5A5]/20 bg-[#120F16] text-white placeholder:text-[#FCA5A5]/50"
+                            />
+                          </div>
+                        ) : null}
+                        <Button
+                          className="h-11 w-full bg-[#EF4444] text-white shadow-lg shadow-[#EF4444]/10 hover:bg-[#DC2626]"
+                          disabled={isCleaningTestData || !testDataPreview || testDataDeletionCount === 0 || testDataReason.trim().length < 10 || testDataConfirmation.trim().toUpperCase() !== "DELETE TEST DATA" || (testDataDeletionCount > 1 && testDataBulkConfirmation.trim().toUpperCase() !== buildBulkTestDataConfirmation(testDataDeletionCount))}
+                          onClick={async () => {
+                            setIsCleaningTestData(true);
+                            try {
+                              const result = await invokeAdminConsole<{ deleted: { announcements?: number; bills?: number; businesses?: number; checkoutSessions?: number; content?: number; customers?: number; invoices?: number; payments: number; payouts: number; signupAlerts?: number; users?: number; vendors?: number } }>("testData.delete", { confirmation: "DELETE TEST DATA", bulkConfirmation: testDataBulkConfirmation.trim(), reason: testDataReason.trim(), resource: testDataResource });
+                              const supportingCount = (result.deleted.announcements ?? 0) + (result.deleted.bills ?? 0) + (result.deleted.businesses ?? 0) + (result.deleted.checkoutSessions ?? 0) + (result.deleted.content ?? 0) + (result.deleted.customers ?? 0) + (result.deleted.signupAlerts ?? 0) + (result.deleted.users ?? 0) + (result.deleted.vendors ?? 0);
+                              toast({ title: "Test data deleted", description: `${result.deleted.payments} payment(s), ${result.deleted.invoices ?? 0} invoice(s), ${result.deleted.payouts} payout(s), and ${supportingCount} other record(s) removed.` });
+                              setTestDataConfirmation("");
+                              setTestDataBulkConfirmation("");
+                              setTestDataReason("");
+                              setTestDataPreview(null);
+                            } catch (error) {
+                              toast({ title: "Cleanup failed", description: error instanceof Error ? error.message : "Unable to delete test data.", variant: "destructive" });
+                            } finally {
+                              setIsCleaningTestData(false);
+                            }
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                          {isCleaningTestData ? "Deleting..." : "Delete marked test data"}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <Button
-                    className="mt-3 bg-[#EF4444] text-white hover:bg-[#DC2626]"
-                    disabled={isCleaningTestData || !testDataPreview || testDataReason.trim().length < 10 || testDataConfirmation.trim().toUpperCase() !== "DELETE TEST DATA" || (testDataDeletionCount > 1 && testDataBulkConfirmation.trim().toUpperCase() !== buildBulkTestDataConfirmation(testDataDeletionCount))}
-                    onClick={async () => {
-                      setIsCleaningTestData(true);
-                      try {
-                        const result = await invokeAdminConsole<{ deleted: { payments: number; payouts: number }; blocked?: Array<{ id: string; status: string }> }>("testData.delete", { confirmation: "DELETE TEST DATA", bulkConfirmation: testDataBulkConfirmation.trim(), reason: testDataReason.trim(), resource: testDataResource });
-                        toast({ title: "Test data deleted", description: `${result.deleted.payments} payment(s) and ${result.deleted.payouts} payout(s) removed.` });
-                        setTestDataConfirmation("");
-                        setTestDataBulkConfirmation("");
-                        setTestDataReason("");
-                        setTestDataPreview(null);
-                      } catch (error) {
-                        toast({ title: "Cleanup failed", description: error instanceof Error ? error.message : "Unable to delete test data.", variant: "destructive" });
-                      } finally {
-                        setIsCleaningTestData(false);
-                      }
-                    }}
-                  >
-                    {isCleaningTestData ? "Deleting..." : "Delete Test Data"}
-                  </Button>
                 </div>
               </div>
             )}

@@ -64,7 +64,7 @@ const Footer = () => (
           <div>
             <p className="text-[12px] font-semibold uppercase tracking-[0.04em] text-white/40">Contact</p>
             <div className="mt-4 space-y-3 text-sm text-white/70">
-              <a href="mailto:hello@moniger.net" className="block transition-colors hover:text-white">hello@moniger.net</a>
+              <a href="mailto:admin@moniger.net" className="block transition-colors hover:text-white">admin@moniger.net</a>
               <a href="tel:+2349131701391" className="block transition-colors hover:text-white">+234 913 170 1391</a>
               <a href="https://www.moniger.net" target="_blank" rel="noreferrer" className="block transition-colors hover:text-white">www.moniger.net</a>
             </div>

@@ -16,8 +16,12 @@ type AdminConsoleAction =
   | "payments.list"
   | "payments.export"
   | "payments.reconcile"
+  | "receivables.list"
+  | "receivables.export"
+  | "banks.delete"
   | "testData.preview"
   | "testData.delete"
+  | "testData.receivables.delete"
   | "payouts.list"
   | "payouts.export"
   | "content.list"
@@ -83,6 +87,39 @@ const asNullableNumber = (value: unknown) => {
   return null;
 };
 const asRecord = (value: unknown) => (value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {});
+const isClearlyTestAuthUser = (authUser: AuthUserRecord) => {
+  const userMetadata = asRecord(authUser.user_metadata ?? {});
+  const appMetadata = asRecord(authUser.app_metadata ?? {});
+  const email = asString(authUser.email).toLowerCase();
+  const name = asString(userMetadata.name).toLowerCase();
+
+  return userMetadata.is_test_user === true ||
+    userMetadata.test_user === true ||
+    [asString(userMetadata.environment), asString(appMetadata.environment)].some((value) => ["test", "qa", "sandbox"].includes(value.toLowerCase())) ||
+    email.endsWith("@moniger.test") ||
+    email.endsWith("@example.com") ||
+    email.includes("playwright") ||
+    email.includes("debug") ||
+    email.includes("test-user") ||
+    name.includes("playwright") ||
+    name.includes("debug");
+};
+const isPaystackTestEnvironment = () => Deno.env.get("PAYSTACK_SECRET_KEY")?.trim().startsWith("sk_test_") === true;
+const markInferredPaystackTestData = (row: Record<string, unknown>) => {
+  if (isMarkedTestData(row) || !isPaystackTestEnvironment() || asString(row.gateway).toLowerCase() !== "paystack") {
+    return row;
+  }
+
+  return {
+    ...row,
+    is_test_data: true,
+    metadata: {
+      ...asRecord(row.metadata),
+      environment: "test",
+      inferred_test_data: true,
+    },
+  };
+};
 const todayDate = () => new Date().toISOString().slice(0, 10);
 const monthStamp = (value: string | null | undefined) => (value ? value.slice(0, 7) : "");
 const toDateOnly = (...values: Array<string | null | undefined>) => {
@@ -425,6 +462,37 @@ const buildAdminPayoutRow = ({
     vendorName: asNullableString((vendor as Record<string, unknown> | null | undefined)?.business_name ?? null),
   };
 };
+
+const buildAdminReceivableRow = ({
+  businessNameById,
+  customer,
+  invoice,
+  payment,
+}: {
+  businessNameById: Map<string, string>;
+  customer: Record<string, unknown> | null;
+  invoice: Record<string, unknown>;
+  payment: Record<string, unknown> | null;
+}) => ({
+  amountPaid: asNumber(invoice.amount_paid),
+  balanceDue: asNumber(invoice.balance_due),
+  businessId: asString(invoice.business_id),
+  businessName: businessNameById.get(asString(invoice.business_id)) ?? "Workspace",
+  currency: asString(invoice.currency) || "NGN",
+  customerEmail: asNullableString(customer?.email),
+  customerName: asNullableString(customer?.name) ?? "Unknown customer",
+  dueDate: asNullableString(invoice.due_date),
+  invoiceId: asString(invoice.id),
+  invoiceNumber: asString(invoice.invoice_number),
+  isTestData: payment ? isMarkedTestData(payment) : false,
+  issueDate: asString(invoice.issue_date),
+  paidAt: asNullableString(invoice.paid_at),
+  paymentGateway: asNullableString(payment?.gateway),
+  paymentReference: asNullableString(payment?.payment_reference),
+  paymentStatus: asNullableString(payment?.status),
+  status: asString(invoice.status),
+  totalAmount: asNumber(invoice.total_amount),
+});
 
 const getAppBaseUrl = (_request: Request) => {
   const configuredUrl = Deno.env.get("APP_BASE_URL")?.trim();
@@ -1042,12 +1110,7 @@ const buildUserRows = async (adminClient: ReturnType<typeof createClient>, searc
     const authFactors = Array.isArray((authUser.app_metadata ?? {}).providers)
       ? (authUser.app_metadata?.providers as unknown[])
       : [];
-    const userMetadata = asRecord(authUser.user_metadata ?? {});
-    const appMetadata = asRecord(authUser.app_metadata ?? {});
-    const isTestUser = userMetadata.is_test_user === true || userMetadata.test_user === true || [
-      asString(userMetadata.environment),
-      asString(appMetadata.environment),
-    ].some((value) => ["test", "qa", "sandbox"].includes(value.toLowerCase()));
+    const isTestUser = isClearlyTestAuthUser(authUser);
 
     return {
       email: authUser.email ?? "Unknown",
@@ -1987,6 +2050,62 @@ Deno.serve(async (request) => {
         return json({ ok: true });
       }
 
+      case "receivables.list":
+      case "receivables.export": {
+        const businessRows = await buildBusinessRows(adminClient);
+        const [invoicesResponse, customersResponse, paymentsResponse] = await Promise.all([
+          adminClient.from("invoices").select("id, business_id, customer_id, invoice_number, issue_date, due_date, status, total_amount, amount_paid, balance_due, currency, paid_at, created_at").order("created_at", { ascending: false }),
+          adminClient.from("customers").select("id, name, email"),
+          adminClient.from("payments").select("id, invoice_id, payment_reference, payment_type, status, gateway, metadata, is_test_data, created_at, paid_on").eq("payment_type", "receivable").order("created_at", { ascending: false }),
+        ]);
+        if (invoicesResponse.error) throw invoicesResponse.error;
+        if (customersResponse.error) throw customersResponse.error;
+        if (paymentsResponse.error) throw paymentsResponse.error;
+
+        const businessNameById = new Map(businessRows.map((row) => [row.businessId, row.businessName]));
+        const customersById = new Map((customersResponse.data ?? []).map((row) => [asString(row.id), row as Record<string, unknown>]));
+        const paymentByInvoiceId = new Map<string, Record<string, unknown>>();
+        for (const payment of paymentsResponse.data ?? []) {
+          const invoiceId = asString(payment.invoice_id);
+          if (invoiceId && !paymentByInvoiceId.has(invoiceId)) {
+            paymentByInvoiceId.set(invoiceId, payment as Record<string, unknown>);
+          }
+        }
+
+        const search = normalizeSearch(payload.search);
+        const statusFilter = normalizeSearch(payload.status);
+        const dataMode = normalizeSearch(payload.dataMode);
+        const rows = (invoicesResponse.data ?? [])
+          .map((invoice) => buildAdminReceivableRow({
+            businessNameById,
+            customer: customersById.get(asString(invoice.customer_id)) ?? null,
+            invoice: invoice as Record<string, unknown>,
+            payment: paymentByInvoiceId.get(asString(invoice.id)) ?? null,
+          }))
+          .filter((row) => {
+            if (search && !`${row.invoiceNumber} ${row.businessName} ${row.customerName} ${row.paymentReference ?? ""}`.toLowerCase().includes(search)) return false;
+            if (statusFilter && statusFilter !== "all" && row.status !== statusFilter) return false;
+            if (dataMode === "test" && !row.isTestData) return false;
+            if (dataMode === "live" && row.isTestData) return false;
+            return true;
+          });
+
+        if (requestBody.action === "receivables.export") {
+          await insertAdminAuditLog({
+            action: "admin_receivables_exported",
+            actorUserId: user.id,
+            adminClient,
+            businessId: null,
+            detail: { row_count: rows.length },
+            entityId: null,
+            entityType: "receivable_export",
+            summary: "Receivables exported",
+          });
+        }
+
+        return json({ rows, total: rows.length });
+      }
+
       case "payments.list":
       case "payments.export": {
         const businessRows = await buildBusinessRows(adminClient);
@@ -1998,7 +2117,7 @@ Deno.serve(async (request) => {
         if (paymentsResponse.error) throw paymentsResponse.error;
 
         const businessNameById = new Map(businessRows.map((row) => [row.businessId, row.businessName]));
-        const payments = (paymentsResponse.data ?? []).map((row) => row as Record<string, unknown>);
+        const payments = (paymentsResponse.data ?? []).map((row) => markInferredPaystackTestData(row as Record<string, unknown>));
         const { billsById, invoicesById } = await loadLinkedPaymentContext(adminClient, payments);
         const rows = payments.map((payment) =>
           buildAdminPaymentRow({
@@ -2199,6 +2318,45 @@ Deno.serve(async (request) => {
         });
       }
 
+      case "banks.delete": {
+        if (adminAccess.role !== "super_admin") {
+          return json({ error: "Only super admins can delete banks." }, 403);
+        }
+
+        const bankId = asString(payload.bankId);
+        if (!bankId) return json({ error: "A bank is required." }, 400);
+
+        const bankResponse = await adminClient.from("banks").select("id, name").eq("id", bankId).maybeSingle();
+        if (bankResponse.error) throw bankResponse.error;
+        if (!bankResponse.data) return json({ error: "Bank not found." }, 404);
+
+        const [vendorsResponse, payoutAccountsResponse, payoutsResponse] = await Promise.all([
+          adminClient.from("vendors").select("id", { count: "exact", head: true }).eq("bank_id", bankId),
+          adminClient.from("business_payout_accounts").select("business_id", { count: "exact", head: true }).eq("bank_id", bankId),
+          adminClient.from("workspace_payouts").select("id", { count: "exact", head: true }).eq("vendor_bank_id", bankId),
+        ]);
+        if (vendorsResponse.error) throw vendorsResponse.error;
+        if (payoutAccountsResponse.error) throw payoutAccountsResponse.error;
+        if (payoutsResponse.error) throw payoutsResponse.error;
+
+        const referenceCount = (vendorsResponse.count ?? 0) + (payoutAccountsResponse.count ?? 0) + (payoutsResponse.count ?? 0);
+        const deleteResponse = await adminClient.from("banks").delete().eq("id", bankId);
+        if (deleteResponse.error) throw deleteResponse.error;
+
+        await insertAdminAuditLog({
+          action: "admin_bank_deleted",
+          actorUserId: user.id,
+          adminClient,
+          businessId: null,
+          detail: { bank_id: bankId, bank_name: bankResponse.data.name, cleared_reference_count: referenceCount },
+          entityId: bankId,
+          entityType: "bank",
+          summary: `Bank ${bankResponse.data.name} removed`,
+        });
+
+        return json({ clearedReferenceCount: referenceCount, deleted: true, bankName: bankResponse.data.name });
+      }
+
       case "testData.preview":
       case "testData.delete": {
         if (!canManageTestData(adminAccess.role)) {
@@ -2206,21 +2364,137 @@ Deno.serve(async (request) => {
         }
 
         const resource = asString(payload.resource);
-        if (resource !== "payments" && resource !== "payouts" && resource !== "all") {
-          return json({ error: "Choose payments, payouts, or all test data." }, 400);
+        if (!["payments", "payouts", "other", "all"].includes(resource)) {
+          return json({ error: "Choose payments, payouts, other, or all test data." }, 400);
         }
 
-        const [paymentsResponse, payoutsResponse] = await Promise.all([
-          resource === "payouts" ? Promise.resolve({ data: [], error: null }) : adminClient.from("payments").select("id, payment_reference, status, amount, created_at, is_test_data, metadata, gateway, invoice_id, bill_id").limit(501),
-          resource === "payments" ? Promise.resolve({ data: [], error: null }) : adminClient.from("workspace_payouts").select("id, status, amount, created_at, is_test_data, provider_metadata").limit(501),
+        const includePayments = resource !== "payouts" && resource !== "other";
+        const includePayouts = resource !== "payments" && resource !== "other";
+        const includeOther = resource === "other" || resource === "all";
+        const [paymentsResponse, payoutsResponse, customersResponse, vendorsResponse, invoicesResponse, billsResponse, checkoutSessionsResponse, contentResponse, announcementsResponse, signupAlertsResponse] = await Promise.all([
+          includePayments ? adminClient.from("payments").select("id, payment_reference, status, amount, created_at, is_test_data, metadata, gateway, invoice_id, bill_id").limit(501) : Promise.resolve({ data: [], error: null }),
+          includePayouts ? adminClient.from("workspace_payouts").select("id, status, amount, created_at, is_test_data, provider_metadata, bill_id, vendor_id").limit(501) : Promise.resolve({ data: [], error: null }),
+          includeOther ? adminClient.from("customers").select("id, name, created_at, is_test_data").limit(501) : Promise.resolve({ data: [], error: null }),
+          includeOther ? adminClient.from("vendors").select("id, business_name, created_at, is_test_data").limit(501) : Promise.resolve({ data: [], error: null }),
+          includeOther ? adminClient.from("invoices").select("id, invoice_number, created_at, is_test_data").limit(501) : Promise.resolve({ data: [], error: null }),
+          includeOther ? adminClient.from("bills").select("id, bill_number, created_at, is_test_data").limit(501) : Promise.resolve({ data: [], error: null }),
+          includeOther ? adminClient.from("subscription_checkout_sessions").select("reference, status, created_at, is_test_data").limit(501) : Promise.resolve({ data: [], error: null }),
+          includeOther ? adminClient.from("content_items").select("id, title, created_at, is_test_data").limit(501) : Promise.resolve({ data: [], error: null }),
+          includeOther ? adminClient.from("announcements").select("id, title, created_at, is_test_data").limit(501) : Promise.resolve({ data: [], error: null }),
+          includeOther ? adminClient.from("signup_alert_events").select("id, email, environment, created_at").in("environment", ["test", "sandbox"]).limit(501) : Promise.resolve({ data: [], error: null }),
         ]);
-        if (paymentsResponse.error) throw paymentsResponse.error;
-        if (payoutsResponse.error) throw payoutsResponse.error;
+        for (const response of [paymentsResponse, payoutsResponse, customersResponse, vendorsResponse, invoicesResponse, billsResponse, checkoutSessionsResponse, contentResponse, announcementsResponse, signupAlertsResponse]) {
+          if (response.error) throw response.error;
+        }
 
-        const markedPaymentRows = (paymentsResponse.data ?? []).map((row) => asRecord(row)).filter(isMarkedTestData);
+        const requestedRecordId = asString(payload.recordId);
+        const requestedRecordIds = Array.isArray(payload.recordIds)
+          ? payload.recordIds.map((value) => asString(value)).filter(Boolean)
+          : [];
+        const matchesRequestedRecord = (row: Record<string, unknown>) =>
+          (!requestedRecordId && requestedRecordIds.length === 0) ||
+          asString(row.id) === requestedRecordId ||
+          asString(row.reference) === requestedRecordId ||
+          requestedRecordIds.includes(asString(row.id));
+        const markedPaymentRows = (paymentsResponse.data ?? [])
+          .map((row) => markInferredPaystackTestData(asRecord(row)))
+          .filter(matchesRequestedRecord)
+          .filter(isMarkedTestData);
         const paymentRows = markedPaymentRows.filter((row) => isSafeToDeletePayment(row) && !asString(row.invoice_id) && !asString(row.bill_id));
+        const candidateReceivableInvoiceIds = [...new Set(markedPaymentRows.map((row) => asString(row.invoice_id)).filter(Boolean))];
+        const allReceivablePaymentsResponse = resource === "all" && candidateReceivableInvoiceIds.length > 0
+          ? await adminClient.from("payments").select("id, invoice_id, gateway, metadata, is_test_data").in("invoice_id", candidateReceivableInvoiceIds)
+          : { data: [], error: null };
+        if (allReceivablePaymentsResponse.error) throw allReceivablePaymentsResponse.error;
+        const allReceivablePayments = allReceivablePaymentsResponse.data ?? [];
+        const safeReceivableInvoiceIds = new Set(candidateReceivableInvoiceIds.filter((invoiceId) => {
+          const linkedPayments = allReceivablePayments.filter((payment) => asString(payment.invoice_id) === invoiceId);
+          return linkedPayments.length > 0 && linkedPayments.every((payment) => isSafeToDeletePayment(asRecord(payment)));
+        }));
+        const linkedReceivableRows = resource === "all"
+          ? markedPaymentRows.filter((row) => isSafeToDeletePayment(row) && safeReceivableInvoiceIds.has(asString(row.invoice_id)))
+          : [];
         const blockedPaymentRows = markedPaymentRows.filter((row) => !paymentRows.includes(row));
-        const payoutRows = (payoutsResponse.data ?? []).map((row) => asRecord(row)).filter(isMarkedTestData);
+        const payoutRows = (payoutsResponse.data ?? [])
+          .map((row) => asRecord(row))
+          .filter(matchesRequestedRecord)
+          .filter(isMarkedTestData);
+        const markedCustomers = (customersResponse.data ?? []).map((row) => asRecord(row)).filter(matchesRequestedRecord).filter(isMarkedTestData);
+        const markedVendors = (vendorsResponse.data ?? []).map((row) => asRecord(row)).filter(matchesRequestedRecord).filter(isMarkedTestData);
+        const markedInvoices = (invoicesResponse.data ?? []).map((row) => asRecord(row)).filter(matchesRequestedRecord).filter(isMarkedTestData);
+        const markedBills = (billsResponse.data ?? []).map((row) => asRecord(row)).filter(matchesRequestedRecord).filter(isMarkedTestData);
+        const markedCheckoutSessions = (checkoutSessionsResponse.data ?? []).map((row) => asRecord(row)).filter(matchesRequestedRecord).filter(isMarkedTestData);
+        const markedContent = (contentResponse.data ?? []).map((row) => asRecord(row)).filter(matchesRequestedRecord).filter(isMarkedTestData);
+        const markedAnnouncements = (announcementsResponse.data ?? []).map((row) => asRecord(row)).filter(matchesRequestedRecord).filter(isMarkedTestData);
+        const markedSignupAlerts = (signupAlertsResponse.data ?? []).map((row) => asRecord(row)).filter(matchesRequestedRecord);
+        const [authUsers, ownedBusinessesResponse] = includeOther
+          ? await Promise.all([
+            listAllAuthUsers(adminClient),
+            adminClient.from("businesses").select("id, owner_user_id, is_test_data"),
+          ])
+          : [[], { data: [], error: null }];
+        if (ownedBusinessesResponse.error) throw ownedBusinessesResponse.error;
+        const testAuthUsers = (authUsers as AuthUserRecord[]).filter((authUser) => {
+          return authUser.id !== user.id && isClearlyTestAuthUser(authUser);
+        });
+        const ownedBusinessesByUserId = new Map<string, Array<Record<string, unknown>>>();
+        for (const business of ownedBusinessesResponse.data ?? []) {
+          const ownerUserId = asString(business.owner_user_id);
+          const existing = ownedBusinessesByUserId.get(ownerUserId) ?? [];
+          existing.push(asRecord(business));
+          ownedBusinessesByUserId.set(ownerUserId, existing);
+        }
+        const deletableTestUsers = testAuthUsers.filter((authUser) => {
+          const ownedBusinesses = ownedBusinessesByUserId.get(authUser.id) ?? [];
+          return ownedBusinesses.every((business) => business.is_test_data === true);
+        });
+        const deletableTestBusinessIds = [...new Set(deletableTestUsers.flatMap((authUser) => (ownedBusinessesByUserId.get(authUser.id) ?? []).map((business) => asString(business.id)).filter(Boolean)))];
+
+        const markedInvoiceIds = new Set(markedInvoices.map((row) => asString(row.id)).filter(Boolean));
+        const markedBillIds = new Set(markedBills.map((row) => asString(row.id)).filter(Boolean));
+        const invoicePaymentRowsResponse = markedInvoices.length > 0
+          ? await adminClient.from("payments").select("id, invoice_id, gateway, metadata, is_test_data").in("invoice_id", [...markedInvoiceIds])
+          : { data: [], error: null };
+        const billPaymentRowsResponse = markedBills.length > 0
+          ? await adminClient.from("payments").select("id, bill_id, gateway, metadata, is_test_data").in("bill_id", [...markedBillIds])
+          : { data: [], error: null };
+        const billPayoutRowsResponse = markedBills.length > 0
+          ? await adminClient.from("workspace_payouts").select("id, bill_id, status, is_test_data, provider_metadata").in("bill_id", [...markedBillIds])
+          : { data: [], error: null };
+        if (invoicePaymentRowsResponse.error) throw invoicePaymentRowsResponse.error;
+        if (billPaymentRowsResponse.error) throw billPaymentRowsResponse.error;
+        if (billPayoutRowsResponse.error) throw billPayoutRowsResponse.error;
+        const invoicePaymentRows = invoicePaymentRowsResponse.data ?? [];
+        const billPaymentRows = billPaymentRowsResponse.data ?? [];
+        const billPayoutRows = billPayoutRowsResponse.data ?? [];
+        const deletableInvoices = markedInvoices.filter((invoice) => {
+          const linked = invoicePaymentRows.filter((payment) => asString(payment.invoice_id) === asString(invoice.id));
+          return linked.every((payment) => isSafeToDeletePayment(asRecord(payment)));
+        });
+        const deletableBills = markedBills.filter((bill) => {
+          const payments = billPaymentRows.filter((payment) => asString(payment.bill_id) === asString(bill.id));
+          const payouts = billPayoutRows.filter((payout) => asString(payout.bill_id) === asString(bill.id));
+          return payments.every((payment) => isSafeToDeletePayment(asRecord(payment))) && payouts.every((payout) => isMarkedTestData(asRecord(payout)) && isSafeToDeletePayout(payout.status));
+        });
+        const invoiceIdsForCleanup = deletableInvoices.map((row) => asString(row.id)).filter(Boolean);
+        const billIdsForCleanup = deletableBills.map((row) => asString(row.id)).filter(Boolean);
+        const paymentIdsForCleanup = [
+          ...invoicePaymentRows.filter((row) => invoiceIdsForCleanup.includes(asString(row.invoice_id))).map((row) => asString(row.id)),
+          ...billPaymentRows.filter((row) => billIdsForCleanup.includes(asString(row.bill_id))).map((row) => asString(row.id)),
+        ].filter(Boolean);
+        const payoutIdsForCleanup = billPayoutRows.filter((row) => billIdsForCleanup.includes(asString(row.bill_id))).map((row) => asString(row.id)).filter(Boolean);
+        const customerIds = markedCustomers.map((row) => asString(row.id)).filter(Boolean);
+        const vendorIds = markedVendors.map((row) => asString(row.id)).filter(Boolean);
+        const customersWithInvoicesResponse = customerIds.length > 0 ? await adminClient.from("invoices").select("customer_id").in("customer_id", customerIds) : { data: [], error: null };
+        const vendorsWithBillsResponse = vendorIds.length > 0 ? await adminClient.from("bills").select("vendor_id").in("vendor_id", vendorIds) : { data: [], error: null };
+        if (customersWithInvoicesResponse.error) throw customersWithInvoicesResponse.error;
+        if (vendorsWithBillsResponse.error) throw vendorsWithBillsResponse.error;
+        const customersWithInvoices = new Set(customersWithInvoicesResponse.data?.map((row) => asString(row.customer_id)) ?? []);
+        const vendorsWithBills = new Set(vendorsWithBillsResponse.data?.map((row) => asString(row.vendor_id)) ?? []);
+        const deletableCustomers = markedCustomers.filter((row) => !customersWithInvoices.has(asString(row.id)));
+        const deletableVendors = markedVendors.filter((row) => !vendorsWithBills.has(asString(row.id)));
+        const deletableCheckoutSessions = markedCheckoutSessions.filter((row) => ["initialized", "failed", "cancelled", "expired"].includes(asString(row.status)));
+        const blockedOtherCount = markedCustomers.length - deletableCustomers.length + markedVendors.length - deletableVendors.length + markedInvoices.length - deletableInvoices.length + markedBills.length - deletableBills.length + markedCheckoutSessions.filter((row) => !deletableCheckoutSessions.includes(row)).length + testAuthUsers.length - deletableTestUsers.length;
         try {
           validateTestDataDeletionBatch(paymentRows.length);
           validateTestDataDeletionBatch(payoutRows.length);
@@ -2229,12 +2503,49 @@ Deno.serve(async (request) => {
         }
         const deletablePayoutRows = payoutRows.filter((row) => isSafeToDeletePayout(row.status));
         const blockedPayoutRows = payoutRows.filter((row) => !deletablePayoutRows.includes(row));
+        const invoiceIds = Array.from(new Set(linkedReceivableRows.map((row) => asString(row.invoice_id)).filter(Boolean)));
+        const confirmationCount = paymentRows.length + linkedReceivableRows.length + deletablePayoutRows.length + invoiceIds.length;
+        const paymentIds = [...new Set([
+          ...paymentRows,
+          ...linkedReceivableRows,
+          ...invoicePaymentRows.filter((row) => invoiceIdsForCleanup.includes(asString(row.invoice_id))),
+          ...billPaymentRows.filter((row) => billIdsForCleanup.includes(asString(row.bill_id))),
+        ].map((row) => asString(row.id)).filter(Boolean))];
+        const payoutIds = [...new Set([
+          ...deletablePayoutRows,
+          ...billPayoutRows.filter((row) => billIdsForCleanup.includes(asString(row.bill_id))),
+        ].map((row) => asString(row.id)).filter(Boolean))];
+        const cleanupInvoiceIds = [...new Set([...invoiceIds, ...invoiceIdsForCleanup])];
+        const cleanupBillIds = billIdsForCleanup;
+        const cleanupCustomerIds = deletableCustomers.map((row) => asString(row.id)).filter(Boolean);
+        const cleanupVendorIds = deletableVendors.map((row) => asString(row.id)).filter(Boolean);
+        const cleanupCheckoutReferences = deletableCheckoutSessions.map((row) => asString(row.reference)).filter(Boolean);
+        const cleanupContentIds = markedContent.map((row) => asString(row.id)).filter(Boolean);
+        const cleanupAnnouncementIds = markedAnnouncements.map((row) => asString(row.id)).filter(Boolean);
+        const cleanupSignupAlertIds = markedSignupAlerts.map((row) => asString(row.id)).filter(Boolean);
+        const cleanupBusinessIds = deletableTestBusinessIds;
+        const cleanupUserIds = deletableTestUsers.map((authUser) => authUser.id);
+        const totalDeletionCount = paymentIds.length + payoutIds.length + cleanupInvoiceIds.length + cleanupBillIds.length + cleanupCustomerIds.length + cleanupVendorIds.length + cleanupCheckoutReferences.length + cleanupContentIds.length + cleanupAnnouncementIds.length + cleanupSignupAlertIds.length + cleanupBusinessIds.length + cleanupUserIds.length;
 
         if (requestBody.action === "testData.preview") {
           return json({
             payments: markedPaymentRows,
             payouts: payoutRows,
-            deletable: { payments: paymentRows.length, payouts: deletablePayoutRows.length },
+            deletable: { payments: paymentRows.length, payouts: deletablePayoutRows.length, receivables: linkedReceivableRows.length },
+            confirmationCount: totalDeletionCount,
+            other: {
+              announcements: markedAnnouncements.length,
+              bills: deletableBills.length,
+              checkoutSessions: deletableCheckoutSessions.length,
+              content: markedContent.length,
+              customers: deletableCustomers.length,
+              invoices: deletableInvoices.length,
+              signupAlerts: markedSignupAlerts.length,
+              vendors: deletableVendors.length,
+              businesses: cleanupBusinessIds.length,
+              users: cleanupUserIds.length,
+              blocked: blockedOtherCount,
+            },
             blocked: {
               payments: blockedPaymentRows.map((row) => ({
                 id: asString(row.id),
@@ -2254,17 +2565,26 @@ Deno.serve(async (request) => {
           return json({ error: "Provide a cleanup reason with at least 10 characters." }, 400);
         }
 
-        const paymentIds = paymentRows.map((row) => asString(row.id)).filter(Boolean);
-        const payoutIds = deletablePayoutRows.map((row) => asString(row.id)).filter(Boolean);
-        const deletionCount = paymentIds.length + payoutIds.length;
-        if (deletionCount > 1 && asString(payload.bulkConfirmation).trim().toUpperCase() !== buildBulkTestDataConfirmation(deletionCount)) {
-          return json({ error: `Type ${buildBulkTestDataConfirmation(deletionCount)} to confirm bulk cleanup.` }, 400);
+        if (totalDeletionCount > 1 && asString(payload.bulkConfirmation).trim().toUpperCase() !== buildBulkTestDataConfirmation(totalDeletionCount)) {
+          return json({ error: `Type ${buildBulkTestDataConfirmation(totalDeletionCount)} to confirm bulk cleanup.` }, 400);
         }
         const manifestResponse = await adminClient.from("admin_test_data_deletion_manifests").insert({
           actor_user_id: user.id,
           blocked_payouts: blockedPayoutRows.map((row) => ({ id: asString(row.id), status: asString(row.status) })),
           payment_ids: paymentIds,
           payout_ids: payoutIds,
+          deleted_records: {
+            announcements: cleanupAnnouncementIds,
+            bills: cleanupBillIds,
+            businesses: cleanupBusinessIds,
+            checkout_sessions: cleanupCheckoutReferences,
+            content: cleanupContentIds,
+            customers: cleanupCustomerIds,
+            invoices: cleanupInvoiceIds,
+            signup_alerts: cleanupSignupAlertIds,
+            users: cleanupUserIds,
+            vendors: cleanupVendorIds,
+          },
           reason,
           resource,
         }).select("id").single();
@@ -2285,6 +2605,49 @@ Deno.serve(async (request) => {
             throw response.error;
           }
         }
+        if (cleanupInvoiceIds.length > 0) {
+          const response = await adminClient.from("invoices").delete().in("id", cleanupInvoiceIds);
+          if (response.error) {
+            await adminClient.from("admin_test_data_deletion_manifests").update({ status: "failed", failure_reason: response.error.message }).eq("id", manifestId);
+            throw response.error;
+          }
+        }
+        if (cleanupBillIds.length > 0) {
+          const response = await adminClient.from("bills").delete().in("id", cleanupBillIds);
+          if (response.error) throw response.error;
+        }
+        if (cleanupCustomerIds.length > 0) {
+          const response = await adminClient.from("customers").delete().in("id", cleanupCustomerIds);
+          if (response.error) throw response.error;
+        }
+        if (cleanupVendorIds.length > 0) {
+          const response = await adminClient.from("vendors").delete().in("id", cleanupVendorIds);
+          if (response.error) throw response.error;
+        }
+        if (cleanupCheckoutReferences.length > 0) {
+          const response = await adminClient.from("subscription_checkout_sessions").delete().in("reference", cleanupCheckoutReferences);
+          if (response.error) throw response.error;
+        }
+        if (cleanupContentIds.length > 0) {
+          const response = await adminClient.from("content_items").delete().in("id", cleanupContentIds);
+          if (response.error) throw response.error;
+        }
+        if (cleanupAnnouncementIds.length > 0) {
+          const response = await adminClient.from("announcements").delete().in("id", cleanupAnnouncementIds);
+          if (response.error) throw response.error;
+        }
+        if (cleanupSignupAlertIds.length > 0) {
+          const response = await adminClient.from("signup_alert_events").delete().in("id", cleanupSignupAlertIds);
+          if (response.error) throw response.error;
+        }
+        if (cleanupBusinessIds.length > 0) {
+          const response = await adminClient.from("businesses").delete().in("id", cleanupBusinessIds);
+          if (response.error) throw response.error;
+        }
+        for (const cleanupUserId of cleanupUserIds) {
+          const response = await adminClient.auth.admin.deleteUser(cleanupUserId);
+          if (response.error) throw response.error;
+        }
 
         const manifestUpdate = await adminClient.from("admin_test_data_deletion_manifests").update({
           completed_at: new Date().toISOString(),
@@ -2298,7 +2661,9 @@ Deno.serve(async (request) => {
         ]);
         if (remainingPayments.error) throw remainingPayments.error;
         if (remainingPayouts.error) throw remainingPayouts.error;
-        if ((remainingPayments.data?.length ?? 0) > 0 || (remainingPayouts.data?.length ?? 0) > 0) {
+        const remainingInvoices = cleanupInvoiceIds.length > 0 ? await adminClient.from("invoices").select("id").in("id", cleanupInvoiceIds) : { data: [], error: null };
+        if (remainingInvoices.error) throw remainingInvoices.error;
+        if ((remainingPayments.data?.length ?? 0) > 0 || (remainingPayouts.data?.length ?? 0) > 0 || (remainingInvoices.data?.length ?? 0) > 0) {
           await adminClient.from("admin_test_data_deletion_manifests").update({
             failure_reason: "Post-delete reconciliation found records that remain.",
             status: "failed",
@@ -2311,7 +2676,7 @@ Deno.serve(async (request) => {
           actorUserId: user.id,
           adminClient,
           businessId: null,
-          detail: { manifest_id: manifestId, payment_count: paymentIds.length, payout_count: payoutIds.length, blocked_payout_count: blockedPayoutRows.length, reason, resource },
+          detail: { deleted_records: { announcements: cleanupAnnouncementIds.length, bills: cleanupBillIds.length, businesses: cleanupBusinessIds.length, checkout_sessions: cleanupCheckoutReferences.length, content: cleanupContentIds.length, customers: cleanupCustomerIds.length, invoices: cleanupInvoiceIds.length, payments: paymentIds.length, payouts: payoutIds.length, signup_alerts: cleanupSignupAlertIds.length, users: cleanupUserIds.length, vendors: cleanupVendorIds.length }, manifest_id: manifestId, blocked_payout_count: blockedPayoutRows.length, reason, resource },
           entityId: null,
           entityType: "test_data_cleanup",
           summary: "Marked test data deleted",
@@ -2319,7 +2684,7 @@ Deno.serve(async (request) => {
 
         return json({
           ok: true,
-          deleted: { payments: paymentIds.length, payouts: payoutIds.length },
+          deleted: { announcements: cleanupAnnouncementIds.length, bills: cleanupBillIds.length, businesses: cleanupBusinessIds.length, checkoutSessions: cleanupCheckoutReferences.length, content: cleanupContentIds.length, customers: cleanupCustomerIds.length, invoices: cleanupInvoiceIds.length, payments: paymentIds.length, payouts: payoutIds.length, signupAlerts: cleanupSignupAlertIds.length, users: cleanupUserIds.length, vendors: cleanupVendorIds.length },
           blocked: {
             payments: blockedPaymentRows.map((row) => ({
               id: asString(row.id),
@@ -2328,6 +2693,77 @@ Deno.serve(async (request) => {
             payouts: blockedPayoutRows.map((row) => ({ id: asString(row.id), status: asString(row.status) })),
           },
         });
+      }
+
+      case "testData.receivables.delete": {
+        if (!canManageTestData(adminAccess.role)) {
+          return json({ error: "Only super admins can manage test data." }, 403);
+        }
+
+        const recordIds = Array.isArray(payload.recordIds)
+          ? payload.recordIds.map((value) => asString(value)).filter(Boolean)
+          : [];
+        if (recordIds.length === 0) return json({ error: "Select at least one receivable." }, 400);
+        const reason = asString(payload.reason).trim();
+        if (reason.length < 10) return json({ error: "Provide a cleanup reason with at least 10 characters." }, 400);
+        if (recordIds.length > 1 && asString(payload.bulkConfirmation).trim().toUpperCase() !== buildBulkTestDataConfirmation(recordIds.length)) {
+          return json({ error: `Type ${buildBulkTestDataConfirmation(recordIds.length)} to confirm bulk cleanup.` }, 400);
+        }
+
+        const invoicesResponse = await adminClient.from("invoices").select("id, invoice_number, business_id").in("id", recordIds);
+        if (invoicesResponse.error) throw invoicesResponse.error;
+        const invoiceIds = (invoicesResponse.data ?? []).map((row) => asString(row.id)).filter(Boolean);
+        const paymentsResponse = invoiceIds.length > 0
+          ? await adminClient.from("payments").select("id, invoice_id, payment_reference, is_test_data, metadata, gateway, status").in("invoice_id", invoiceIds).eq("payment_type", "receivable")
+          : { data: [], error: null };
+        if (paymentsResponse.error) throw paymentsResponse.error;
+
+        const paymentsByInvoice = new Map<string, Array<Record<string, unknown>>>();
+        for (const row of paymentsResponse.data ?? []) {
+          const invoiceId = asString(row.invoice_id);
+          const existing = paymentsByInvoice.get(invoiceId) ?? [];
+          existing.push(row as Record<string, unknown>);
+          paymentsByInvoice.set(invoiceId, existing);
+        }
+        const eligibleInvoices = (invoicesResponse.data ?? []).filter((invoice) => {
+          const linkedPayments = paymentsByInvoice.get(asString(invoice.id)) ?? [];
+          return linkedPayments.length > 0 && linkedPayments.every((payment) => isSafeToDeletePayment(payment));
+        });
+        if (eligibleInvoices.length !== recordIds.length) {
+          return json({ error: "Only receivables linked exclusively to marked test payments can be deleted." }, 409);
+        }
+
+        const eligibleInvoiceIds = eligibleInvoices.map((invoice) => asString(invoice.id));
+        const paymentIds = eligibleInvoiceIds.flatMap((invoiceId) => (paymentsByInvoice.get(invoiceId) ?? []).map((payment) => asString(payment.id)).filter(Boolean));
+        const manifestResponse = await adminClient.from("admin_test_data_deletion_manifests").insert({
+          actor_user_id: user.id,
+          blocked_payouts: [],
+          payment_ids: paymentIds,
+          payout_ids: [],
+          reason,
+          resource: "receivables",
+        }).select("id").single();
+        if (manifestResponse.error) throw manifestResponse.error;
+        const manifestId = asString(manifestResponse.data?.id);
+
+        if (paymentIds.length > 0) {
+          const paymentDelete = await adminClient.from("payments").delete().in("id", paymentIds);
+          if (paymentDelete.error) throw paymentDelete.error;
+        }
+        const invoiceDelete = await adminClient.from("invoices").delete().in("id", eligibleInvoiceIds);
+        if (invoiceDelete.error) throw invoiceDelete.error;
+        await adminClient.from("admin_test_data_deletion_manifests").update({ completed_at: new Date().toISOString(), status: "completed" }).eq("id", manifestId);
+        await insertAdminAuditLog({
+          action: "admin_test_data_deleted",
+          actorUserId: user.id,
+          adminClient,
+          businessId: null,
+          detail: { invoice_count: eligibleInvoiceIds.length, manifest_id: manifestId, payment_count: paymentIds.length, reason, resource: "receivables" },
+          entityId: null,
+          entityType: "test_data_cleanup",
+          summary: "Marked test receivables deleted",
+        });
+        return json({ deleted: { invoices: eligibleInvoiceIds.length, payments: paymentIds.length }, ok: true });
       }
 
       case "payouts.list":

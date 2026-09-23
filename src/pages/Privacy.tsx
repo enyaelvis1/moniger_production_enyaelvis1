@@ -18,7 +18,7 @@ const sections = [
   { title: "Data Retention", content: "We retain your data for as long as your account is active. Upon account deletion, we remove your personal data within 30 days, except where retention is required by Nigerian financial regulations." },
   { title: "Cookies", content: "We use essential cookies for authentication and session management. We do not use third-party tracking cookies. You can manage cookie preferences in your browser settings." },
   { title: "Changes to This Policy", content: "We may update this policy from time to time. We will notify you of any material changes via email or in-app notification." },
-  { title: "Contact Us", content: "If you have questions about this privacy policy, contact us at hello@moniger.net or +234 913 170 1391." },
+  { title: "Contact Us", content: "If you have questions about this privacy policy, contact us at admin@moniger.net or +234 913 170 1391." },
 ];
 
 const PrivacyPage = () => (

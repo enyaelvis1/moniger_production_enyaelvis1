@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { format, formatDistanceToNowStrict } from "date-fns";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/app/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -215,11 +215,11 @@ export const AdminGhostButton = ({
 
 export const AdminEmpty = ({
   description,
-  icon,
+  icon = Inbox,
   title,
 }: {
   description: string;
-  icon: Parameters<typeof EmptyState>[0]["icon"];
+  icon?: Parameters<typeof EmptyState>[0]["icon"];
   title: string;
 }) => {
   const { isDark } = useAdminTheme();

@@ -13,7 +13,7 @@ const fadeUp = {
 };
 
 const contactInfo = [
-  { icon: Mail, label: "Email", value: "hello@moniger.net", href: "mailto:hello@moniger.net" },
+  { icon: Mail, label: "Email", value: "admin@moniger.net", href: "mailto:admin@moniger.net" },
   { icon: Phone, label: "Phone", value: "+234 913 170 1391", href: "tel:+2349131701391" },
   { icon: MapPin, label: "Address", value: "Lagos, Nigeria", href: "#" },
 ];
@@ -42,7 +42,7 @@ const ContactPage = () => {
       console.error("Contact form delivery failed", error);
       setStatus({
         kind: "error",
-        message: "We couldn't send your message right now. Please try again or email hello@moniger.net.",
+        message: "We couldn't send your message right now. Please try again or email admin@moniger.net.",
       });
     } finally {
       setIsSending(false);
@@ -106,8 +106,11 @@ const ContactPage = () => {
               <input id="contact-subject" value={form.subject} onChange={update("subject")} placeholder="Subject" required className="w-full rounded-xl border border-[#E0DFF0] bg-[#F3F4FB] px-4 py-3 text-sm font-normal outline-none transition-colors focus:border-[#5B67F7] focus-visible:ring-2 focus-visible:ring-[#5B67F7] focus-visible:ring-offset-2" />
             </label>
             <label className="block space-y-1.5 text-sm font-medium text-[#0D1B2A]">
-              <span>Your message</span>
-              <textarea id="contact-message" value={form.message} onChange={update("message")} placeholder="Your message..." rows={5} required className="w-full resize-none rounded-xl border border-[#E0DFF0] bg-[#F3F4FB] px-4 py-3 text-sm font-normal outline-none transition-colors focus:border-[#5B67F7] focus-visible:ring-2 focus-visible:ring-[#5B67F7] focus-visible:ring-offset-2" />
+              <span className="flex items-center justify-between gap-3">
+                <span>Your message</span>
+                <span className="text-xs font-normal text-[#64748B]">{form.message.length}/300</span>
+              </span>
+              <textarea id="contact-message" value={form.message} onChange={update("message")} placeholder="Your message..." rows={5} maxLength={300} required className="w-full resize-none rounded-xl border border-[#E0DFF0] bg-[#F3F4FB] px-4 py-3 text-sm font-normal outline-none transition-colors focus:border-[#5B67F7] focus-visible:ring-2 focus-visible:ring-[#5B67F7] focus-visible:ring-offset-2" />
             </label>
             <input aria-label="Website" aria-hidden="true" tabIndex={-1} autoComplete="off" value={form.website} onChange={update("website")} className="absolute h-px w-px overflow-hidden opacity-0" />
             <button type="submit" disabled={isSending} className="inline-flex items-center rounded-full bg-[#5B67F7] px-8 py-3 text-sm font-medium text-white shadow-[0_4px_16px_rgba(91,103,247,0.3)] transition-all hover:bg-[#4A56E0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B67F7] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">
