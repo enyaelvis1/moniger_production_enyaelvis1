@@ -478,7 +478,7 @@ const Navbar = () => {
           <div className="mt-4 space-y-2">
             <div className="flex items-center gap-2 text-[13px] font-medium text-[#0D1B2A]">
               <Mail size={14} />
-              <span>hello@moniger.net</span>
+              <span>admin@moniger.net</span>
             </div>
             <div className="flex items-center gap-2 text-[13px] font-medium text-[#0D1B2A]">
               <Phone size={14} />

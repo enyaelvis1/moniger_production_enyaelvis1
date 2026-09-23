@@ -1,8 +1,9 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
-import { Download, Plus, Search } from "lucide-react";
+import { Building2, Download, Plus, Search, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -19,7 +20,29 @@ import {
 } from "@/admin/components/AdminUi";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBanksList, useBankMutations } from "@/hooks/use-directory-data";
-import { useAdminConsoleQuery, type AdminSettingsResponse } from "@/admin/lib/admin-console";
+import { invokeAdminConsole, useAdminConsoleQuery, type AdminSettingsResponse } from "@/admin/lib/admin-console";
+import { getBankLogoUrl } from "@/lib/bank-logos";
+
+const BankLogo = ({ name }: { name: string }) => {
+  const [hasError, setHasError] = useState(false);
+  const logoUrl = getBankLogoUrl(name);
+
+  return (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white p-1">
+      {logoUrl && !hasError ? (
+        <img
+          src={logoUrl}
+          alt=""
+          className="h-full w-full object-contain"
+          loading="lazy"
+          onError={() => setHasError(true)}
+        />
+      ) : (
+        <Building2 className="h-4 w-4 text-slate-500" aria-hidden="true" />
+      )}
+    </div>
+  );
+};
 
 const AdminBanksPage = () => {
   const { toast } = useToast();
@@ -35,6 +58,8 @@ const AdminBanksPage = () => {
   const [newBankName, setNewBankName] = useState("");
   const [newBankCode, setNewBankCode] = useState("");
   const [newBankCountryCode, setNewBankCountryCode] = useState("NG");
+  const [pendingDeleteBank, setPendingDeleteBank] = useState<{ id: string; name: string } | null>(null);
+  const [isDeletingBank, setIsDeletingBank] = useState(false);
 
   const filtered = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
@@ -81,6 +106,21 @@ const AdminBanksPage = () => {
       toast({ title: "Bank updated", description: "Bank status updated." });
     } catch (err) {
       toast({ title: "Unable to update bank", description: err instanceof Error ? err.message : "Please try again.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteBank = async () => {
+    if (!pendingDeleteBank || isDeletingBank) return;
+    setIsDeletingBank(true);
+    try {
+      const result = await invokeAdminConsole<{ bankName: string; clearedReferenceCount: number }>("banks.delete", { bankId: pendingDeleteBank.id });
+      await banksQuery.refetch();
+      setPendingDeleteBank(null);
+      toast({ title: "Bank removed", description: `${result.bankName} was removed. ${result.clearedReferenceCount} existing reference(s) were unassigned.` });
+    } catch (err) {
+      toast({ title: "Unable to remove bank", description: err instanceof Error ? err.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setIsDeletingBank(false);
     }
   };
 
@@ -143,7 +183,7 @@ const AdminBanksPage = () => {
               <table className="w-full table-auto">
                 <AdminTableHead>
                   <tr>
-                    <th className="px-4 py-3 text-left">Name</th>
+                    <th className="px-4 py-3 text-left">Bank</th>
                     <th className="px-4 py-3 text-left">Code</th>
                     <th className="px-4 py-3 text-left">Country</th>
                     <th className="px-4 py-3 text-left">Created</th>
@@ -154,7 +194,12 @@ const AdminBanksPage = () => {
                 <tbody>
                   {displayed.map((b) => (
                     <tr key={b.id} className="border-t border-white/5">
-                      <td className="px-4 py-3">{b.name}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <BankLogo name={b.name} />
+                          <span>{b.name}</span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3">{b.bank_code ?? "—"}</td>
                       <td className="px-4 py-3">{b.country_code ?? "—"}</td>
                       <td className="px-4 py-3">{formatAdminDate(b.created_at)}</td>
@@ -165,6 +210,13 @@ const AdminBanksPage = () => {
                         <div className="flex items-center justify-end gap-2">
                           <AdminGhostButton onClick={() => void handleToggleActive(b.id, b.is_active)}>
                             {b.is_active ? "Disable" : "Enable"}
+                          </AdminGhostButton>
+                          <AdminGhostButton
+                            onClick={() => setPendingDeleteBank(b)}
+                            className="border-[#EF4444]/20 text-[#FCA5A5] hover:border-[#EF4444]/40 hover:bg-[#EF4444]/10"
+                          >
+                            <Trash2 className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                            Remove
                           </AdminGhostButton>
                         </div>
                       </td>
@@ -224,6 +276,25 @@ const AdminBanksPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={Boolean(pendingDeleteBank)} onOpenChange={(open) => !open && !isDeletingBank && setPendingDeleteBank(null)}>
+        <AlertDialogContent className="border-white/10 bg-[#161E2E] text-[#F1F5F9]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this bank?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/50">
+              {pendingDeleteBank
+                ? `${pendingDeleteBank.name} will be removed from the platform bank list. Existing vendor and payout-account references will be unassigned, not deleted.`
+                : "This action removes the bank from the platform list."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={(event) => { event.preventDefault(); void handleDeleteBank(); }} className="bg-[#EF4444] text-white hover:bg-[#DC2626]">
+              {isDeletingBank ? "Removing..." : "Remove bank"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

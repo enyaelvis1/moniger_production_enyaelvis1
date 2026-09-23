@@ -1,9 +1,9 @@
-import { Download, ExternalLink, Eye, Inbox, RefreshCcw } from "lucide-react";
+import { Download, ExternalLink, Eye, Inbox, RefreshCcw, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { createExportFileName, downloadCsvFile } from "@/lib/export";
-import { invokeAdminConsole, useAdminConsoleQuery, type AdminPaymentsResponse, type AdminSettingsResponse } from "@/admin/lib/admin-console";
+import { invokeAdminConsole, useAdminConsoleQuery, type AdminPaymentsResponse, type AdminSettingsResponse, type AdminTestDataDeleteResponse } from "@/admin/lib/admin-console";
 import {
   Dialog,
   DialogContent,
@@ -107,6 +107,8 @@ const AdminPaymentsPage = () => {
   const [pageSize, setPageSize] = useState(25);
   const [selectedPayment, setSelectedPayment] = useState<AdminPaymentRow | null>(null);
   const [reconcilingPaymentId, setReconcilingPaymentId] = useState<string | null>(null);
+  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
+  const [selectedPaymentIds, setSelectedPaymentIds] = useState<Set<string>>(new Set());
   const [dataMode, setDataMode] = useState<"all" | "live" | "test">("all");
 
   const settingsQuery = useAdminConsoleQuery<AdminSettingsResponse>("settings.get");
@@ -176,6 +178,68 @@ const AdminPaymentsPage = () => {
     }
   };
 
+  const deleteTestPayment = async (payment: AdminPaymentRow) => {
+    if (!payment.isTestData) {
+      toast({ title: "Payment is protected", description: "Only marked test payments can be deleted.", variant: "destructive" });
+      return;
+    }
+
+    const reason = window.prompt("Enter a cleanup reason (at least 10 characters):", "Remove test payment after QA")?.trim() ?? "";
+    if (reason.length < 10) return;
+    if (!window.confirm(`Delete test payment ${payment.paymentReference}? This cannot be undone.`)) return;
+
+    setDeletingPaymentId(payment.paymentId);
+    try {
+      const result = await invokeAdminConsole<AdminTestDataDeleteResponse>("testData.delete", {
+        confirmation: "DELETE TEST DATA",
+        reason,
+        recordId: payment.paymentId,
+        resource: "payments",
+      });
+      await paymentsQuery.refetch();
+      setSelectedPayment(null);
+      toast({ title: "Test payment deleted", description: `${result.deleted.payments} payment record removed and audited.` });
+    } catch (error) {
+      toast({ title: "Unable to delete payment", description: error instanceof Error ? error.message : "Only eligible test payments can be deleted.", variant: "destructive" });
+    } finally {
+      setDeletingPaymentId(null);
+    }
+  };
+
+  const deleteSelectedTestPayments = async () => {
+    const ids = Array.from(selectedPaymentIds);
+    if (ids.length === 0) return;
+    const reason = window.prompt("Enter a cleanup reason (at least 10 characters):", "Remove selected test payments after QA")?.trim() ?? "";
+    if (reason.length < 10) return;
+    if (!window.confirm(`Delete ${ids.length} selected test payment record(s)? This cannot be undone.`)) return;
+    setDeletingPaymentId("bulk");
+    try {
+      const result = await invokeAdminConsole<AdminTestDataDeleteResponse>("testData.delete", {
+        bulkConfirmation: `DELETE ${ids.length} RECORDS`,
+        confirmation: "DELETE TEST DATA",
+        reason,
+        recordIds: ids,
+        resource: "payments",
+      });
+      await paymentsQuery.refetch();
+      setSelectedPaymentIds(new Set());
+      toast({ title: "Test payments deleted", description: `${result.deleted.payments} payment record(s) removed and audited.` });
+    } catch (error) {
+      toast({ title: "Unable to delete selected payments", description: error instanceof Error ? error.message : "Only eligible test payments can be deleted.", variant: "destructive" });
+    } finally {
+      setDeletingPaymentId(null);
+    }
+  };
+
+  const selectablePaymentIds = displayedRows.filter((payment) => payment.isTestData).map((payment) => payment.paymentId);
+  const allDisplayedPaymentsSelected = selectablePaymentIds.length > 0 && selectablePaymentIds.every((id) => selectedPaymentIds.has(id));
+  const togglePaymentSelection = (paymentId: string) => setSelectedPaymentIds((current) => {
+    const next = new Set(current);
+    if (next.has(paymentId)) next.delete(paymentId);
+    else next.add(paymentId);
+    return next;
+  });
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -208,6 +272,12 @@ const AdminPaymentsPage = () => {
               <option value={50}>50</option>
               <option value={100}>100</option>
             </select>
+            {selectedPaymentIds.size > 0 ? (
+              <AdminGhostButton className="text-[#FCA5A5]" onClick={() => void deleteSelectedTestPayments()} disabled={deletingPaymentId === "bulk"}>
+                <Trash2 size={14} aria-hidden="true" />
+                Delete selected ({selectedPaymentIds.size})
+              </AdminGhostButton>
+            ) : null}
             <AdminGhostButton onClick={() => void exportCsv()}>
               <Download size={14} aria-hidden="true" />
               Export history CSV
@@ -284,6 +354,16 @@ const AdminPaymentsPage = () => {
               <p className="mt-2 text-xs text-white/40">{formatAdminDateTime(payment.date)}</p>
               <p className="mt-2 text-xs text-white/50">{payment.reconciliation.summary}</p>
               <div className="mt-3 flex justify-end">
+                {payment.isTestData ? (
+                  <AdminGhostButton
+                    className="mr-2 h-8 px-2.5 text-xs text-[#FCA5A5]"
+                    disabled={deletingPaymentId === payment.paymentId}
+                    onClick={() => void deleteTestPayment(payment)}
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                    Delete test
+                  </AdminGhostButton>
+                ) : null}
                 {payment.reconciliation.canReconcile ? (
                   <AdminGhostButton
                     className="mr-2 h-8 px-2.5 text-xs"
@@ -308,6 +388,19 @@ const AdminPaymentsPage = () => {
           <table className="min-w-full text-left text-sm text-white/70">
             <AdminTableHead>
               <tr>
+                <th className="px-3 py-2.5 sm:px-4">
+                  <input
+                    type="checkbox"
+                    aria-label="Select displayed test payments"
+                    checked={allDisplayedPaymentsSelected}
+                    onChange={() => setSelectedPaymentIds((current) => {
+                      const next = new Set(current);
+                      if (allDisplayedPaymentsSelected) selectablePaymentIds.forEach((id) => next.delete(id));
+                      else selectablePaymentIds.forEach((id) => next.add(id));
+                      return next;
+                    })}
+                  />
+                </th>
                 <th className="px-3 py-2.5 sm:px-4">Payment</th>
                 <th className="px-3 py-2.5 sm:px-4">Type</th>
                 <th className="px-3 py-2.5 sm:px-4">Amount</th>
@@ -321,6 +414,9 @@ const AdminPaymentsPage = () => {
             <tbody>
               {displayedRows.map((payment) => (
                 <tr key={payment.paymentId} className={`border-b border-white/5 ${payment.status === "failed" ? "border-l-2 border-l-[#EF4444]" : ""}`}>
+                  <td className="px-3 py-3 sm:px-4">
+                    {payment.isTestData ? <input type="checkbox" aria-label={`Select test payment ${payment.paymentReference}`} checked={selectedPaymentIds.has(payment.paymentId)} onChange={() => togglePaymentSelection(payment.paymentId)} /> : null}
+                  </td>
                   <td className="px-3 py-3 sm:px-4">
                     <div className="space-y-1">
                       <p className="font-medium text-[#F1F5F9]">{payment.paymentReference}</p>
@@ -366,6 +462,17 @@ const AdminPaymentsPage = () => {
                       >
                         <Eye size={14} aria-hidden="true" />
                       </button>
+                      {payment.isTestData ? (
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#EF4444]/20 bg-[#EF4444]/10 text-[#FCA5A5] hover:bg-[#EF4444]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                          title="Delete eligible test payment"
+                          disabled={deletingPaymentId === payment.paymentId}
+                          onClick={() => void deleteTestPayment(payment)}
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
@@ -576,6 +683,18 @@ const AdminPaymentsPage = () => {
                   </p>
                 )}
               </div>
+              {selectedPayment.isTestData ? (
+                <div className="flex justify-end">
+                  <AdminGhostButton
+                    className="text-[#FCA5A5]"
+                    disabled={deletingPaymentId === selectedPayment.paymentId}
+                    onClick={() => void deleteTestPayment(selectedPayment)}
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                    Delete eligible test payment
+                  </AdminGhostButton>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </DialogContent>
