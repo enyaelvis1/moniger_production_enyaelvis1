@@ -22,12 +22,18 @@ Current implementation branch: `develop`
   - Sign in as an admin user.
   - Visit `/admin/*` pages: Users, Payments, Businesses, Settings.
   - Confirm non-admin users cannot access `/admin/*` (redirect or 403).
+- [x] Allow a Super Admin to revoke another admin's console access without deleting the user's account or workspace.
+- [x] Protect the current Super Admin account and prevent removal or downgrade of the last Super Admin.
+- **Test admin access removal**
+  - Sign in as a Super Admin and open Admin -> Settings -> Admin Users.
+  - Choose another admin and click `Revoke access`, then confirm the action.
+  - Confirm the admin can no longer open `/admin/*` while their account and workspace remain unchanged.
 
 ---
 
-## 2) Auto sign-out after 10 minutes inactivity (no permanent sessions)
+## 2) Auto sign-out after 20 minutes inactivity (no permanent sessions)
 
-- [x] Define “inactivity” (mouse/keyboard/touch/scroll) and confirm 10 minutes requirement.
+- [x] Define “inactivity” (mouse/keyboard/touch/scroll) and confirm 20 minutes requirement.
 - [x] Implement idle timer + warning prompt (recommended: warning at 9 min).
 - [x] Sign out locally (`supabase.auth.signOut({ scope: "local" })`) and redirect to `/login` with a reason banner.
 - [x] Add a Security settings control to adjust inactivity duration for testing and future admin tuning.
@@ -38,7 +44,7 @@ Current implementation branch: `develop`
   - Stop interacting with the app completely.
   - Confirm a warning appears before timeout.
   - Confirm the app signs out after the selected duration and redirects to `/login`.
-  - Repeat with `10` minutes and confirm the same behavior still applies.
+  - Repeat with `20` minutes and confirm the same behavior still applies.
   - Confirm the app signs out and redirects to `/login`.
   - Confirm you cannot navigate back to protected routes without signing in again.
   - (If warning modal added) wait to warning time, click “Stay signed in”, confirm session remains active.
@@ -363,3 +369,127 @@ This item should cover public invoice collection and workspace subscription bill
 4. Confirm the customer receipt is delivered and the payment is visible in workspace and admin reporting.
 5. Separately run a live workspace subscription checkout and confirm `/pricing/confirmed`, `subscription_checkout_sessions`, and `business_subscriptions` reconcile correctly.
 6. Record the exact references and stop the test if any status, amount, recipient, or webhook result is unexpected.
+
+---
+
+## 21) Starter, Growth, and Business acceptance milestone
+
+**Status: [ ] In progress — paid signup checkout, dashboard return, subscription visibility, and 20-minute timeout confirmed; full tier acceptance still pending**
+
+### A. Fix workspace upgrade and status display
+
+- [ ] Reproduce a signed-in workspace upgrade from `Starter` to `Growth` using Paystack test mode.
+- [ ] Capture the checkout reference, callback URL, verification response, and webhook result.
+- [ ] Confirm the selected workspace—not another workspace owned by the same user—is updated.
+- [ ] Confirm `business_subscriptions.plan` changes to `growth` only after successful provider verification.
+- [ ] Confirm the workspace status card changes from `Starter` to `Growth` after callback, webhook sync, and a full page refresh.
+- [ ] Confirm the upgrade page does not remain visible after the plan becomes active.
+- [x] Invalidate the cached workspace subscription query before redirecting after successful verification.
+- [x] Route paid registrations directly into Paystack checkout after the account and workspace are created.
+- [x] Allow active workspace members to read their own subscription so the plan status and premium feature gates render correctly after checkout.
+- [x] Prevent a fresh `null` subscription placeholder from suppressing the first real subscription fetch while workspace settings load.
+- [x] Keep the post-registration Paystack redirect alive when subscription checkout toggles its loading state.
+- [x] Send a newly registered paid-plan user directly into Paystack checkout after the account and workspace are created, without an intermediate pricing-page handoff.
+- [ ] Confirm a delayed provider response leaves the checkout retryable and does not create a false failure.
+- [x] Repeat the same checks for `Business`.
+- [x] Confirm signed-in users return to their workspace dashboard after successful confirmation.
+- [ ] Confirm signed-out confirmation remains read-only and does not expose private workspace details.
+
+### Test A — upgrade status
+
+1. Sign in to the intended test workspace while it is on `Starter`.
+2. Open pricing, choose `Growth`, and complete a Paystack test checkout.
+3. Record the Paystack reference and confirm the browser returns to `/pricing/confirmed`.
+4. Confirm the page redirects to the workspace dashboard after successful verification.
+5. Open workspace settings and confirm the current plan is `Growth`.
+6. Refresh, sign out and back in, and confirm the plan remains `Growth`.
+7. Repeat with a separate workspace and the `Business` plan.
+8. Confirm `/admin/subscriptions` shows the correct workspace, plan, provider reference, amount, and renewal state.
+9. Start a fresh paid registration and confirm the account flow opens the Paystack checkout directly instead of stopping on the pricing page.
+
+### B. Create the retained test businesses and vendors
+
+- [ ] Create exactly these test workspaces:
+  - `Moniger Starter Limited` — Starter
+  - `Moniger Growth Limited` — Growth
+  - `Moniger Business Limited` — Business
+- [ ] Mark each workspace explicitly as test data.
+- [ ] Add exactly two vendors to each workspace:
+  - `Moniger Starter Vendor Ent1`
+  - `Moniger Starter Vendor Ent2`
+  - `Moniger Growth Vendor Ent1`
+  - `Moniger Growth Vendor Ent2`
+  - `Moniger Business Vendor Ent1`
+  - `Moniger Business Vendor Ent2`
+- [ ] Use clearly fake/test contact details and test bank details only.
+- [ ] Confirm each vendor belongs to the correct workspace and has the expected bank/logo mapping.
+- [ ] Record the business IDs and vendor IDs in the UAT results before cleanup.
+
+### Test B — fixtures
+
+1. Sign in to each workspace and confirm its displayed plan.
+2. Open Vendors and confirm both expected vendors appear.
+3. Edit one vendor in each workspace, refresh, and confirm the change persists.
+4. Confirm a vendor from one workspace is never visible in another workspace.
+5. Confirm the admin Vendors page shows all six vendors with the correct workspace names.
+
+### C. Test the three plan tiers
+
+For every workspace, execute the applicable feature matrix and record Pass/Fail, evidence, and any plan-gating mismatch.
+
+- [ ] Starter baseline: dashboard, customers, vendors, invoices, bills, payments, workspace settings, team access, and basic exports.
+- [ ] Growth: all Starter checks plus reports, audit trail, enhanced exports, and the Growth-only limits/entitlements shown in the pricing catalog.
+- [ ] Business: all Growth checks plus Business-only limits/entitlements shown in the pricing catalog and any admin-configured controls.
+- [ ] Confirm unavailable premium features show a useful upgrade message rather than a broken page.
+- [ ] Confirm an upgrade changes access without requiring a second account or browser session.
+- [ ] Confirm cancellation, failed payment, and expired access states display the correct status and do not grant paid features incorrectly.
+- [ ] Confirm invoice collection, receipt delivery, notifications, search, filters, and CSV exports for each applicable tier.
+- [ ] Confirm admin views show the correct business, subscription, payment, receivable, payout, and vendor data.
+- [ ] Confirm the current product limitation: outgoing payable/vendor disbursement must not be reported as real bank movement unless the approved provider-backed payout release is explicitly enabled and documented.
+
+### Test C — tier acceptance
+
+1. Run the same core workflow in all three workspaces: create a customer, vendor, invoice, bill, and test payment record.
+2. Test each plan-specific feature from a clean browser session.
+3. Capture screenshots or IDs for successful flows and error messages for blocked flows.
+4. Confirm data isolation between the three workspaces.
+5. Log every failure as a separate fix before cleanup begins.
+
+### D. Clean up test data while retaining the three fixtures
+
+- [ ] Export a backup/snapshot and save the cleanup manifest before deletion.
+- [ ] Confirm the retained businesses are explicitly marked test data and listed by ID.
+- [ ] Delete all other marked test businesses, users, vendors, customers, invoices, bills, payments, receivables, payouts, content, alerts, and non-completed checkout sessions.
+- [ ] Retain only the three named businesses and their six named vendors, plus the minimum linked records needed for their acceptance evidence.
+- [ ] Do not delete admin users, audit logs, live/provider-settled financial records, active subscriptions, wallet ledgers, webhook events, or unmarked data.
+- [ ] Preview the cleanup and resolve every blocked dependency before confirming deletion.
+- [ ] Run cleanup in the admin console with a reason of at least 10 characters and the exact typed confirmation requested by the UI.
+- [ ] Refresh all admin pages and confirm no unrelated records were removed.
+
+### Test D — cleanup safety
+
+1. Open `Admin → Settings → Danger Zone` and select `All marked test data`.
+2. Confirm the preview lists the retained fixture records separately from deletable records.
+3. Confirm live, unmarked, admin, subscription, audit, ledger, and webhook records are blocked.
+4. Execute cleanup only after reviewing the manifest and counts.
+5. Confirm the three retained businesses and six retained vendors still load and remain associated correctly.
+6. Confirm the audit log contains the cleanup reason, actor, scope, counts, and outcome.
+
+### E. Test accounts and real-customer readiness
+
+- [ ] Complete the full workflow in Paystack `TEST` mode using test customers and test payment methods first.
+- [ ] Confirm local testing uses the local Supabase URL and localhost callback; never use production callbacks from local development.
+- [ ] Confirm production-domain test-mode checkout works independently from local testing.
+- [ ] Obtain Paystack live approval, business/KYC approval, live-key configuration, webhook confirmation, and an approved low-value test amount before using real money.
+- [ ] Treat real bank-account testing as a controlled live-money release activity, not as ordinary unit/UAT testing.
+- [ ] Run public invoice collection and workspace subscription billing as separate live tests.
+- [ ] Do not describe payable/vendor flows as real bank transfers unless the provider-backed payout engine is enabled and release-approved.
+
+### Test E — live-mode gate
+
+1. Verify live keys and webhook configuration with the platform owner.
+2. Use one approved real customer and one approved low-value invoice.
+3. Record the Paystack reference, callback result, webhook result, payment status, invoice status, and receipt delivery.
+4. Separately run one workspace subscription checkout and confirm subscription synchronization.
+5. Stop immediately if the amount, recipient, status, callback, or webhook result is unexpected.
+6. Update this checklist, the UAT guide, and the source-of-truth document with the dated evidence before declaring live testing complete.

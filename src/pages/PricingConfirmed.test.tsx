@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PricingConfirmedPage from "@/pages/PricingConfirmed";
@@ -22,18 +23,26 @@ vi.mock("@/lib/workspace-subscriptions", () => ({
   verifyWorkspaceSubscriptionCheckout: verifyWorkspaceSubscriptionCheckoutMock,
 }));
 
-const renderPage = (initialEntry: string) =>
-  render(
-    <MemoryRouter initialEntries={[initialEntry]}>
-      <Routes>
-        <Route path="/pricing/confirmed" element={<PricingConfirmedPage />} />
-        <Route path="/pricing" element={<div>Pricing</div>} />
-        <Route path="/dashboard" element={<div>Dashboard</div>} />
-        <Route path="/login" element={<div>Login</div>} />
-        <Route path="/admin/subscriptions" element={<div>Admin subscriptions</div>} />
-      </Routes>
-    </MemoryRouter>,
-  );
+const renderPage = (initialEntry: string) => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+  return {
+    queryClient,
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[initialEntry]}>
+          <Routes>
+            <Route path="/pricing/confirmed" element={<PricingConfirmedPage />} />
+            <Route path="/pricing" element={<div>Pricing</div>} />
+            <Route path="/dashboard" element={<div>Dashboard</div>} />
+            <Route path="/login" element={<div>Login</div>} />
+            <Route path="/admin/subscriptions" element={<div>Admin subscriptions</div>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    ),
+  };
+};
 
 describe("PricingConfirmedPage", () => {
   beforeEach(() => {
@@ -92,7 +101,8 @@ describe("PricingConfirmedPage", () => {
       },
     });
 
-    renderPage("/pricing/confirmed?reference=SUB-123");
+    const { queryClient } = renderPage("/pricing/confirmed?reference=SUB-123");
+    queryClient.setQueryData(["workspace-subscription", "business-1"], { plan: "starter" });
 
     await waitFor(() => {
       expect(verifyWorkspaceSubscriptionCheckoutMock).toHaveBeenCalledWith({ reference: "SUB-123" });
@@ -101,5 +111,8 @@ describe("PricingConfirmedPage", () => {
     expect(getWorkspaceSubscriptionConfirmationStatusMock).not.toHaveBeenCalled();
     expect(await screen.findByText("Dashboard")).toBeInTheDocument();
     expect(screen.queryByText(/subscription confirmed/i)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(queryClient.getQueryState(["workspace-subscription", "business-1"])?.isInvalidated).toBe(true);
+    });
   });
 });

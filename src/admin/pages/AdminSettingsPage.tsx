@@ -110,6 +110,7 @@ const AdminSettingsPage = () => {
   const [testDataReason, setTestDataReason] = useState("");
   const [testDataPreview, setTestDataPreview] = useState<{ confirmationCount?: number; blocked?: { payments?: Array<{ id: string; reason: string }>; payouts: Array<{ id: string; status: string }> }; deletable?: { payments: number; payouts: number; receivables?: number }; other?: { announcements: number; bills: number; businesses: number; checkoutSessions: number; content: number; customers: number; invoices: number; signupAlerts: number; users: number; vendors: number; blocked: number } } | null>(null);
   const [isCleaningTestData, setIsCleaningTestData] = useState(false);
+  const [isRevokingAdmin, setIsRevokingAdmin] = useState(false);
   const testDataDeletionCount = testDataPreview?.confirmationCount ?? 0;
 
   const previewTestData = useCallback(async (resource = testDataResource) => {
@@ -160,6 +161,31 @@ const AdminSettingsPage = () => {
     await settingsQuery.refetch();
   };
 
+  const revokeAdminAccess = async (adminUser: AdminSettingsResponse["adminUsers"][number]) => {
+    if (adminUser.userId === adminAccess.userId || isRevokingAdmin) {
+      return;
+    }
+
+    if (!window.confirm(`Revoke admin access for ${adminUser.email}? Their account and workspace data will remain unchanged.`)) {
+      return;
+    }
+
+    setIsRevokingAdmin(true);
+
+    try {
+      await invokeAdminConsole("settings.adminUser", {
+        adminUserId: adminUser.adminUserId,
+        type: "remove",
+      });
+      await refreshSettings();
+      toast({ title: "Admin access revoked", description: `${adminUser.email} can no longer access the admin console.` });
+    } catch (error) {
+      toast({ title: "Unable to revoke admin access", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setIsRevokingAdmin(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -206,15 +232,10 @@ const AdminSettingsPage = () => {
                       <Button
                         variant="ghost"
                         className="h-8 rounded-lg border border-[#EF4444]/20 bg-[#EF4444]/10 text-[#FCA5A5] hover:bg-[#EF4444]/20"
-                        onClick={async () => {
-                          await invokeAdminConsole("settings.adminUser", {
-                            adminUserId: adminUser.adminUserId,
-                            type: "remove",
-                          });
-                          await refreshSettings();
-                        }}
+                        disabled={adminUser.userId === adminAccess.userId || isRevokingAdmin}
+                        onClick={() => void revokeAdminAccess(adminUser)}
                       >
-                        Revoke access
+                        {adminUser.userId === adminAccess.userId ? "Your access" : isRevokingAdmin ? "Revoking..." : "Revoke access"}
                       </Button>
                     </div>
                   </div>

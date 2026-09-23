@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import RegisterPage from "@/pages/Register";
+import { getRegistrationDestination } from "@/lib/subscription-registration";
 
 const { signUpMock } = vi.hoisted(() => ({
   signUpMock: vi.fn(),
@@ -47,6 +48,13 @@ const renderPage = (initialEntry: string) =>
   );
 
 describe("RegisterPage plan summary", () => {
+  it("continues paid registrations into Paystack intent checkout", () => {
+    expect(getRegistrationDestination(null, "growth")).toBe("/pricing?billingCycle=monthly&subscribe=growth");
+    expect(getRegistrationDestination("/dashboard", "business")).toBe("/pricing?billingCycle=monthly&subscribe=business");
+    expect(getRegistrationDestination("/pricing?subscribe=growth", "growth")).toBe("/pricing?subscribe=growth");
+    expect(getRegistrationDestination("/dashboard", "starter")).toBe("/dashboard");
+  });
+
   it.each([
     ["/register", "Starter", "Free trial"],
     ["/register?next=%2Fpricing%3Fsubscribe%3Dgrowth", "Growth", "NGN 29,000/mo"],

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 const SESSION_TIMEOUT_STORAGE_KEY = "moniger-session-timeout-minutes";
-const DEFAULT_SESSION_TIMEOUT_MINUTES = 10;
+const DEFAULT_SESSION_TIMEOUT_MINUTES = 20;
 const MIN_SESSION_TIMEOUT_MINUTES = 1;
 const MAX_SESSION_TIMEOUT_MINUTES = 120;
 

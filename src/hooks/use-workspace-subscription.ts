@@ -81,7 +81,6 @@ export const useWorkspaceSubscription = () => {
   const query = useQuery({
     ...financeQueryOptions,
     enabled: Boolean(businessId),
-    initialData: null,
     queryFn: () => fetchWorkspaceSubscription(businessId as string),
     queryKey: ["workspace-subscription", businessId],
     staleTime: 60_000,

@@ -13,7 +13,14 @@ import AuthShell, {
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/hooks/use-localization";
 import { supabase } from "@/lib/supabase";
-import { defaultSubscriptionCatalog, isSubscriptionPlan, type SubscriptionPlan } from "@/lib/subscriptions";
+import {
+  defaultSubscriptionCatalog,
+  getDefaultSubscriptionBillingCycle,
+  isSubscriptionPlan,
+  type SubscriptionPlan,
+} from "@/lib/subscriptions";
+import { getRegistrationDestination } from "@/lib/subscription-registration";
+import { initializeWorkspaceSubscriptionCheckout } from "@/lib/workspace-subscriptions";
 
 const getPasswordStrength = (
   t: (key: string, params?: Record<string, string | number>) => string,
@@ -148,6 +155,19 @@ type EmailAvailabilityState = {
 };
 
 const DASHBOARD_REDIRECT_DELAY_MS = 6000;
+const PAID_CHECKOUT_RETRY_DELAY_MS = 1000;
+const PAID_CHECKOUT_MAX_ATTEMPTS = 5;
+
+const isWorkspaceProvisioningError = (error: unknown) => {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  return message.includes("business workspace is required") || message.includes("workspace is required");
+};
+
+const waitForPaidCheckoutRetry = () =>
+  new Promise<void>((resolve) => {
+    window.setTimeout(resolve, PAID_CHECKOUT_RETRY_DELAY_MS);
+  });
 
 const registrationPlanOptions: Array<{
   plan: SubscriptionPlan;
@@ -158,14 +178,6 @@ const registrationPlanOptions: Array<{
   { plan: "growth", eyebrow: "For growing teams", paymentLabel: "Pay with Paystack" },
   { plan: "business", eyebrow: "For finance operations", paymentLabel: "Pay with Paystack" },
 ];
-
-const getRegistrationDestination = (nextPath: string | null, plan: SubscriptionPlan) => {
-  if (nextPath?.startsWith("/")) {
-    return nextPath;
-  }
-
-  return plan === "starter" ? "/dashboard" : `/pricing?subscribe=${plan}`;
-};
 
 const getPrefilledEmailFromState = (state: unknown) => {
   if (!state || typeof state !== "object" || !("email" in state)) {
@@ -203,6 +215,7 @@ const RegisterPage = () => {
   }, [initialSelectedPlan]);
   const selectedPlanDetails = defaultSubscriptionCatalog[selectedPlan];
   const selectedPlanLabel = selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1);
+  const isPaidPlanSelection = selectedPlan !== "starter";
   const registrationDestination = getRegistrationDestination(nextPath, selectedPlan);
   const loginPath = `/login?next=${encodeURIComponent(registrationDestination)}`;
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -401,14 +414,14 @@ const RegisterPage = () => {
     }, 100);
 
     const timeoutId = window.setTimeout(() => {
-      navigate(nextPath?.startsWith("/") ? nextPath : "/dashboard", { replace: true });
+      navigate(registrationDestination, { replace: true });
     }, DASHBOARD_REDIRECT_DELAY_MS);
 
     return () => {
       window.clearInterval(intervalId);
       window.clearTimeout(timeoutId);
     };
-  }, [navigate, nextPath, successState?.redirectToDashboard]);
+  }, [navigate, registrationDestination, successState?.redirectToDashboard]);
 
   useEffect(() => {
     if (step !== 2) {
@@ -526,6 +539,37 @@ const RegisterPage = () => {
         return;
       }
 
+      if (isPaidPlanSelection) {
+        let checkoutError: unknown = null;
+
+        for (let attempt = 1; attempt <= PAID_CHECKOUT_MAX_ATTEMPTS; attempt += 1) {
+          try {
+            const checkoutResult = await initializeWorkspaceSubscriptionCheckout({
+              billingCycle: getDefaultSubscriptionBillingCycle(selectedPlan),
+              plan: selectedPlan,
+            });
+
+            if (checkoutResult.kind === "checkout") {
+              window.location.assign(checkoutResult.authorizationUrl);
+              return;
+            }
+
+            navigate("/dashboard", { replace: true });
+            return;
+          } catch (error) {
+            checkoutError = error;
+
+            if (!isWorkspaceProvisioningError(error) || attempt === PAID_CHECKOUT_MAX_ATTEMPTS) {
+              throw error;
+            }
+
+            await waitForPaidCheckoutRetry();
+          }
+        }
+
+        throw checkoutError ?? new Error("Unable to start Paystack checkout.");
+      }
+
       setSuccessState({
         email: normalizedEmail,
         redirectToDashboard: true,
@@ -583,7 +627,7 @@ const RegisterPage = () => {
                   type="button"
                   onClick={openDashboard}
                   className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#BFDBFE] bg-white/80 text-[#3157A7] transition-colors hover:bg-white hover:text-[#1E3A8A]"
-                  aria-label={t("auth.register.openDashboardNow")}
+                    aria-label={isPaidPlanSelection ? t("auth.register.continueToPayment") : t("auth.register.openDashboardNow")}
                 >
                   <X size={16} />
                 </button>
@@ -592,7 +636,9 @@ const RegisterPage = () => {
                   {t("auth.register.accountReady", { email: successState.email })}
                 </p>
                 <p className="mt-2 leading-7 text-[#3157A7]">
-                  {t("auth.register.redirecting", { seconds: redirectSecondsRemaining })}
+                  {isPaidPlanSelection
+                    ? t("auth.register.redirectingToPayment", { seconds: redirectSecondsRemaining })
+                    : t("auth.register.redirecting", { seconds: redirectSecondsRemaining })}
                 </p>
                 <div className="mt-4">
                   <div className="h-2 overflow-hidden rounded-full bg-[#D7E5FF]">
@@ -624,7 +670,7 @@ const RegisterPage = () => {
                 onClick={openDashboard}
                 className={authPrimaryButtonClassName}
               >
-                {t("auth.register.openDashboardNow")}
+                {isPaidPlanSelection ? t("auth.register.continueToPayment") : t("auth.register.openDashboardNow")}
               </button>
             ) : (
               <>
@@ -751,7 +797,7 @@ const RegisterPage = () => {
             </fieldset>
             <div className="pt-2">
               <button type="submit" className={authPrimaryButtonClassName}>
-                {t("auth.register.next")}
+                {isPaidPlanSelection ? "Continue to account setup" : t("auth.register.next")}
               </button>
             </div>
           </>
