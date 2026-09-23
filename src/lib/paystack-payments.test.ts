@@ -1,4 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
 
 describe("paystack payment helpers", () => {
   it("builds a public invoice payment url from an explicit base url", async () => {
@@ -12,6 +17,7 @@ describe("paystack payment helpers", () => {
 
   it("falls back to the configured public app url when no base url is supplied", async () => {
     vi.resetModules();
+    vi.stubEnv("VITE_PUBLIC_APP_URL", "https://moniger.net");
     vi.stubGlobal("window", {
       location: {
         origin: "https://app.moniger.net",

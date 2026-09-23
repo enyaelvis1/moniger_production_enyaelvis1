@@ -11,6 +11,7 @@ type AdminConsoleAction =
   | "businesses.action"
   | "users.list"
   | "users.action"
+  | "vendors.list"
   | "subscriptions.list"
   | "subscriptions.update"
   | "payments.list"
@@ -1132,6 +1133,58 @@ const buildUserRows = async (adminClient: ReturnType<typeof createClient>, searc
   });
 };
 
+const buildVendorRows = async (adminClient: ReturnType<typeof createClient>) => {
+  const [vendorsResponse, businessesResponse, banksResponse, billsResponse] = await Promise.all([
+    adminClient.from("vendors").select("id, business_id, business_name, contact_name, email, phone, account_name, account_number, bank_name, bank_id, created_at, is_test_data").order("created_at", { ascending: false }),
+    adminClient.from("businesses").select("id, name"),
+    adminClient.from("banks").select("id, name"),
+    adminClient.from("bills").select("vendor_id, total_amount, amount_paid, status"),
+  ]);
+
+  if (vendorsResponse.error) throw vendorsResponse.error;
+  if (businessesResponse.error) throw businessesResponse.error;
+  if (banksResponse.error) throw banksResponse.error;
+  if (billsResponse.error) throw billsResponse.error;
+
+  const businessNameById = new Map((businessesResponse.data ?? []).map((business) => [asString(business.id), asString(business.name)]));
+  const bankNameById = new Map((banksResponse.data ?? []).map((bank) => [asString(bank.id), asString(bank.name)]));
+  const billTotalsByVendorId = new Map<string, { billCount: number; totalPaid: number }>();
+
+  for (const bill of billsResponse.data ?? []) {
+    const vendorId = asString(bill.vendor_id);
+    const current = billTotalsByVendorId.get(vendorId) ?? { billCount: 0, totalPaid: 0 };
+    const amountPaid = asNumber(bill.amount_paid);
+    const totalAmount = asNumber(bill.total_amount);
+
+    billTotalsByVendorId.set(vendorId, {
+      billCount: current.billCount + 1,
+      totalPaid: current.totalPaid + (asString(bill.status) === "paid" ? Math.max(amountPaid, totalAmount) : amountPaid),
+    });
+  }
+
+  return (vendorsResponse.data ?? []).map((vendor) => {
+    const vendorId = asString(vendor.id);
+    const totals = billTotalsByVendorId.get(vendorId) ?? { billCount: 0, totalPaid: 0 };
+
+    return {
+      accountName: asNullableString(vendor.account_name),
+      accountNumber: asNullableString(vendor.account_number),
+      bankName: bankNameById.get(asString(vendor.bank_id)) ?? asNullableString(vendor.bank_name),
+      billCount: totals.billCount,
+      businessId: asString(vendor.business_id),
+      businessName: businessNameById.get(asString(vendor.business_id)) ?? "Unknown workspace",
+      contactName: asNullableString(vendor.contact_name),
+      createdAt: asString(vendor.created_at),
+      email: asNullableString(vendor.email),
+      isTestData: Boolean(vendor.is_test_data),
+      phone: asNullableString(vendor.phone),
+      totalPaid: totals.totalPaid,
+      vendorId,
+      vendorName: asString(vendor.business_name),
+    };
+  });
+};
+
 const getOwnedBusinessNames = async (adminClient: ReturnType<typeof createClient>, userId: string) => {
   const response = await adminClient
     .from("businesses")
@@ -1778,6 +1831,25 @@ Deno.serve(async (request) => {
       case "users.list": {
         const search = normalizeSearch(payload.search);
         const rows = await buildUserRows(adminClient, search);
+
+        return json({
+          rows,
+          total: rows.length,
+        });
+      }
+
+      case "vendors.list": {
+        const search = normalizeSearch(payload.search);
+        const dataMode = normalizeSearch(payload.dataMode);
+        const rows = (await buildVendorRows(adminClient)).filter((row) => {
+          if (search && !`${row.vendorId} ${row.vendorName} ${row.businessName} ${row.contactName ?? ""} ${row.email ?? ""} ${row.bankName ?? ""}`.toLowerCase().includes(search)) {
+            return false;
+          }
+
+          if (dataMode === "test" && !row.isTestData) return false;
+          if (dataMode === "live" && row.isTestData) return false;
+          return true;
+        });
 
         return json({
           rows,
