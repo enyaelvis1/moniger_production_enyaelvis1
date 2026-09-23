@@ -1,8 +1,8 @@
-import { Download, Inbox, RefreshCcw } from "lucide-react";
+import { Download, Inbox, RefreshCcw, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { createExportFileName, downloadCsvFile } from "@/lib/export";
-import { invokeAdminConsole, useAdminConsoleQuery, type AdminPayoutsResponse, type AdminSettingsResponse } from "@/admin/lib/admin-console";
+import { invokeAdminConsole, useAdminConsoleQuery, type AdminPayoutsResponse, type AdminSettingsResponse, type AdminTestDataDeleteResponse } from "@/admin/lib/admin-console";
 import {
   AdminBadge,
   AdminEmpty,
@@ -57,6 +57,8 @@ const formatStatusLabel = (status: string) => {
   }
 };
 
+const safeDeleteStatuses = new Set(["failed", "reversed", "cancelled"]);
+
 const AdminPayoutsPage = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -65,6 +67,8 @@ const AdminPayoutsPage = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [dataMode, setDataMode] = useState<"all" | "live" | "test">("all");
+  const [deletingPayoutId, setDeletingPayoutId] = useState<string | null>(null);
+  const [selectedPayoutIds, setSelectedPayoutIds] = useState<Set<string>>(new Set());
 
   const rows = payoutsQuery.data?.rows ?? [];
   const safePageSize = useMemo(() => {
@@ -125,6 +129,67 @@ const AdminPayoutsPage = () => {
     }
   };
 
+  const deleteTestPayout = async (payout: AdminPayoutRow) => {
+    if (!payout.isTestData || !safeDeleteStatuses.has(payout.status)) {
+      toast({ title: "Payout is protected", description: "Only marked test payouts in failed, reversed, or cancelled status can be deleted.", variant: "destructive" });
+      return;
+    }
+
+    const reason = window.prompt("Enter a cleanup reason (at least 10 characters):", "Remove test payout after QA")?.trim() ?? "";
+    if (reason.length < 10) return;
+    if (!window.confirm(`Delete test payout for ${payout.vendorName ?? "this vendor"}? This cannot be undone.`)) return;
+
+    setDeletingPayoutId(payout.payoutId);
+    try {
+      const result = await invokeAdminConsole<AdminTestDataDeleteResponse>("testData.delete", {
+        confirmation: "DELETE TEST DATA",
+        reason,
+        recordId: payout.payoutId,
+        resource: "payouts",
+      });
+      await payoutsQuery.refetch();
+      toast({ title: "Test payout deleted", description: `${result.deleted.payouts} payout record removed and audited.` });
+    } catch (error) {
+      toast({ title: "Unable to delete payout", description: error instanceof Error ? error.message : "Only eligible test payouts can be deleted.", variant: "destructive" });
+    } finally {
+      setDeletingPayoutId(null);
+    }
+  };
+
+  const deleteSelectedTestPayouts = async () => {
+    const ids = Array.from(selectedPayoutIds);
+    if (ids.length === 0) return;
+    const reason = window.prompt("Enter a cleanup reason (at least 10 characters):", "Remove selected test payouts after QA")?.trim() ?? "";
+    if (reason.length < 10) return;
+    if (!window.confirm(`Delete ${ids.length} selected test payout record(s)? This cannot be undone.`)) return;
+    setDeletingPayoutId("bulk");
+    try {
+      const result = await invokeAdminConsole<AdminTestDataDeleteResponse>("testData.delete", {
+        bulkConfirmation: `DELETE ${ids.length} RECORDS`,
+        confirmation: "DELETE TEST DATA",
+        reason,
+        recordIds: ids,
+        resource: "payouts",
+      });
+      await payoutsQuery.refetch();
+      setSelectedPayoutIds(new Set());
+      toast({ title: "Test payouts deleted", description: `${result.deleted.payouts} payout record(s) removed and audited.` });
+    } catch (error) {
+      toast({ title: "Unable to delete selected payouts", description: error instanceof Error ? error.message : "Only eligible test payouts can be deleted.", variant: "destructive" });
+    } finally {
+      setDeletingPayoutId(null);
+    }
+  };
+
+  const selectablePayoutIds = displayedRows.filter((payout) => payout.isTestData && safeDeleteStatuses.has(payout.status)).map((payout) => payout.payoutId);
+  const allDisplayedPayoutsSelected = selectablePayoutIds.length > 0 && selectablePayoutIds.every((id) => selectedPayoutIds.has(id));
+  const togglePayoutSelection = (payoutId: string) => setSelectedPayoutIds((current) => {
+    const next = new Set(current);
+    if (next.has(payoutId)) next.delete(payoutId);
+    else next.add(payoutId);
+    return next;
+  });
+
   const metrics = payoutsQuery.data?.metrics;
 
   return (
@@ -163,6 +228,12 @@ const AdminPayoutsPage = () => {
               <RefreshCcw size={14} aria-hidden="true" />
               Refresh
             </AdminGhostButton>
+            {selectedPayoutIds.size > 0 ? (
+              <AdminGhostButton className="text-[#FCA5A5]" onClick={() => void deleteSelectedTestPayouts()} disabled={deletingPayoutId === "bulk"}>
+                <Trash2 size={14} aria-hidden="true" />
+                Delete selected ({selectedPayoutIds.size})
+              </AdminGhostButton>
+            ) : null}
             <AdminGhostButton onClick={() => void exportCsv()}>
               <Download size={14} aria-hidden="true" />
               Export history CSV
@@ -225,6 +296,7 @@ const AdminPayoutsPage = () => {
             <div key={payout.payoutId} className={`rounded-xl border bg-[#161E2E] p-3.5 ${payout.status === "failed" ? "border-l-4 border-l-[#EF4444] border-white/5" : "border-white/5"}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
+                  {payout.isTestData && safeDeleteStatuses.has(payout.status) ? <input type="checkbox" aria-label={`Select test payout for ${payout.vendorName ?? "vendor"}`} checked={selectedPayoutIds.has(payout.payoutId)} onChange={() => togglePayoutSelection(payout.payoutId)} className="mr-2" /> : null}
                   <p className="text-sm font-semibold text-[#F1F5F9]">{payout.businessName}</p>
                   <p className="text-xs text-white/35">{payout.vendorName || "Unknown vendor"}</p>
                 </div>
@@ -238,6 +310,14 @@ const AdminPayoutsPage = () => {
                 {payout.completedAt ? <p>Completed {formatAdminDateTime(payout.completedAt)}</p> : null}
                 {payout.failureReason ? <p className="text-[#FCA5A5]">{payout.failureReason}</p> : null}
               </div>
+              {payout.isTestData && safeDeleteStatuses.has(payout.status) ? (
+                <div className="mt-3 flex justify-end">
+                  <AdminGhostButton className="h-8 px-2.5 text-xs text-[#FCA5A5]" disabled={deletingPayoutId === payout.payoutId} onClick={() => void deleteTestPayout(payout)}>
+                    <Trash2 size={14} aria-hidden="true" />
+                    Delete test
+                  </AdminGhostButton>
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -248,6 +328,9 @@ const AdminPayoutsPage = () => {
           <table className="w-full text-sm">
             <AdminTableHead>
               <tr>
+                <th className="table-header px-4 py-3 text-left">
+                  <input type="checkbox" aria-label="Select displayed test payouts" checked={allDisplayedPayoutsSelected} onChange={() => setSelectedPayoutIds((current) => { const next = new Set(current); if (allDisplayedPayoutsSelected) selectablePayoutIds.forEach((id) => next.delete(id)); else selectablePayoutIds.forEach((id) => next.add(id)); return next; })} />
+                </th>
                 <th className="table-header px-4 py-3 text-left">Business</th>
                 <th className="table-header px-4 py-3 text-left">Vendor</th>
                 <th className="table-header px-4 py-3 text-left">Bill</th>
@@ -256,11 +339,15 @@ const AdminPayoutsPage = () => {
                 <th className="table-header px-4 py-3 text-left">Bank</th>
                 <th className="table-header px-4 py-3 text-left">Reference</th>
                 <th className="table-header px-4 py-3 text-left">Dates</th>
+                <th className="table-header px-4 py-3 text-right">Actions</th>
               </tr>
             </AdminTableHead>
             <tbody>
               {displayedRows.map((payout: AdminPayoutRow) => (
                 <tr key={payout.payoutId} className="border-t border-white/5">
+                  <td className="px-4 py-3">
+                    {payout.isTestData && safeDeleteStatuses.has(payout.status) ? <input type="checkbox" aria-label={`Select test payout for ${payout.vendorName ?? "vendor"}`} checked={selectedPayoutIds.has(payout.payoutId)} onChange={() => togglePayoutSelection(payout.payoutId)} /> : null}
+                  </td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-[#F1F5F9]">{payout.businessName}</p>
                     <p className="text-xs text-white/40">{payout.businessId}</p>
@@ -285,6 +372,19 @@ const AdminPayoutsPage = () => {
                     {payout.submittedAt ? <p>Submitted {formatAdminDateTime(payout.submittedAt)}</p> : null}
                     {payout.completedAt ? <p>Completed {formatAdminDateTime(payout.completedAt)}</p> : null}
                     {payout.failureReason ? <p className="text-[#FCA5A5]">{payout.failureReason}</p> : null}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {payout.isTestData && safeDeleteStatuses.has(payout.status) ? (
+                      <button
+                        type="button"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#EF4444]/20 bg-[#EF4444]/10 text-[#FCA5A5] hover:bg-[#EF4444]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        title="Delete eligible test payout"
+                        disabled={deletingPayoutId === payout.payoutId}
+                        onClick={() => void deleteTestPayout(payout)}
+                      >
+                        <Trash2 size={14} aria-hidden="true" />
+                      </button>
+                    ) : <span className="text-xs text-white/30">Protected</span>}
                   </td>
                 </tr>
               ))}

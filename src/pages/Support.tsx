@@ -65,7 +65,7 @@ const SupportPage = () => (
             <div className="flex items-start gap-3 rounded-2xl bg-[#F6F8FF] px-4 py-4">
               <Mail size={18} className="mt-0.5 text-[#4154D8]" />
               <div>
-                <p className="font-semibold text-[#10203F]">hello@moniger.net</p>
+                <p className="font-semibold text-[#10203F]">admin@moniger.net</p>
                 <p className="mt-1">For general support and onboarding help.</p>
               </div>
             </div>

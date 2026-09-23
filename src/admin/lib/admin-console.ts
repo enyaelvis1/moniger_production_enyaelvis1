@@ -267,6 +267,44 @@ export type AdminPaymentsResponse = {
   }>;
 };
 
+export type AdminTestDataDeleteResponse = {
+  blocked: {
+    payments: Array<{ id: string; reason: string }>;
+    payouts: Array<{ id: string; status: string }>;
+  };
+  deleted: { payments: number; payouts: number };
+  ok: boolean;
+};
+
+export type AdminReceivablesDeleteResponse = {
+  deleted: { invoices: number; payments: number };
+  ok: boolean;
+};
+
+export type AdminReceivablesResponse = {
+  rows: Array<{
+    amountPaid: number;
+    balanceDue: number;
+    businessId: string;
+    businessName: string;
+    currency: string;
+    customerEmail: string | null;
+    customerName: string;
+    dueDate: string | null;
+    invoiceId: string;
+    invoiceNumber: string;
+    isTestData: boolean;
+    issueDate: string;
+    paidAt: string | null;
+    paymentGateway: string | null;
+    paymentReference: string | null;
+    paymentStatus: string | null;
+    status: string;
+    totalAmount: number;
+  }>;
+  total: number;
+};
+
 export type AdminPayoutsResponse = {
   metrics: {
     completedThisMonth: number;
@@ -472,8 +510,12 @@ export type AdminConsoleAction =
   | "payments.list"
   | "payments.export"
   | "payments.reconcile"
+  | "receivables.list"
+  | "receivables.export"
+  | "banks.delete"
   | "testData.preview"
   | "testData.delete"
+  | "testData.receivables.delete"
   | "content.list"
   | "content.save"
   | "content.delete"

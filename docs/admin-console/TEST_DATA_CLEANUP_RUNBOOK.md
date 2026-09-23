@@ -17,14 +17,20 @@ Payments linked to an invoice or bill are blocked because the related financial 
 ## Safe operator sequence
 
 1. Confirm the target environment is QA or sandbox and record the operator, date, and reason.
-2. In Admin → Settings → Danger Zone, choose Payments, Payouts, or All.
+2. In Admin → Settings → Danger Zone, choose Payments, Payouts, Other, or All.
 3. Run **Preview eligible records** and review eligible and blocked counts.
-4. Confirm that no live provider settlement, invoice, bill, wallet ledger entry, webhook record, receipt, or audit record is in the deletion set.
+4. Confirm that no live provider settlement, completed subscription checkout, wallet ledger entry, webhook record, receipt, user, subscription, or audit record is in the deletion set. Invoices and bills are deleted only when every linked payment/payout is also marked test and safely deletable.
 5. Export a platform snapshot if the cleanup is material or the records may be needed for investigation.
 6. Enter a reason of at least 10 characters and type `DELETE TEST DATA` exactly.
 7. Execute the cleanup once. Do not retry blindly if the result is unclear.
 8. Confirm the result counts and review the generated deletion manifest and audit event.
 9. Re-run Preview and verify the deleted IDs no longer appear while blocked records remain.
+
+## Supporting test data
+
+The **Other** scope covers only records with an explicit `is_test_data = true` marker: customers, vendors, invoices, bills, non-completed checkout sessions, managed content, and announcements. Test/sandbox signup alerts are also included. A test user is eligible only when it is explicitly marked as a test user, is not an admin, and every workspace it owns is marked test; those workspaces are deleted before the auth user. It never deletes production businesses, admin users, subscriptions, wallet ledgers, webhook events, or audit logs.
+
+For the legacy QA fixtures, the migration marks identities using narrowly scoped signals such as `@moniger.test`, `@example.com`, `playwright`, `debug`, `test-user`, or a Playwright/Debug display name. The currently signed-in admin is always excluded.
 
 ## User cleanup
 

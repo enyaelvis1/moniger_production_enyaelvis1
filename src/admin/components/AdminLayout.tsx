@@ -17,6 +17,7 @@ import {
   Users,
   X,
   ArrowLeftRight,
+  WalletCards,
   MoonStar,
   SunMedium,
 } from "lucide-react";
@@ -63,6 +64,7 @@ const ADMIN_NAV: AdminNavSection[] = [
       { label: "Users", to: "/admin/users", icon: Users },
       { label: "Subscriptions", to: "/admin/subscriptions", icon: CreditCard },
       { label: "Payments", to: "/admin/payments", icon: ArrowLeftRight },
+      { label: "Receivables", to: "/admin/receivables", icon: WalletCards },
       { label: "Payouts", to: "/admin/payouts", icon: ArrowLeftRight },
     ],
   },
@@ -94,6 +96,7 @@ const routeMeta: Record<string, { breadcrumb: string[]; page: string }> = {
   "/admin/users": { breadcrumb: ["Management"], page: "Users" },
   "/admin/subscriptions": { breadcrumb: ["Management"], page: "Subscriptions" },
   "/admin/payments": { breadcrumb: ["Management"], page: "Payments" },
+  "/admin/receivables": { breadcrumb: ["Management"], page: "Receivables" },
   "/admin/payouts": { breadcrumb: ["Management"], page: "Payouts" },
   "/admin/announcements": { breadcrumb: ["Operations"], page: "Announcements" },
   "/admin/content": { breadcrumb: ["Operations"], page: "Public Content" },

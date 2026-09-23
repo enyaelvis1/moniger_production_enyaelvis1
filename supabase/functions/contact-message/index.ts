@@ -13,6 +13,7 @@ const json = (body: Record<string, unknown>, status = 200) => new Response(JSON.
 });
 
 const asString = (value: unknown) => typeof value === "string" ? value.trim() : "";
+const MAX_MESSAGE_LENGTH = 300;
 const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
@@ -74,7 +75,7 @@ Deno.serve(async (request) => {
     if (!fullName || fullName.length > 120) return json({ error: "Enter your name." }, 400);
     if (!isValidEmail(email) || email.length > 254) return json({ error: "Enter a valid email address." }, 400);
     if (!subject || subject.length > 180) return json({ error: "Enter a subject." }, 400);
-    if (!message || message.length > 5000) return json({ error: "Enter a message under 5,000 characters." }, 400);
+    if (!message || message.length > MAX_MESSAGE_LENGTH) return json({ error: `Enter a message under ${MAX_MESSAGE_LENGTH} characters.` }, 400);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim() ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? "";
