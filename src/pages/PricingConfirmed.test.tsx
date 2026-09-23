@@ -99,7 +99,7 @@ describe("PricingConfirmedPage", () => {
     });
 
     expect(getWorkspaceSubscriptionConfirmationStatusMock).not.toHaveBeenCalled();
-    expect(await screen.findByText(/subscription confirmed/i)).toBeInTheDocument();
-    expect(screen.getByText(/Acme Workspace/)).toBeInTheDocument();
+    expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+    expect(screen.queryByText(/subscription confirmed/i)).not.toBeInTheDocument();
   });
 });

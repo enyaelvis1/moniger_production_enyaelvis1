@@ -8,9 +8,12 @@ import {
   ClipboardList,
   CreditCard,
   LayoutDashboard,
+  Home,
   Megaphone,
   FileText,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Search,
   BellRing,
   Settings,
@@ -59,7 +62,8 @@ const ADMIN_NAV: AdminNavSection[] = [
     label: "MANAGEMENT",
     items: [
       { label: "Businesses", to: "/admin/businesses", icon: Building2 },
-          { label: "Banks", to: "/admin/banks", icon: CreditCard },
+      { label: "Vendors", to: "/admin/vendors", icon: WalletCards },
+      { label: "Banks", to: "/admin/banks", icon: CreditCard },
           { label: "Categories", to: "/admin/categories", icon: ClipboardList },
       { label: "Users", to: "/admin/users", icon: Users },
       { label: "Subscriptions", to: "/admin/subscriptions", icon: CreditCard },
@@ -91,6 +95,7 @@ const routeMeta: Record<string, { breadcrumb: string[]; page: string }> = {
   "/admin": { breadcrumb: ["Overview"], page: "Dashboard" },
   "/admin/metrics": { breadcrumb: ["Overview"], page: "Platform Metrics" },
   "/admin/businesses": { breadcrumb: ["Management"], page: "Businesses" },
+  "/admin/vendors": { breadcrumb: ["Management"], page: "Vendors" },
   "/admin/banks": { breadcrumb: ["Management"], page: "Banks" },
   "/admin/categories": { breadcrumb: ["Management"], page: "Bill categories" },
   "/admin/users": { breadcrumb: ["Management"], page: "Users" },
@@ -131,7 +136,7 @@ const getRouteMeta = (pathname: string) => {
   return routeMeta[pathname] ?? { breadcrumb: ["Overview"], page: "Dashboard" };
 };
 
-const SidebarContent = ({ closeMobile, isDark }: { closeMobile?: () => void; isDark: boolean }) => {
+const SidebarContent = ({ closeMobile, isDark, collapsed = false }: { closeMobile?: () => void; isDark: boolean; collapsed?: boolean }) => {
   const { user } = useAuth();
   const adminAccess = useAdminAccess();
   const displayName = user?.user_metadata?.name || user?.email || "Moniger Admin";
@@ -139,30 +144,30 @@ const SidebarContent = ({ closeMobile, isDark }: { closeMobile?: () => void; isD
 
   return (
     <div className={cn("flex h-full flex-col", isDark ? "bg-[#0A1020] text-[#F1F5F9]" : "bg-[#F8FAFF] text-[#10203F]")}>
-      <div className="px-5 pt-6">
-        <Link to="/admin" onClick={closeMobile}>
-          <p className={cn("text-[14px] font-bold tracking-[0.15em]", isDark ? "text-[#3B82F6]" : "text-[#4154D8]")}>MONIGER</p>
-          <p className={cn("mt-1 text-[11px] tracking-[0.1em]", isDark ? "text-white/35" : "text-[#6B7693]")}>Admin Console</p>
+      <div className={cn("pt-6", collapsed ? "px-2" : "px-5")}>
+        <Link to="/admin" onClick={closeMobile} className={cn("block", collapsed && "text-center")}>
+          <p className={cn("text-[14px] font-bold tracking-[0.15em]", isDark ? "text-[#3B82F6]" : "text-[#4154D8]")}>{collapsed ? "M" : "MONIGER"}</p>
+          {!collapsed ? <p className={cn("mt-1 text-[11px] tracking-[0.1em]", isDark ? "text-white/35" : "text-[#6B7693]")}>Admin Console</p> : null}
         </Link>
         <div className={cn("mt-4 border-t pt-4", isDark ? "border-white/5" : "border-[#E3E6F2]")}>
-          <div className="flex items-center gap-3">
+          <div className={cn("flex items-center", collapsed ? "justify-center" : "gap-3")}>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[linear-gradient(135deg,#3B82F6,#6366F1)] text-[11px] font-semibold text-white">
               {initials}
             </div>
-            <div className="min-w-0">
+            {!collapsed ? <div className="min-w-0">
               <p className={cn("truncate text-[13px] font-medium", isDark ? "text-[#F1F5F9]" : "text-[#10203F]")}>{displayName}</p>
               <span className="mt-1 inline-flex rounded-full bg-[#3B82F6]/15 px-2 py-0.5 text-[10px] text-[#3B82F6]">
                 {adminAccess.role === "super_admin" ? "Super Admin" : "Support"}
               </span>
-            </div>
+            </div> : null}
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-4">
+      <div className={cn("flex-1 overflow-y-auto py-4", collapsed ? "px-1" : "px-2")}>
         {ADMIN_NAV.map((section) => (
           <div key={section.label} className="mb-4">
-            <p className={cn("px-5 pb-1 text-[10px] uppercase tracking-[0.12em]", isDark ? "text-white/30" : "text-[#8E97B7]")}>{section.label}</p>
+            {!collapsed ? <p className={cn("px-5 pb-1 text-[10px] uppercase tracking-[0.12em]", isDark ? "text-white/30" : "text-[#8E97B7]")}>{section.label}</p> : null}
             <div className="space-y-0.5">
               {section.items.map((item) => (
                 <NavLink
@@ -172,11 +177,12 @@ const SidebarContent = ({ closeMobile, isDark }: { closeMobile?: () => void; isD
                   onClick={closeMobile}
                   className={({ isActive }) =>
                     cn(
-                      "mx-2 flex items-center gap-2.5 rounded-md px-3 py-2 pl-5 text-[13px] font-normal transition-all duration-150",
+                      "mx-2 flex items-center gap-2.5 rounded-md py-2 text-[13px] font-normal transition-all duration-150",
+                      collapsed ? "justify-center px-2" : "px-3 pl-5",
                       isDark
                         ? "text-white/55 hover:bg-white/5 hover:text-white/85"
                         : "text-[#5F6A88] hover:bg-[#EEF2FF] hover:text-[#10203F]",
-                      isActive && "border-l-2 border-[#3B82F6] bg-[#3B82F6]/12 pl-[18px] text-[#3B82F6]",
+                      isActive && cn("border-l-2 border-[#3B82F6] bg-[#3B82F6]/12 text-[#3B82F6]", collapsed ? "pl-[6px]" : "pl-[18px]"),
                     )
                   }
                 >
@@ -187,7 +193,7 @@ const SidebarContent = ({ closeMobile, isDark }: { closeMobile?: () => void; isD
                         className={cn(isDark ? "text-white/35" : "text-[#94A3B8]", isActive && "text-[#3B82F6]")}
                         aria-hidden="true"
                       />
-                      <span>{item.label}</span>
+                      {!collapsed ? <span>{item.label}</span> : null}
                     </>
                   )}
                 </NavLink>
@@ -197,14 +203,27 @@ const SidebarContent = ({ closeMobile, isDark }: { closeMobile?: () => void; isD
         ))}
       </div>
 
-      <div className={cn("border-t px-5 py-4", isDark ? "border-white/5" : "border-[#E3E6F2]")}>
-        <Link
-          to="/dashboard"
-          className={cn("inline-flex items-center gap-2 text-[12px] transition-colors", isDark ? "text-white/35 hover:text-white/60" : "text-[#6B7693] hover:text-[#10203F]")}
-        >
-          <ArrowLeft size={14} aria-hidden="true" />
-          Back to App
-        </Link>
+      <div className={cn("border-t py-4", collapsed ? "px-1" : "px-5", isDark ? "border-white/5" : "border-[#E3E6F2]")}>
+        <div className="space-y-1">
+          <Link
+            to="/dashboard"
+            onClick={closeMobile}
+            className={cn("flex items-center gap-2 rounded-md py-2 text-[12px] transition-colors", collapsed ? "justify-center px-2" : "px-2", isDark ? "text-white/55 hover:bg-white/5 hover:text-white" : "text-[#5F6A88] hover:bg-[#EEF2FF] hover:text-[#10203F]")}
+            title={collapsed ? "Back to workspace" : undefined}
+          >
+            <ArrowLeft size={14} aria-hidden="true" />
+            {!collapsed ? "Back to workspace" : null}
+          </Link>
+          <Link
+            to="/"
+            onClick={closeMobile}
+            className={cn("flex items-center gap-2 rounded-md py-2 text-[12px] transition-colors", collapsed ? "justify-center px-2" : "px-2", isDark ? "text-white/35 hover:bg-white/5 hover:text-white/75" : "text-[#6B7693] hover:bg-[#EEF2FF] hover:text-[#10203F]")}
+            title={collapsed ? "Visit homepage" : undefined}
+          >
+            <Home size={14} aria-hidden="true" />
+            {!collapsed ? "Visit homepage" : null}
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -218,6 +237,7 @@ const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("moniger-admin-sidebar-collapsed") === "true");
   const displayName = user?.user_metadata?.name || user?.email || "Moniger Admin";
   const initials = getInitials(displayName);
   const meta = getRouteMeta(location.pathname);
@@ -255,14 +275,18 @@ const AdminLayout = () => {
     setMobileOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    localStorage.setItem("moniger-admin-sidebar-collapsed", String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
+
   return (
     <div className={cn("admin-shell min-h-screen font-sans", isDark ? "admin-dark bg-[#0F1621] text-[#F1F5F9]" : "admin-light bg-[#F5F7FF] text-[#10203F]")}>
       {!isDark ? <style>{lightModeOverrides}</style> : null}
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-white/5 md:block">
-        <SidebarContent isDark={isDark} />
+      <aside className={cn("fixed inset-y-0 left-0 hidden border-r border-white/5 transition-[width] duration-200 md:block", sidebarCollapsed ? "w-16" : "w-64")}>
+        <SidebarContent isDark={isDark} collapsed={sidebarCollapsed} />
       </aside>
 
-      <div className="min-h-screen md:ml-64">
+      <div className={cn("min-h-screen transition-[margin] duration-200", sidebarCollapsed ? "md:ml-16" : "md:ml-64")}>
         <header
           className={cn(
             "sticky top-0 z-40 flex h-14 items-center justify-between border-b px-4 backdrop-blur-xl md:px-7",
@@ -270,6 +294,21 @@ const AdminLayout = () => {
           )}
         >
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+              className={cn(
+                "hidden h-9 w-9 items-center justify-center rounded-lg border transition-colors md:inline-flex",
+                isDark
+                  ? "border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+                  : "border-[#DCE2F2] bg-white text-[#64748B] hover:bg-[#F5F7FF] hover:text-[#10203F]",
+              )}
+              aria-label={sidebarCollapsed ? "Expand admin sidebar" : "Collapse admin sidebar"}
+              aria-pressed={sidebarCollapsed}
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
+            </button>
             {isMobile ? (
               <button
                 type="button"
@@ -343,7 +382,7 @@ const AdminLayout = () => {
                   Sign out of Admin
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/dashboard")}>Back to App</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/dashboard")}>Back to workspace</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

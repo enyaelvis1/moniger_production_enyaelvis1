@@ -1028,7 +1028,7 @@ Deno.serve(async (request) => {
         await markCheckoutSession({
           adminClient,
           reference,
-          status: "failed",
+          status: "initialized",
           verificationError: "The Paystack transaction is not marked as successful yet.",
         });
         return json({ error: "The Paystack checkout has not completed successfully yet." }, 409);
@@ -1044,7 +1044,7 @@ Deno.serve(async (request) => {
         await markCheckoutSession({
           adminClient,
           reference,
-          status: "failed",
+          status: "initialized",
           verificationError: "No Paystack subscription record could be resolved for this completed checkout.",
         });
         return json(
