@@ -215,6 +215,26 @@ export type AdminUsersResponse = {
   total: number;
 };
 
+export type AdminVendorsResponse = {
+  rows: Array<{
+    accountName: string | null;
+    accountNumber: string | null;
+    bankName: string | null;
+    billCount: number;
+    businessId: string;
+    businessName: string;
+    contactName: string | null;
+    createdAt: string;
+    email: string | null;
+    isTestData: boolean;
+    phone: string | null;
+    totalPaid: number;
+    vendorId: string;
+    vendorName: string;
+  }>;
+  total: number;
+};
+
 export type AdminPaymentsResponse = {
   metrics: {
     failedThisMonth: number;
@@ -505,6 +525,7 @@ export type AdminConsoleAction =
   | "businesses.action"
   | "users.list"
   | "users.action"
+  | "vendors.list"
   | "subscriptions.list"
   | "subscriptions.update"
   | "payments.list"

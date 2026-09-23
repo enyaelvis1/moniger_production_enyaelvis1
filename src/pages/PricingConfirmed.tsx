@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import PublicPageShell from "@/components/public/PublicPageShell";
 import { Button } from "@/components/ui/button";
@@ -38,13 +38,29 @@ const formatDateLabel = (value: string | null) => {
   }
 };
 
+const isRetryableVerificationError = (message: string) => {
+  const normalizedMessage = message.toLowerCase();
+
+  return normalizedMessage.includes("not available yet") ||
+    normalizedMessage.includes("not marked as successful yet") ||
+    normalizedMessage.includes("try again in a moment");
+};
+
+const waitForVerificationRetry = (delayMs: number) =>
+  new Promise<void>((resolve) => {
+    window.setTimeout(resolve, delayMs);
+  });
+
 const PricingConfirmedPage = () => {
   const { isSessionLoading, session } = useSupabaseSession();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [result, setResult] = useState<WorkspaceSubscriptionActionResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [verificationAttempt, setVerificationAttempt] = useState(0);
+  const [canRetryVerification, setCanRetryVerification] = useState(false);
 
   const reference = useMemo(
     () => searchParams.get("reference")?.trim() || searchParams.get("trxref")?.trim() || "",
@@ -69,36 +85,64 @@ const PricingConfirmedPage = () => {
     let isMounted = true;
 
     const runVerification = async () => {
-      try {
-        const verification = session
-          ? await verifyWorkspaceSubscriptionCheckout({
-            reference,
-          })
-          : await getWorkspaceSubscriptionConfirmationStatus({
-            reference,
-          });
+      setIsLoading(true);
+      setCanRetryVerification(false);
 
-        if (isMounted) {
-          setResult(verification);
-          setErrorMessage(null);
+      for (let attempt = 0; attempt < (session ? 3 : 1); attempt += 1) {
+        try {
+          const verification = session
+            ? await verifyWorkspaceSubscriptionCheckout({
+              reference,
+            })
+            : await getWorkspaceSubscriptionConfirmationStatus({
+              reference,
+            });
+
+          if (isMounted) {
+            setResult(verification);
+            setErrorMessage(null);
+          }
+
+          return;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "We could not confirm this workspace subscription.";
+
+          if (!session || !isRetryableVerificationError(message) || attempt === 2) {
+            if (isMounted) {
+              setErrorMessage(message);
+              setCanRetryVerification(Boolean(session && isRetryableVerificationError(message)));
+            }
+
+            return;
+          }
+
+          await waitForVerificationRetry(2000);
         }
-      } catch (error) {
-        if (isMounted) {
-          setErrorMessage(error instanceof Error ? error.message : "We could not confirm this workspace subscription.");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+      }
+
+      if (isMounted) {
+        setErrorMessage("We could not confirm this workspace subscription.");
       }
     };
 
-    void runVerification();
+    void runVerification().finally(() => {
+      if (isMounted) {
+        setIsLoading(false);
+      }
+    });
 
     return () => {
       isMounted = false;
     };
-  }, [isSessionLoading, reference, session]);
+  }, [isSessionLoading, reference, session, verificationAttempt]);
+
+  useEffect(() => {
+    if (!session || !result || (result.kind !== "verified" && result.kind !== "activated")) {
+      return;
+    }
+
+    navigate("/dashboard", { replace: true });
+  }, [navigate, result, session]);
 
   const verifiedSubscription =
     result && (result.kind === "verified" || result.kind === "activated") ? result.subscription : null;
@@ -131,7 +175,11 @@ const PricingConfirmedPage = () => {
               {errorMessage}
             </div>
             <div className="flex flex-wrap gap-3">
-              {!session ? (
+              {session && canRetryVerification ? (
+                <Button type="button" onClick={() => setVerificationAttempt((attempt) => attempt + 1)} disabled={isLoading}>
+                  {isLoading ? "Retrying verification…" : "Retry verification"}
+                </Button>
+              ) : !session ? (
                 <Button asChild>
                   <Link to={loginPath}>Sign in to continue</Link>
                 </Button>

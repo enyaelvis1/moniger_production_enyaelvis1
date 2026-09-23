@@ -8,6 +8,7 @@ import AdminLayout from "@/admin/components/AdminLayout";
 const AdminDashboardPage = lazy(() => import("@/admin/pages/AdminDashboardPage"));
 const AdminPlatformMetricsPage = lazy(() => import("@/admin/pages/AdminPlatformMetricsPage"));
 const AdminBusinessesPage = lazy(() => import("@/admin/pages/AdminBusinessesPage"));
+const AdminVendorsPage = lazy(() => import("@/admin/pages/AdminVendorsPage"));
 const AdminBusinessInvoicesPage = lazy(() => import("@/admin/pages/AdminBusinessInvoicesPage"));
 const AdminBanksPage = lazy(() => import("@/admin/pages/AdminBanksPage"));
 const AdminCategoriesPage = lazy(() => import("@/admin/pages/AdminCategoriesPage"));
@@ -33,6 +34,7 @@ const AdminApp = () => (
             <Route index element={<AdminDashboardPage />} />
             <Route path="metrics" element={<AdminPlatformMetricsPage />} />
             <Route path="businesses" element={<AdminBusinessesPage />} />
+            <Route path="vendors" element={<AdminVendorsPage />} />
             <Route path="banks" element={<AdminBanksPage />} />
             <Route path="categories" element={<AdminCategoriesPage />} />
             <Route path="businesses/:businessId/invoices" element={<AdminBusinessInvoicesPage />} />

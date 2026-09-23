@@ -61,6 +61,8 @@ npm run create:admin-test-users
 
 ## Environment Variables
 
+For isolated local development and payment callbacks, follow [docs/LOCAL_ENVIRONMENT_SETUP.md](./docs/LOCAL_ENVIRONMENT_SETUP.md). Do not use production Supabase values in `.env.local` when testing Paystack locally.
+
 ### Required for app startup
 
 - `VITE_SUPABASE_URL`
