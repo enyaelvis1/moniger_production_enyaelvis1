@@ -12,9 +12,10 @@ import {
   ChevronDown,
   Wallet,
   ArrowRightLeft,
+  LogOut,
 } from "lucide-react";
 import { useRef, type KeyboardEvent, type MutableRefObject } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/hooks/use-localization";
 import { useSettingsData } from "@/hooks/use-settings-data";
@@ -35,10 +36,11 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const settingsQuery = useSettingsData(user?.id);
   const { setSelectedBusinessId } = useWorkspaceSelection();
   const { t } = useLocalization();
+  const navigate = useNavigate();
   const mainNav = [
     { title: t("navigation.dashboard"), url: "/dashboard", icon: LayoutDashboard },
     { title: t("navigation.invoices"), url: "/invoices", icon: FileText },
@@ -61,6 +63,11 @@ export function AppSidebar() {
   const isLegacyTeamView = location.pathname === "/settings" && activeSettingsTab === "team";
   const isTeamView = location.pathname === "/team" || isLegacyTeamView;
   const isSettingsView = location.pathname === "/settings" && !isLegacyTeamView;
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   const handleArrowNavigation = (
     event: KeyboardEvent<HTMLAnchorElement>,
@@ -238,6 +245,20 @@ export function AppSidebar() {
                 <Settings size={18} className="shrink-0" aria-hidden="true" />
                 {!collapsed && <span>{t("navigation.settings")}</span>}
               </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <button
+                type="button"
+                onClick={() => void handleSignOut()}
+                className="flex w-full items-center gap-3 rounded-lg bg-[#B42318] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#912018] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B42318] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-card"
+                aria-label={t("header.accountMenu.signOut")}
+                title={t("header.accountMenu.signOut")}
+              >
+                <LogOut size={18} className="shrink-0" aria-hidden="true" />
+                {!collapsed && <span>{t("header.accountMenu.signOut")}</span>}
+              </button>
             </SidebarMenuButton>
           </SidebarMenuItem>
           </SidebarMenu>

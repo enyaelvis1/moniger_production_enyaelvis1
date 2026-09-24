@@ -152,6 +152,17 @@ const AppHeader = ({ pageTitle }: { pageTitle: string }) => {
           <NotificationCenter businessId={businessId} userId={user?.id} />
         </div>
 
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#B42318] px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#912018] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B42318] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-card max-[520px]:px-2"
+          aria-label={t("header.accountMenu.signOut")}
+          title={t("header.accountMenu.signOut")}
+        >
+          <LogOut size={16} aria-hidden="true" />
+          <span className="hidden xl:inline">{t("header.accountMenu.signOut")}</span>
+        </button>
+
         <DropdownMenu open={accountMenuOpen} onOpenChange={setAccountMenuOpen}>
           <DropdownMenuTrigger asChild>
             <button
