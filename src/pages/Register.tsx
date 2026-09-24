@@ -920,15 +920,15 @@ const RegisterPage = () => {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-2">
               <button
                 type="button"
                 onClick={goToPreviousStep}
-                className={authSecondaryButtonClassName}
+                className={`${authSecondaryButtonClassName} !min-w-0 basis-0 flex-1 px-3`}
               >
                 {t("auth.register.back")}
               </button>
-              <button type="submit" disabled={!canContinue} className={authPrimaryButtonClassName}>
+              <button type="submit" disabled={!canContinue} className={`${authPrimaryButtonClassName} !min-w-0 basis-0 flex-1 px-3`}>
                 {t("auth.register.next")}
               </button>
             </div>
@@ -1067,16 +1067,16 @@ const RegisterPage = () => {
               </span>
             </label>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-2">
               <button
                 type="button"
                 onClick={goToPreviousStep}
-                className={authSecondaryButtonClassName}
+                className={`${authSecondaryButtonClassName} !min-w-0 basis-0 flex-1 px-3`}
               >
                 {t("auth.register.back")}
               </button>
 
-              <button type="submit" disabled={!canSubmit || loading} className={authPrimaryButtonClassName}>
+              <button type="submit" disabled={!canSubmit || loading} className={`${authPrimaryButtonClassName} !min-w-0 basis-0 flex-1 px-3 text-sm`}>
                 {loading ? <Loader2 size={16} className="animate-spin" /> : null}
                 {loading ? t("auth.register.creating") : t("auth.register.createAccount")}
               </button>
