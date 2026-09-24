@@ -90,7 +90,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
   }, [fabOpen]);
 
   return (
-    <div className="min-h-screen bg-[#F3F4FB] dark:bg-background">
+    <div className="min-h-screen bg-muted/30 dark:bg-background">
       <SkipToMainContent />
       <SidebarProvider>
         <div className="min-h-screen flex w-full">

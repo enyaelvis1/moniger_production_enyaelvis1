@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { ArrowUpRight, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/app/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/hooks/use-theme";
@@ -54,13 +55,13 @@ export const AdminSectionCard = ({
   const { isDark } = useAdminTheme();
 
   return (
-    <section className={cn(getSurfaceClassName(isDark), "p-4 sm:p-5", className)}>
-      <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4">
-        <h2 className={cn("text-sm font-semibold sm:text-[15px]", isDark ? "text-[#F1F5F9]" : "text-[#10203F]")}>{title}</h2>
+    <Card className={cn(getSurfaceClassName(isDark), "p-0", className)}>
+      <CardHeader className="flex-row items-center justify-between space-y-0 p-4 sm:p-5">
+        <CardTitle className={cn("text-sm font-semibold sm:text-[15px]", isDark ? "text-[#F1F5F9]" : "text-[#10203F]")}>{title}</CardTitle>
         {titleAction}
-      </div>
-      {children}
-    </section>
+      </CardHeader>
+      <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">{children}</CardContent>
+    </Card>
   );
 };
 
@@ -82,9 +83,9 @@ export const AdminMetricCard = ({
   const { isDark } = useAdminTheme();
 
   return (
-    <div
+    <Card
       className={cn(
-        "rounded-xl border px-4 py-4 transition-all duration-150 hover:shadow-[0_0_0_1px_rgba(59,130,246,0.08)] sm:px-6 sm:py-5",
+        "rounded-xl px-4 py-4 transition-all duration-150 hover:shadow-[0_0_0_1px_rgba(59,130,246,0.08)] sm:px-6 sm:py-5",
         isDark ? "border-white/5 bg-[#161E2E] hover:border-white/10" : "border-[#DCE2F2] bg-white hover:border-[#C9D6F5]",
       )}
     >
@@ -100,7 +101,7 @@ export const AdminMetricCard = ({
         {trend}
         <span className={isDark ? "text-white/45" : "text-[#6B7693]"}>{sublabel}</span>
       </div>
-    </div>
+    </Card>
   );
 };
 

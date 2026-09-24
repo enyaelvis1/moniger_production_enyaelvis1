@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -35,11 +36,14 @@ const initialForm = {
 const AdminAnnouncementsPage = () => {
   const { toast } = useToast();
   const [form, setForm] = useState(initialForm);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const announcementsQuery = useAdminConsoleQuery<AdminAnnouncementsResponse>("announcements.list");
   const previewStatus = useMemo(
     () => form.publishedAt ? "Scheduled" : "Draft",
     [form.publishedAt],
   );
+  const rows = announcementsQuery.data?.rows ?? [];
+  const allSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.announcementId));
 
   const saveAnnouncement = async (publishNow = false) => {
     try {
@@ -65,11 +69,24 @@ const AdminAnnouncementsPage = () => {
     }
   };
 
+  const deleteSelected = async () => {
+    if (selectedIds.length === 0 || !window.confirm(`Delete ${selectedIds.length} selected announcement${selectedIds.length === 1 ? "" : "s"}?`)) return;
+    try {
+      await Promise.all(selectedIds.map((announcementId) => invokeAdminConsole("announcements.delete", { announcementId })));
+      await announcementsQuery.refetch();
+      setSelectedIds([]);
+      toast({ title: "Announcements deleted", description: "The selected announcements were removed." });
+    } catch (error) {
+      toast({ title: "Unable to delete announcements", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
         title="Announcements"
         subtitle="Create, schedule, preview, and publish operator notices across the platform."
+        action={selectedIds.length > 0 ? <Button variant="destructive" onClick={() => void deleteSelected()}>Delete selected ({selectedIds.length})</Button> : null}
       />
 
       <AdminSectionCard title="What this page is for">
@@ -81,11 +98,13 @@ const AdminAnnouncementsPage = () => {
 
       <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
         <AdminSectionCard title="Announcements List">
+          {rows.length > 0 ? <label className="mb-4 flex items-center gap-2 text-xs text-white/60"><Checkbox checked={allSelected} onCheckedChange={(checked) => setSelectedIds(checked === true ? rows.map((row) => row.announcementId) : [])} aria-label="Select all announcements" /> Select all visible ({selectedIds.length} selected)</label> : null}
           <div className="space-y-3">
-            {(announcementsQuery.data?.rows ?? []).map((announcement) => (
+            {rows.map((announcement) => (
               <div key={announcement.announcementId} className="rounded-xl border border-white/5 bg-[#0F1621] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
+                    <Checkbox checked={selectedIds.includes(announcement.announcementId)} onCheckedChange={(checked) => setSelectedIds((current) => checked === true ? [...new Set([...current, announcement.announcementId])] : current.filter((id) => id !== announcement.announcementId))} aria-label={`Select ${announcement.title}`} className="mb-2" />
                     <p className="text-sm font-semibold text-[#F1F5F9]">{announcement.title}</p>
                     <p className="mt-1 line-clamp-2 text-sm text-white/45">{announcement.body}</p>
                   </div>

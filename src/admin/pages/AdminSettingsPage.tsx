@@ -194,7 +194,7 @@ const AdminSettingsPage = () => {
       />
 
       <Tabs defaultValue="admins" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-[#111927]">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 bg-muted/50 p-1 sm:grid-cols-4">
           <TabsTrigger value="admins">Admin Users</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="config">Platform Config</TabsTrigger>
@@ -202,7 +202,7 @@ const AdminSettingsPage = () => {
         </TabsList>
 
         <TabsContent value="admins" className="mt-4">
-          <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+          <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
             <AdminSectionCard title="Current Admins">
               <p className="mb-4 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/60">
                 Super admins can remove another admin&apos;s console access here. The account, workspace, and business data remain unchanged.
@@ -275,7 +275,7 @@ const AdminSettingsPage = () => {
         </TabsContent>
 
         <TabsContent value="security" className="mt-4">
-          <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
             <AdminSectionCard title="Session Security">
               <div className="space-y-4">
                 <div>

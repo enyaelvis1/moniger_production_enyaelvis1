@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/app/EmptyState";
 import AppLayout from "@/components/app/AppLayout";
 import OnboardingChecklist from "@/components/app/OnboardingChecklist";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/hooks/use-localization";
@@ -43,6 +44,8 @@ const scaleIn = {
     transition: { delay: index * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] },
   }),
 };
+
+const MotionCard = motion(Card);
 
 const activityStyles: Record<ActivityModule, { bg: string; color: string; icon: typeof FileText }> = {
   Bills: { bg: "bg-[#FEF3F2]", color: "text-[#F97066]", icon: CreditCard },
@@ -312,12 +315,12 @@ const Dashboard = () => {
 
           <div className="hidden min-w-0 md:grid grid-cols-2 gap-3 xl:grid-cols-5">
             {summaryCards.map((card, index) => (
-              <motion.div
+              <MotionCard
                 key={card.label}
                 custom={index}
                 variants={scaleIn}
                 whileHover={{ transition: { duration: 0.2 }, y: -4 }}
-                className={`group relative flex h-full min-h-[152px] flex-col overflow-hidden rounded-[28px] border border-white/50 bg-white/75 p-3 shadow-[0_12px_32px_rgba(91,103,247,0.08)] backdrop-blur-xl transition-shadow hover:shadow-[0_16px_36px_rgba(91,103,247,0.12)] dark:border-white/10 dark:bg-card/70 sm:min-h-[176px] sm:p-6 ${
+                className={`group relative flex h-full min-h-[152px] flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-4 shadow-sm transition-shadow hover:shadow-md sm:min-h-[176px] sm:p-5 ${
                   card.label === "Funding balance" ? "col-span-2 sm:col-span-1" : ""
                 }`}
               >
@@ -341,7 +344,7 @@ const Dashboard = () => {
                     {card.sub}
                   </p>
                 </div>
-              </motion.div>
+              </MotionCard>
             ))}
           </div>
 
@@ -361,12 +364,12 @@ const Dashboard = () => {
                 <div key={groupIndex} className="min-w-full snap-start">
                   <div className="grid auto-rows-fr grid-cols-2 items-stretch gap-3">
                     {group.map((card, index) => (
-                      <motion.div
+                      <MotionCard
                         key={card.label}
                         custom={index + 1}
                         variants={scaleIn}
                         whileTap={{ scale: 0.99 }}
-                        className="group relative flex h-full min-h-[168px] flex-col overflow-hidden rounded-[28px] border border-white/50 bg-white/85 p-3 shadow-[0_14px_34px_rgba(91,103,247,0.08)] backdrop-blur-2xl transition-transform dark:border-white/10 dark:bg-card/70"
+                        className="group relative flex h-full min-h-[168px] flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-4 shadow-sm transition-transform hover:shadow-md"
                       >
                         <div className={`absolute left-0 right-0 top-0 h-1 bg-gradient-to-r ${card.accent}`} />
                         <div className="flex items-start justify-between gap-2">
@@ -385,7 +388,7 @@ const Dashboard = () => {
                         <p className="mt-auto pt-4 text-[1.15rem] font-bold leading-none text-[#0D1B2A] dark:text-foreground">
                           {card.value}
                         </p>
-                      </motion.div>
+                      </MotionCard>
                     ))}
                   </div>
                 </div>
@@ -409,7 +412,7 @@ const Dashboard = () => {
                 <motion.div
                   custom={4}
                   variants={fadeUp}
-                  className="flex h-[340px] flex-col overflow-hidden rounded-[30px] border border-white/50 bg-white/82 p-4 shadow-[0_14px_34px_rgba(91,103,247,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-card/70"
+                  className="flex h-[340px] flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-4 shadow-sm"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -470,7 +473,7 @@ const Dashboard = () => {
                 <motion.div
                   custom={5}
                   variants={fadeUp}
-                  className="flex h-[340px] flex-col overflow-hidden rounded-[30px] border border-white/50 bg-white/82 p-4 shadow-[0_14px_34px_rgba(91,103,247,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-card/70"
+                  className="flex h-[340px] flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-4 shadow-sm"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -533,7 +536,7 @@ const Dashboard = () => {
                 <motion.div
                   custom={5.5}
                   variants={fadeUp}
-                  className="flex h-[340px] flex-col overflow-hidden rounded-[30px] border border-white/50 bg-white/82 p-4 shadow-[0_14px_34px_rgba(91,103,247,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-card/70"
+                  className="flex h-[340px] flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-4 shadow-sm"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -571,7 +574,7 @@ const Dashboard = () => {
             <motion.div
               custom={4}
               variants={fadeUp}
-              className="rounded-3xl border border-white/50 bg-white/75 p-4 shadow-[0_12px_32px_rgba(91,103,247,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-card/70 sm:p-6"
+              className="rounded-xl border border-border/60 bg-card p-4 shadow-sm sm:p-6"
             >
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h3 className="text-base font-semibold text-[#0D1B2A] dark:text-foreground">
@@ -630,7 +633,7 @@ const Dashboard = () => {
             <motion.div
               custom={5}
               variants={fadeUp}
-              className="rounded-3xl border border-white/50 bg-white/75 p-4 shadow-[0_12px_32px_rgba(91,103,247,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-card/70 sm:p-6"
+              className="rounded-xl border border-border/60 bg-card p-4 shadow-sm sm:p-6"
             >
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h3 className="text-base font-semibold text-[#0D1B2A] dark:text-foreground">{t("dashboard.recentActivity")}</h3>
@@ -686,7 +689,7 @@ const Dashboard = () => {
             <motion.div
               custom={5.5}
               variants={fadeUp}
-              className="rounded-[30px] border border-white/50 bg-white/82 p-4 shadow-[0_14px_34px_rgba(91,103,247,0.08)] backdrop-blur-2xl dark:border-white/10 dark:bg-card/70"
+              className="rounded-xl border border-border/60 bg-card p-4 shadow-sm"
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -725,7 +728,7 @@ const Dashboard = () => {
           <motion.div
             custom={5.5}
             variants={fadeUp}
-            className="hidden rounded-3xl border border-white/50 bg-white/75 p-4 shadow-[0_12px_32px_rgba(91,103,247,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-card/70 sm:p-6 md:block"
+            className="hidden rounded-xl border border-border/60 bg-card p-4 shadow-sm sm:p-6 md:block"
           >
             <div className="min-w-0">
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -770,7 +773,7 @@ const Dashboard = () => {
                 whileHover={{ transition: { duration: 0.2 }, y: -3 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate(action.href)}
-                className="group flex items-center gap-4 rounded-3xl border border-white/50 bg-white/75 p-4 text-left shadow-[0_12px_32px_rgba(91,103,247,0.08)] backdrop-blur-xl transition-all hover:border-[#5B67F7]/30 hover:shadow-[0_16px_36px_rgba(91,103,247,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B67F7] focus-visible:ring-offset-2 dark:border-white/10 dark:bg-card/70 sm:p-6"
+                className="group flex items-center gap-4 rounded-xl border border-border/60 bg-card p-4 text-left shadow-sm transition-all hover:border-[#5B67F7]/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B67F7] focus-visible:ring-offset-2 sm:p-5"
               >
                 <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${action.gradient} shadow-sm`}>
                   <action.icon size={20} className="text-white" aria-hidden="true" />

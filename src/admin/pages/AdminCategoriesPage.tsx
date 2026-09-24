@@ -2,6 +2,7 @@ import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -31,6 +32,7 @@ const AdminCategoriesPage = () => {
   const [pageSize, setPageSize] = useState(25);
   const [addOpen, setAddOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
 
   const filtered = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
@@ -51,6 +53,7 @@ const AdminCategoriesPage = () => {
 
   const start = (page - 1) * pageSize;
   const displayed = useMemo(() => (filtered ?? []).slice(start, start + pageSize), [filtered, start, pageSize]);
+  const allDisplayedSelected = displayed.length > 0 && displayed.every((category) => selectedCategoryIds.includes(category.id));
 
   const handleAdd = async () => {
     const name = newCategoryName.trim();
@@ -74,6 +77,17 @@ const AdminCategoriesPage = () => {
     }
   };
 
+  const bulkToggleCategories = async (isActive: boolean) => {
+    try {
+      await Promise.all(selectedCategoryIds.map((id) => modifyCategory.mutateAsync({ id, values: { is_active: isActive } })));
+      await categoriesQuery.refetch();
+      setSelectedCategoryIds([]);
+      toast({ title: "Categories updated", description: `${selectedCategoryIds.length} categories were ${isActive ? "enabled" : "archived"}.` });
+    } catch (err) {
+      toast({ title: "Unable to update categories", description: err instanceof Error ? err.message : "Please try again.", variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -86,11 +100,16 @@ const AdminCategoriesPage = () => {
               <Plus size={14} />
               <span className="ml-2">Add category</span>
             </Button>
+            {selectedCategoryIds.length > 0 ? <AdminGhostButton onClick={() => void bulkToggleCategories(false)}>Archive selected</AdminGhostButton> : null}
           </div>
         )}
       />
 
       <AdminToolbar>
+        <label className="flex items-center gap-2 text-xs text-white/60">
+          <Checkbox checked={allDisplayedSelected} onCheckedChange={(checked) => setSelectedCategoryIds(checked === true ? displayed.map((category) => category.id) : [])} aria-label="Select all visible categories" />
+          Select all visible ({selectedCategoryIds.length} selected)
+        </label>
         <div className="relative w-full flex-1 sm:min-w-[240px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
           <Input
@@ -133,6 +152,7 @@ const AdminCategoriesPage = () => {
               <table className="w-full table-auto">
                 <AdminTableHead>
                   <tr>
+                    <th className="w-10 px-4 py-3"><span className="sr-only">Select</span></th>
                     <th className="px-4 py-3 text-left">Name</th>
                     <th className="px-4 py-3 text-left">Created</th>
                     <th className="px-4 py-3">Status</th>
@@ -142,6 +162,7 @@ const AdminCategoriesPage = () => {
                 <tbody>
                   {displayed.map((c) => (
                     <tr key={c.id} className="border-t border-white/5">
+                      <td className="px-4 py-3"><Checkbox checked={selectedCategoryIds.includes(c.id)} onCheckedChange={(checked) => setSelectedCategoryIds((current) => checked === true ? [...new Set([...current, c.id])] : current.filter((id) => id !== c.id))} aria-label={`Select ${c.name}`} /></td>
                       <td className="px-4 py-3">{c.name}</td>
                       <td className="px-4 py-3">{formatAdminDate(c.created_at)}</td>
                       <td className="px-4 py-3 text-center">
