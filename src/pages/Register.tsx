@@ -664,12 +664,12 @@ const RegisterPage = () => {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3">
             {successState.redirectToDashboard ? (
               <button
                 type="button"
                 onClick={openDashboard}
-                className={authPrimaryButtonClassName}
+                className={`${authPrimaryButtonClassName} !min-w-0 basis-0 flex-1 px-3 text-sm`}
               >
                 {isPaidPlanSelection ? t("auth.register.continueToPayment") : t("auth.register.openDashboardNow")}
               </button>
@@ -683,7 +683,7 @@ const RegisterPage = () => {
                       { replace: true },
                     )
                   }
-                  className={authPrimaryButtonClassName}
+                  className={`${authPrimaryButtonClassName} !min-w-0 basis-0 flex-1 px-3 text-sm`}
                 >
                   {t("auth.register.goToLogin")}
                 </button>
@@ -704,7 +704,7 @@ const RegisterPage = () => {
                     setAgreed(false);
                     setError("");
                   }}
-                  className={authSecondaryButtonClassName}
+                  className={`${authSecondaryButtonClassName} !min-w-0 basis-0 flex-1 px-3 text-sm`}
                 >
                   {t("auth.register.useAnotherEmail")}
                 </button>
