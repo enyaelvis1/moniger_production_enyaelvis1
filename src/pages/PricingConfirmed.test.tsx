@@ -112,7 +112,40 @@ describe("PricingConfirmedPage", () => {
     expect(await screen.findByText("Dashboard")).toBeInTheDocument();
     expect(screen.queryByText(/subscription confirmed/i)).not.toBeInTheDocument();
     await waitFor(() => {
-      expect(queryClient.getQueryState(["workspace-subscription", "business-1"])?.isInvalidated).toBe(true);
+      expect(queryClient.getQueryData(["workspace-subscription", "business-1"])).toBeUndefined();
     });
   });
+
+  it("retries a delayed provider response and only redirects after verification succeeds", async () => {
+    useSupabaseSessionMock.mockReturnValue({
+      isSessionLoading: false,
+      session: { access_token: "token" },
+    });
+    verifyWorkspaceSubscriptionCheckoutMock
+      .mockRejectedValueOnce(Object.assign(new Error("Payment verification is still pending"), { code: "CHECKOUT_PENDING", retryable: true }))
+      .mockRejectedValueOnce(Object.assign(new Error("Payment verification is still pending"), { code: "CHECKOUT_PENDING", retryable: true }))
+      .mockResolvedValueOnce({
+        kind: "verified",
+        ok: true,
+        subscription: {
+          amount: 89000,
+          billingCycle: "monthly",
+          businessId: "business-1",
+          businessName: "Acme Workspace",
+          nextRenewalAt: "2026-06-21T00:00:00.000Z",
+          plan: "business",
+          provider: "paystack",
+          reference: "SUB-DELAYED",
+          status: "active",
+        },
+      });
+
+    renderPage("/pricing/confirmed?reference=SUB-DELAYED");
+
+    await waitFor(() => {
+      expect(verifyWorkspaceSubscriptionCheckoutMock).toHaveBeenCalledTimes(3);
+      expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    }, { timeout: 10000 });
+
+  }, 10000);
 });

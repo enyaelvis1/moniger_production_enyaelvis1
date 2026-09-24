@@ -350,6 +350,9 @@ const PaymentsPage = () => {
             </div>
 
             <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+              <p className="px-4 pt-3 text-xs text-muted-foreground sm:hidden">
+                Swipe horizontally to view all payment columns.
+              </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <caption className="sr-only">Payments table</caption>

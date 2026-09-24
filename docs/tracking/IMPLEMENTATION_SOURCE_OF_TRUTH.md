@@ -71,6 +71,7 @@ That changes the implementation priority:
 - [ ] Most workspace routes still only require sign-in and MFA, but premium pages like `/reports` and `/audit-trail` now have subscription-aware entitlement gates.
 - [x] Public pricing cards now read from an admin-editable `billing_catalog` value published through a public site config endpoint.
 - [x] The workspace shell now shows a subscription status banner, and `/reports` plus `/audit-trail` now show an in-app workspace upgrade page with direct checkout and a highlighted current-plan summary when the plan is not active.
+- [x] Multi-workspace users can switch workspaces from the sidebar; the selected workspace is persisted per user and settings/subscription queries are scoped to the selected business.
 - [x] The workspace profile upgrade action now opens a plan comparison dialog first, so users can review the available plans before starting checkout.
 - [x] Self-service cancellation stops Paystack renewal, preserves access through the recorded renewal date, and records `cancel_at_period_end` with an audit event.
 - [x] Paystack `invoice.payment_failed` events set the workspace subscription to `past_due` and notify active workspace finance users with a Settings recovery link; hosted retry and email-delivery verification remain release gates.
@@ -255,3 +256,14 @@ Live cutover checklist after Paystack approval:
 1. Close production rollout verification for the already-implemented Paystack invoice and subscription flows.
 2. Close production rollout details for marketplace routing, especially live secrets, webhook visibility, and deployment settings.
 3. Resolve paid-plan switching rules before additional billing complexity is added.
+
+### 2026-09-23 — Client feedback hardening in local validation
+
+- [x] Added shared Vendor and Business phone validation that rejects alphabetic and unsupported characters in the browser and database trigger paths.
+- [x] Added same-workspace relationship checks for invoices, bills, payments, and payout records in the local migration set.
+- [x] Added a bounded Supabase request timeout so Dashboard, Payments, Reports, and Audit Trail requests resolve to an error state instead of spinning indefinitely.
+- [x] Separated unresolved subscription status from the `Starter` display fallback and added retry/error handling for subscription-gated pages.
+- [x] Consolidated lazy-route and protected-route full-page loading into the shared `RouteLoadingScreen`; removed the invalid landing-page image priority prop that produced a React console warning.
+- [x] Authenticated multi-company isolation and Starter/Growth/Business page rendering now have local UAT evidence; full entitlement coverage and multi-workspace switching remain open.
+- [ ] A visible workspace selector is still required before multi-membership workspace-switch acceptance can be completed.
+- [ ] The new migrations are applied to the local Supabase instance only; remote migration and production deployment remain intentionally pending approval.

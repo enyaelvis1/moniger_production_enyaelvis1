@@ -4,9 +4,29 @@ import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
 import WorkspaceUpgradePrompt from "@/components/app/WorkspaceUpgradePrompt";
 
 const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
-  const { entitlements, isLoading, subscription } = useWorkspaceSubscription();
+  const { entitlements, isError, refetch, refetchWorkspace, subscription, subscriptionLoading, workspaceError, workspaceLoading } = useWorkspaceSubscription();
 
-  if (isLoading || !subscription) {
+  if (workspaceError || isError) {
+    return (
+      <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-[#F8C9C9] bg-[#FEF2F2] px-6 text-center shadow-[0_18px_50px_rgba(16,32,63,0.06)]">
+        <div className="max-w-md space-y-3">
+          <p className="text-base font-semibold text-[#991B1B]">Unable to resolve this workspace&apos;s subscription</p>
+          <p className="text-sm leading-6 text-[#991B1B]/80">
+            We could not confirm the current plan. Refresh the page or retry the subscription check.
+          </p>
+          <button
+            type="button"
+            onClick={() => void Promise.all([refetchWorkspace(), refetch()])}
+            className="rounded-full bg-[#991B1B] px-4 py-2 text-sm font-semibold text-white hover:bg-[#7F1D1D]"
+          >
+            Retry subscription check
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (workspaceLoading || subscriptionLoading) {
     return (
       <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-[#DCE2F2] bg-white shadow-[0_18px_50px_rgba(16,32,63,0.06)]">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -14,6 +34,16 @@ const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
           <p className="text-sm font-medium text-[#5F6A88]">Checking workspace subscription…</p>
         </div>
       </div>
+    );
+  }
+
+  if (!subscription) {
+    return (
+      <WorkspaceUpgradePrompt
+        businessId={null}
+        currentPlan={null}
+        reason="paid-plan-required"
+      />
     );
   }
 

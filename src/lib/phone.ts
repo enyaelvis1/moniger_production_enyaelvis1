@@ -2,11 +2,24 @@ const NIGERIA_COUNTRY_CODE = "234";
 
 export const phonePlaceholder = "+234 801 234 5678";
 
-const stripPhoneFormatting = (value: string) => value.replace(/[^\d+]/g, "");
+const supportedPhoneCharacters = /^[+\d\s().-]+$/;
+
+export const filterPhoneInput = (value: string) => value.replace(/[^+\d\s().-]/g, "");
+
+const stripPhoneFormatting = (value: string) => value.replace(/[\s().-]/g, "");
 
 export const normalizePhoneNumber = (value: string | null | undefined): string | null => {
   const trimmedValue = value?.trim();
   if (!trimmedValue) {
+    return null;
+  }
+
+  if (!supportedPhoneCharacters.test(trimmedValue)) {
+    return null;
+  }
+
+  const plusCount = (trimmedValue.match(/\+/g) ?? []).length;
+  if (plusCount > 1 || (plusCount === 1 && !trimmedValue.startsWith("+"))) {
     return null;
   }
 
@@ -16,11 +29,11 @@ export const normalizePhoneNumber = (value: string | null | undefined): string |
   }
 
   if (compactValue.startsWith("+")) {
-    const digits = compactValue.slice(1).replace(/\D/g, "");
+    const digits = compactValue.slice(1);
     return digits ? `+${digits}` : null;
   }
 
-  const digits = compactValue.replace(/\D/g, "");
+  const digits = compactValue;
   if (!digits) {
     return null;
   }

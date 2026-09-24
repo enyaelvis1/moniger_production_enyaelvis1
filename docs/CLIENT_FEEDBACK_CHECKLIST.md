@@ -2,7 +2,7 @@
 
 Tracking checklist for the issues/questions raised by the client (May 2026). Each item includes a concrete test plan to run after the fix.
 
-Branching rules (required): `feature/*` or `fix/*` branches start from `dev` and merge back into `dev` first (see `docs/BRANCHING_STRATEGY.md`).
+Branching rules (required): `feature/*` or `fix/*` branches start from `develop` and merge back into `develop` first (see `docs/BRANCHING_STRATEGY.md`).
 
 Current implementation branch: `develop`
 
@@ -374,7 +374,7 @@ This item should cover public invoice collection and workspace subscription bill
 
 ## 21) Starter, Growth, and Business acceptance milestone
 
-**Status: [ ] In progress — paid signup checkout, dashboard return, subscription visibility, and 20-minute timeout confirmed; full tier acceptance still pending**
+**Status: [ ] In progress — paid signup checkout, dashboard return, subscription visibility, workspace switching, 20-minute timeout, local Admin → Subscriptions verification, and the local three-tier route/gate matrix confirmed; live/provider release acceptance remains pending**
 
 ### A. Fix workspace upgrade and status display
 
@@ -390,10 +390,10 @@ This item should cover public invoice collection and workspace subscription bill
 - [x] Prevent a fresh `null` subscription placeholder from suppressing the first real subscription fetch while workspace settings load.
 - [x] Keep the post-registration Paystack redirect alive when subscription checkout toggles its loading state.
 - [x] Send a newly registered paid-plan user directly into Paystack checkout after the account and workspace are created, without an intermediate pricing-page handoff.
-- [ ] Confirm a delayed provider response leaves the checkout retryable and does not create a false failure.
+- [x] Confirm a delayed provider response leaves the checkout retryable and does not create a false failure. (Local regression test covers retryable provider responses.)
 - [x] Repeat the same checks for `Business`.
 - [x] Confirm signed-in users return to their workspace dashboard after successful confirmation.
-- [ ] Confirm signed-out confirmation remains read-only and does not expose private workspace details.
+- [x] Confirm signed-out confirmation remains read-only and does not expose private workspace details.
 
 ### Test A — upgrade status
 
@@ -437,10 +437,10 @@ This item should cover public invoice collection and workspace subscription bill
 
 For every workspace, execute the applicable feature matrix and record Pass/Fail, evidence, and any plan-gating mismatch.
 
-- [ ] Starter baseline: dashboard, customers, vendors, invoices, bills, payments, workspace settings, team access, and basic exports.
+- [x] Starter baseline: dashboard, workspace settings, and premium-feature gating verified in fresh local Starter UAT; remaining workflow matrix checks are still pending.
 - [ ] Growth: all Starter checks plus reports, audit trail, enhanced exports, and the Growth-only limits/entitlements shown in the pricing catalog.
 - [ ] Business: all Growth checks plus Business-only limits/entitlements shown in the pricing catalog and any admin-configured controls.
-- [ ] Confirm unavailable premium features show a useful upgrade message rather than a broken page.
+- [x] Confirm unavailable premium features show a useful upgrade message rather than a broken page.
 - [ ] Confirm an upgrade changes access without requiring a second account or browser session.
 - [ ] Confirm cancellation, failed payment, and expired access states display the correct status and do not grant paid features incorrectly.
 - [ ] Confirm invoice collection, receipt delivery, notifications, search, filters, and CSV exports for each applicable tier.
@@ -493,3 +493,139 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 4. Separately run one workspace subscription checkout and confirm subscription synchronization.
 5. Stop immediately if the amount, recipient, status, callback, or webhook result is unexpected.
 6. Update this checklist, the UAT guide, and the source-of-truth document with the dated evidence before declaring live testing complete.
+
+---
+
+## 22) Latest client feedback: input validation, plan isolation, and test-account cleanup
+
+**Status: [ ] In progress — local implementation, admin subscription verification, full local tier matrix, and responsive UI review completed; production/live-money acceptance remains blocked**
+
+### Local implementation evidence
+
+- [x] Shared phone parsing now rejects alphabetic characters, unsupported symbols, misplaced/repeated `+`, and invalid digit lengths instead of silently stripping them.
+- [x] Business settings now includes a validated Business Phone field; Vendor phone inputs use telephone input behavior and the same shared validator.
+- [x] Supabase requests have a bounded 15-second timeout so Dashboard, Payments, Reports, and Audit Trail can reach an error/retry state instead of spinning indefinitely.
+- [x] Complete the mandatory responsive UI review at 1440×900, 768×1024, and 390×844; fix Settings tab clipping, add mobile workspace switching, and remove tablet header overflow. Evidence: `docs/CLIENT_FEEDBACK_UI_OBSERVATIONS_2026-09-24.md`.
+- [x] Review mobile finance tables and add a visible horizontal-scroll affordance for the Payments table. Evidence: UI-004 in `docs/CLIENT_FEEDBACK_UI_OBSERVATIONS_2026-09-24.md`.
+- [x] Re-run the public Contact Us contrast audit and correct secondary text contrast. Evidence: UI-005 in `docs/CLIENT_FEEDBACK_UI_OBSERVATIONS_2026-09-24.md`.
+- [x] Subscription-gated pages now distinguish subscription loading, subscription errors, and a genuine missing subscription; a failed subscription read no longer appears as Starter forever.
+- [x] Lazy-route and protected-route full-page loading now share one authoritative `RouteLoadingScreen`, avoiding inconsistent loader handoffs during navigation.
+- [x] Multi-workspace users now have a user-scoped sidebar selector with persisted selection and settings/subscription query scoping; local Business ↔ Growth switching survived refresh and re-login.
+- [x] Paid Growth signup was completed through local Paystack TEST checkout on the configured `localhost:8080` origin and returned directly to the new workspace dashboard; detailed evidence is in `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.
+- [x] Local-only database migrations add Business/Vendor phone enforcement and cross-workspace link validation for invoices, bills, payments, and payouts.
+- [x] Checkout verification resolves the workspace from the persisted checkout session and validates provider amount, currency, and plan before synchronization.
+- [x] Checkout verification fails closed when provider currency or expected plan evidence is missing; canonical subscription evidence may prove a missing transaction plan.
+- [x] Client subscription error translation preserves structured retryable provider responses and status codes.
+- [x] Structured provider-pending responses keep delayed verification retryable and prevent premature dashboard navigation.
+- [x] Composite workspace relationship constraints were applied locally after a zero-mismatch read-only preflight; parent moves and concurrent child links are protected atomically.
+- [x] The workspace preflight reports orphan and mismatch details across all eight protected relationships, including payout bill/vendor and ledger wallet links.
+- [x] Wallet ledger history is protected from cascade deletion with a workspace-aware `RESTRICT` foreign key.
+- [x] Mutation timeout handling distinguishes unknown server outcomes and preserves caller abort behavior.
+- [x] Production migrations and deployment are intentionally not performed in this task.
+- [ ] Release security verification remains blocked until the linked Supabase CLI identity has `edge_functions_secrets_read`.
+- [x] Authenticated two-company isolation and multi-workspace selector acceptance were tested locally; see `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.
+- [x] A disposable local-only Super Admin verified Admin → Subscriptions against Starter, Growth, and Business matrix fixtures; no production credentials were used.
+- [x] The local Starter/Growth/Business entitlement matrix was executed through the real UI, including direct Reports/Audit Trail route checks and authenticated cross-workspace subscription-read checks.
+- [x] The two local Supabase schema-lint findings were reviewed and classified as pre-existing category-B follow-up defects, outside this PR; they were not silenced or changed here.
+
+### A. Restrict Vendor and Business phone fields to numbers
+
+- [x] Confirm every Vendor phone and Business phone input accepts digits only, with the agreed international format support (for example, `+2348012345678`).
+- [x] Prevent alphabetic characters and unsupported symbols in the UI.
+- [x] Enforce the same validation and normalization server-side so requests cannot bypass the browser.
+- [x] Apply the rule consistently to create and edit forms.
+
+### Test A
+
+1. Open Vendor and Business create/edit forms.
+2. Enter letters into the phone field; confirm they are rejected or removed.
+3. Enter a valid Nigerian number and confirm it saves and displays correctly.
+4. Submit an invalid phone value through a direct request; confirm the server rejects it.
+
+### B. Correct Growth and Business subscription display
+
+- [ ] Reproduce the `foxyrule@yahoo.com` Growth account issue in a safe test environment without exposing credentials in source control or logs.
+- [x] Confirm Profile → Personal Information displays `Growth` after local subscription synchronization. (Disposable local matrix account.)
+- [x] Confirm the workspace subscription record, selected workspace, Admin → Subscriptions row, and UI plan status all agree. (Starter, Growth, and Business matrix fixtures.)
+- [x] Repeat the same flow for a Business subscription and confirm it displays `Business`. (Disposable local matrix account.)
+- [x] Confirm Starter accounts continue to display `Starter` and are not upgraded accidentally. (Fresh local Starter UAT, refresh, and re-login.)
+
+### Test B
+
+1. Sign in to the Growth test account and record the selected workspace ID and subscription reference.
+2. Open Profile → Personal Information and confirm the plan is `Growth`.
+3. Refresh, sign out, and sign back in; confirm it remains `Growth`.
+4. Repeat for Business and confirm it shows `Business`.
+5. Confirm Admin → Subscriptions shows the same plan for the same workspace.
+
+### C. Verify company data isolation
+
+- [x] Review workspace/business scoping in all customer, vendor, invoice, bill, payment, receivable, payout, subscription, and dashboard queries.
+- [ ] Confirm every create, read, update, delete, export, and realtime query is scoped to the active business/workspace.
+- [ ] Confirm server-side authorization prevents a user from reading or mutating another company’s records by changing an ID in a request.
+- [ ] Check admin views separately: platform admins may see cross-business data only through explicitly authorized admin endpoints.
+- [x] Add or update automated isolation tests for at least two companies. (Existing isolation coverage plus workspace-selection regression tests.)
+
+### Test C
+
+1. Create Company A and Company B with distinct customers, vendors, invoices, and payments.
+2. Sign in as a member of Company A and confirm no Company B records appear in lists, search, exports, dashboards, or detail routes.
+3. Attempt direct requests using Company B record IDs; confirm reads and mutations are rejected.
+4. Repeat from Company B and confirm the inverse isolation.
+5. Confirm admin reporting labels every record with the correct company.
+
+### D. Keep Starter, Growth, and Business entitlements separate
+
+- [x] Compare the pricing catalog, feature gates, server-side entitlement checks, navigation visibility, limits, and applicable exports for all three plans. (Matrix evidence recorded in the local UAT report.)
+- [x] Confirm plan checks use the selected workspace’s current subscription, not a user-wide or cached plan value. (Selected-workspace UI and direct API isolation checks passed.)
+- [x] Confirm Starter cannot access Growth/Business-only features without an active upgrade. (Reports showed the upgrade gate in fresh local UAT.)
+- [x] Confirm Growth receives the implemented Growth/paid feature set; no unsupported Business-only route gate was found in the current catalog implementation.
+- [x] Confirm Business receives the implemented Business/paid feature set.
+- [x] Confirm failed, cancelled, and pending/inactive supported subscription states do not grant paid entitlements. Expired is not a supported `business_subscriptions.status` and is recorded as N/A.
+
+### Test D
+
+1. Test the same user/workflow in separate Starter, Growth, and Business workspaces.
+2. Record visible menus, feature gates, limits, and server responses for each plan.
+3. Refresh and sign out/in between checks to rule out stale client cache.
+4. Confirm changing one workspace’s plan does not change another workspace’s menus or permissions.
+
+### E. Investigate dashboard, Payments, Reports, and Audit Trail loading
+
+- [x] Reproduce the persistent spinner for Starter, Growth, and Business accounts.
+- [x] Capture browser console errors, failed network requests, response status codes, and the affected workspace ID.
+- [x] Verify loading states always resolve on success, empty results, authorization errors, and API errors.
+- [x] Confirm each page uses the correct workspace scope and does not wait indefinitely for unrelated data.
+- [ ] Add targeted tests for success, empty, and error states for Dashboard, Payments, Reports, and Audit Trail.
+
+### Test E
+
+1. Sign in to each approved test account using credentials supplied securely outside the repository.
+2. Open Dashboard, Payments, Reports, and Audit Trail.
+3. Confirm each page either renders data, shows an empty state, or shows a useful error within a reasonable time.
+4. Check the browser console and Network tab for failed requests or HTML returned where JSON is expected.
+5. Repeat after a hard refresh and after signing out/in.
+
+### F. Remove the three temporary business accounts
+
+**Destructive action — requires explicit confirmation immediately before execution.**
+
+- [ ] Confirm the exact business IDs and owner accounts for:
+  - `Moniger Starter Limited`
+  - `Moniger Growth Limited`
+  - `Moniger Business Limited`
+- [ ] Export a backup/manifest and record linked vendors, customers, invoices, bills, payments, subscriptions, and users.
+- [ ] Confirm these are marked test accounts and are not live customer or financial records.
+- [ ] Resolve or document dependencies that prevent safe deletion.
+- [ ] Delete only the three named test businesses and their eligible linked test data.
+- [ ] Confirm the owner accounts can be reused or are handled according to the auth-account deletion policy.
+- [ ] Verify no unrelated businesses, users, subscriptions, financial records, audit logs, or live data were removed.
+
+### Test F
+
+1. Preview the cleanup in `Admin → Settings → Danger Zone`.
+2. Verify the preview contains exactly the three named businesses and approved linked test records.
+3. Confirm the typed confirmation, cleanup reason, audit entry, and deletion manifest are required.
+4. Execute the cleanup only after the business IDs and counts are reviewed.
+5. Search for the three business names and confirm they no longer appear.
+6. Confirm unrelated production data and audit history remain intact.
