@@ -129,7 +129,6 @@ const Dashboard = () => {
   const isSettingsLoading = settingsQuery.isLoading && !settingsQuery.data;
   const isOperationsLoading = operationsQuery.isLoading && !operationsQuery.data;
   const emailConfirmed = searchParams.get("email_confirmed") === "1";
-
   useEffect(() => {
     if (!user?.id) {
       setShowEmailConfirmationReminder(false);
