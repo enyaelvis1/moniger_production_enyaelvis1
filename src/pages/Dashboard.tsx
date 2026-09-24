@@ -149,7 +149,6 @@ const Dashboard = () => {
 
     setShowEmailConfirmationReminder(hasEmailConfirmationReminderPending(user.id));
   }, [emailConfirmed, user?.id]);
-
   const startPendingSignupPayment = async () => {
     if (!pendingSignupPlan || isPaymentLoading) {
       return;
