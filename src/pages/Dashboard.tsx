@@ -12,6 +12,7 @@ import {
   Wallet,
   TrendingUp,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { format as formatDashboardDate } from "date-fns";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -26,6 +27,10 @@ import { useLocalization } from "@/hooks/use-localization";
 import { useOperationsData, type ActivityModule } from "@/hooks/use-operations-data";
 import { useSettingsData, useWorkspaceWalletData } from "@/hooks/use-settings-data";
 import { getFriendlyErrorMessage } from "@/lib/error-handling";
+import {
+  clearEmailConfirmationReminder,
+  hasEmailConfirmationReminderPending,
+} from "@/lib/email-confirmation-reminder";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },
@@ -102,6 +107,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const [showEmailConfirmationReminder, setShowEmailConfirmationReminder] = useState(false);
   const { formatCurrency, t } = useLocalization();
   const settingsQuery = useSettingsData(user?.id);
   const businessId = settingsQuery.data?.business?.id;
@@ -123,6 +129,21 @@ const Dashboard = () => {
   const isSettingsLoading = settingsQuery.isLoading && !settingsQuery.data;
   const isOperationsLoading = operationsQuery.isLoading && !operationsQuery.data;
   const emailConfirmed = searchParams.get("email_confirmed") === "1";
+
+  useEffect(() => {
+    if (!user?.id) {
+      setShowEmailConfirmationReminder(false);
+      return;
+    }
+
+    if (emailConfirmed) {
+      clearEmailConfirmationReminder(user.id);
+      setShowEmailConfirmationReminder(false);
+      return;
+    }
+
+    setShowEmailConfirmationReminder(hasEmailConfirmationReminderPending(user.id));
+  }, [emailConfirmed, user?.id]);
 
   const summaryCards = [
     {
@@ -194,6 +215,27 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
+      {showEmailConfirmationReminder ? (
+        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-950 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">Please confirm your email</p>
+            <p className="mt-1 text-sm leading-6 text-amber-900/80 dark:text-amber-100/80">
+              Confirm your email to keep your Moniger account secure. You can continue using your dashboard for now.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              clearEmailConfirmationReminder(user?.id);
+              setShowEmailConfirmationReminder(false);
+            }}
+            className="shrink-0 rounded-full border border-amber-300 bg-white/70 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-white dark:border-amber-400/40 dark:bg-transparent dark:text-amber-100"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
       {isSettingsLoading || isOperationsLoading ? (
         <DashboardSkeleton />
       ) : (
