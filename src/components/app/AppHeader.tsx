@@ -10,6 +10,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { useSettingsData, useWorkspaceWalletData } from "@/hooks/use-settings-data";
 import { useAdminAccess } from "@/hooks/use-admin-access";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +39,7 @@ const AppHeader = ({ pageTitle }: { pageTitle: string }) => {
       : walletAvailableBalance;
 
   const displayName = user?.user_metadata?.name || user?.email || "";
+  const profileAvatarUrl = settingsQuery.data?.profile?.avatar_url ?? null;
   const initials = displayName
     ? displayName
         .split(" ")
@@ -173,7 +175,10 @@ const AppHeader = ({ pageTitle }: { pageTitle: string }) => {
               aria-expanded={accountMenuOpen}
               aria-haspopup="menu"
             >
-              {initials}
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={profileAvatarUrl ?? undefined} alt={`${displayName || "Your"} profile photo`} />
+                <AvatarFallback className="bg-[#5B67F7] text-white text-xs font-semibold">{initials}</AvatarFallback>
+              </Avatar>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent id="account-menu" align="end" className="w-48">

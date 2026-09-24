@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/hooks/use-localization";
 import { useSettingsData } from "@/hooks/use-settings-data";
 import { useWorkspaceSelection } from "@/contexts/WorkspaceSelectionContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sidebar,
   SidebarContent,
@@ -41,6 +42,14 @@ export function AppSidebar() {
   const { setSelectedBusinessId } = useWorkspaceSelection();
   const { t } = useLocalization();
   const navigate = useNavigate();
+  const displayName = user?.user_metadata?.name || user?.email || "";
+  const initials = displayName
+    .split(" ")
+    .map((name) => name[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "DA";
+  const profileAvatarUrl = settingsQuery.data?.profile?.avatar_url ?? null;
   const mainNav = [
     { title: t("navigation.dashboard"), url: "/dashboard", icon: LayoutDashboard },
     { title: t("navigation.invoices"), url: "/invoices", icon: FileText },
@@ -142,6 +151,13 @@ export function AppSidebar() {
               </div>
             )}
           </div>
+        </div>
+        <div className={`mt-3 flex items-center gap-2 ${collapsed ? "justify-center" : "min-w-0"}`}>
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={profileAvatarUrl ?? undefined} alt={`${displayName || "Your"} profile photo`} />
+            <AvatarFallback className="bg-[#5B67F7] text-white text-xs font-semibold">{initials}</AvatarFallback>
+          </Avatar>
+          {!collapsed ? <span className="min-w-0 truncate text-xs text-muted-foreground">{displayName}</span> : null}
         </div>
       </div>
 

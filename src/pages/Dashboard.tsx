@@ -58,8 +58,8 @@ const getErrorMessage = (error: unknown, fallbackMessage: string) =>
   getFriendlyErrorMessage(error, fallbackMessage);
 
 const DashboardSkeleton = () => (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="min-w-0 space-y-8">
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
@@ -74,7 +74,7 @@ const DashboardSkeleton = () => (
         </div>
       ))}
     </div>
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid min-w-0 gap-6 lg:grid-cols-2">
       {Array.from({ length: 2 }).map((_, index) => (
         <div
           key={index}
@@ -192,7 +192,7 @@ const Dashboard = () => {
       {isSettingsLoading || isOperationsLoading ? (
         <DashboardSkeleton />
       ) : (
-        <motion.div initial="hidden" animate="visible" className="space-y-8">
+        <motion.div initial="hidden" animate="visible" className="min-w-0 space-y-8">
           {settingsQuery.error ? (
             <div className="rounded-xl border border-[#F8C9C9] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B42318]">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -297,7 +297,7 @@ const Dashboard = () => {
             </div>
           </motion.div>
 
-          <div className="hidden md:grid grid-cols-2 gap-3 xl:grid-cols-5">
+          <div className="hidden min-w-0 md:grid grid-cols-2 gap-3 xl:grid-cols-5">
             {summaryCards.map((card, index) => (
               <motion.div
                 key={card.label}
@@ -554,7 +554,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="hidden grid gap-6 lg:grid-cols-2 md:grid">
+          <div className="hidden min-w-0 grid gap-6 lg:grid-cols-2 md:grid">
             <motion.div
               custom={4}
               variants={fadeUp}
@@ -714,22 +714,24 @@ const Dashboard = () => {
             variants={fadeUp}
             className="hidden rounded-3xl border border-white/50 bg-white/75 p-4 shadow-[0_12px_32px_rgba(91,103,247,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-card/70 sm:p-6 md:block"
           >
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
+            <div className="min-w-0">
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                 <h3 className="text-base font-semibold text-[#0D1B2A] dark:text-foreground">Confirmed online collections</h3>
                 <p className="mt-1 text-sm text-[#94A3B8] dark:text-muted-foreground">
                   Paystack-settled invoice payments are folded into dashboard totals automatically.
                 </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 shrink-0 self-start rounded-full px-3 text-xs font-medium text-[#5B67F7] hover:bg-[#5B67F7]/10"
+                  onClick={handleRetryOperations}
+                >
+                  Retry
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 rounded-full px-3 text-xs font-medium text-[#5B67F7] hover:bg-[#5B67F7]/10"
-                onClick={handleRetryOperations}
-              >
-                Retry
-              </Button>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-emerald-200/40 bg-emerald-50/70 px-4 py-3 shadow-sm backdrop-blur-sm dark:border-emerald-500/20 dark:bg-emerald-500/10">
                   <p className="text-xs uppercase tracking-wide text-[#16A34A]">Paystack this month</p>
                   <p className="mt-1 text-lg font-semibold text-[#0D1B2A] dark:text-foreground">
