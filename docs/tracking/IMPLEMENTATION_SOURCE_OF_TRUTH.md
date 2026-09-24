@@ -267,3 +267,10 @@ Live cutover checklist after Paystack approval:
 - [x] Authenticated multi-company isolation and Starter/Growth/Business page rendering now have local UAT evidence; full entitlement coverage and multi-workspace switching remain open.
 - [ ] A visible workspace selector is still required before multi-membership workspace-switch acceptance can be completed.
 - [ ] The new migrations are applied to the local Supabase instance only; remote migration and production deployment remain intentionally pending approval.
+
+### 2026-09-24 — Signup access and email reminder
+
+- [x] Production Auth is configured for immediate signup sessions so new users can enter the dashboard before confirming their email.
+- [x] The dashboard shows a user-scoped email-confirmation reminder after signup; the reminder clears after the confirmation callback or dismissal.
+- [x] Paid-plan signup continues directly to Paystack checkout after the account session is created.
+- [ ] Confirm the final production signup behavior with one disposable Starter account and one disposable paid-plan account.

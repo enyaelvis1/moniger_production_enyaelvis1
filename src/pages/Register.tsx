@@ -20,6 +20,7 @@ import {
   type SubscriptionPlan,
 } from "@/lib/subscriptions";
 import { getRegistrationDestination } from "@/lib/subscription-registration";
+import { markEmailConfirmationReminderPending } from "@/lib/email-confirmation-reminder";
 import { initializeWorkspaceSubscriptionCheckout } from "@/lib/workspace-subscriptions";
 
 const getPasswordStrength = (
@@ -531,6 +532,8 @@ const RegisterPage = () => {
         businessName: normalizedBusinessName,
         plan: selectedPlan,
       });
+
+      markEmailConfirmationReminderPending(result.userId);
 
       if (result.needsEmailConfirmation) {
         setSuccessState({
