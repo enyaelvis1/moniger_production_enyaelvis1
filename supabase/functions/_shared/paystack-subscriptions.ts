@@ -493,7 +493,7 @@ export const resolveCanonicalPaystackSubscription = async ({
         const subscriptionPlanCode = asNullableString(subscriptionPlan.plan_code);
         const subscriptionEmail = asNullableString(subscriptionCustomer.email)?.toLowerCase();
 
-        if (checkoutPlanCode && subscriptionPlanCode && checkoutPlanCode !== subscriptionPlanCode) {
+        if (checkoutPlanCode && subscriptionPlanCode !== checkoutPlanCode) {
           return false;
         }
 

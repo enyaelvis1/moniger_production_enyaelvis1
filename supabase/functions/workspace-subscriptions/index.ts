@@ -19,6 +19,7 @@ import {
   getManagedSubscriptionSwitchKind,
   type ManagedSubscriptionSwitchKind,
 } from "../_shared/paystack-subscription-switching.ts";
+import { validatePaystackCheckout } from "../_shared/paystack-checkout-validation.ts";
 
 type SubscriptionAction =
   | "public.confirmation-status"
@@ -1047,19 +1048,6 @@ Deno.serve(async (request) => {
         return json({ error: "Payment verification is still pending. Try again in a moment.", code: "CHECKOUT_PENDING", retryable: true }, 409);
       }
 
-      const transaction = transactionVerification as Record<string, unknown>;
-      const expectedAmount = checkoutSession.amount === null ? null : Math.round(checkoutSession.amount * 100);
-      const actualAmount = asNumber(transaction.amount);
-      const expectedCurrency = asString(checkoutSession.currency).toUpperCase();
-      const actualCurrency = asString(transaction.currency).toUpperCase();
-      const providerPlan = transaction.plan && typeof transaction.plan === "object" ? transaction.plan as Record<string, unknown> : null;
-      const actualPlanCode = asNullableString(providerPlan?.plan_code);
-      if ((expectedAmount !== null && actualAmount !== expectedAmount) ||
-        (expectedCurrency && actualCurrency && expectedCurrency !== actualCurrency) ||
-        (checkoutSession.provider_plan_code && actualPlanCode && checkoutSession.provider_plan_code !== actualPlanCode)) {
-        return json({ error: "The payment does not match the selected workspace subscription.", code: "CHECKOUT_MISMATCH", retryable: false }, 409);
-      }
-
       const canonicalSubscription = await resolveCanonicalPaystackSubscription({
         checkoutSession,
         paystackSecretKey,
@@ -1081,6 +1069,24 @@ Deno.serve(async (request) => {
           },
           409,
         );
+      }
+
+      const transaction = transactionVerification as Record<string, unknown>;
+      const providerPlan = transaction.plan && typeof transaction.plan === "object" ? transaction.plan as Record<string, unknown> : null;
+      const canonicalPlan = canonicalSubscription.plan && typeof canonicalSubscription.plan === "object"
+        ? canonicalSubscription.plan as Record<string, unknown>
+        : null;
+      const validation = validatePaystackCheckout({
+        canonicalPlanCode: asNullableString(canonicalPlan?.plan_code),
+        expectedAmountKobo: checkoutSession.amount === null ? null : Math.round(checkoutSession.amount * 100),
+        expectedCurrency: asNullableString(checkoutSession.currency),
+        expectedPlanCode: asNullableString(checkoutSession.provider_plan_code),
+        providerAmount: asNumber(transaction.amount),
+        providerCurrency: asNullableString(transaction.currency),
+        transactionPlanCode: asNullableString(providerPlan?.plan_code),
+      });
+      if (!validation.ok) {
+        return json({ error: "The payment does not match the selected workspace subscription.", code: validation.code, retryable: false }, 409);
       }
 
       const canonicalSummary = await syncBusinessSubscriptionFromPaystack({

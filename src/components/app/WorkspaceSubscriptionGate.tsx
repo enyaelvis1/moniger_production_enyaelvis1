@@ -4,7 +4,7 @@ import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
 import WorkspaceUpgradePrompt from "@/components/app/WorkspaceUpgradePrompt";
 
 const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
-  const { entitlements, isError, isLoading, refetch, refetchWorkspace, subscription, workspaceError, workspaceLoading } = useWorkspaceSubscription();
+  const { entitlements, isError, refetch, refetchWorkspace, subscription, subscriptionLoading, workspaceError, workspaceLoading } = useWorkspaceSubscription();
 
   if (workspaceError || isError) {
     return (
@@ -26,7 +26,7 @@ const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  if (workspaceLoading || isLoading) {
+  if (workspaceLoading || subscriptionLoading) {
     return (
       <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-[#DCE2F2] bg-white shadow-[0_18px_50px_rgba(16,32,63,0.06)]">
         <div className="flex flex-col items-center gap-3 text-center">

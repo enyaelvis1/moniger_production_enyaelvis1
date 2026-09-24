@@ -514,10 +514,15 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 - [x] Paid Growth signup was completed through local Paystack TEST checkout on the configured `localhost:8080` origin and returned directly to the new workspace dashboard; detailed evidence is in `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.
 - [x] Local-only database migrations add Business/Vendor phone enforcement and cross-workspace link validation for invoices, bills, payments, and payouts.
 - [x] Checkout verification resolves the workspace from the persisted checkout session and validates provider amount, currency, and plan before synchronization.
+- [x] Checkout verification fails closed when provider currency or expected plan evidence is missing; canonical subscription evidence may prove a missing transaction plan.
+- [x] Client subscription error translation preserves structured retryable provider responses and status codes.
 - [x] Structured provider-pending responses keep delayed verification retryable and prevent premature dashboard navigation.
 - [x] Composite workspace relationship constraints were applied locally after a zero-mismatch read-only preflight; parent moves and concurrent child links are protected atomically.
+- [x] The workspace preflight reports orphan and mismatch details across all eight protected relationships, including payout bill/vendor and ledger wallet links.
+- [x] Wallet ledger history is protected from cascade deletion with a workspace-aware `RESTRICT` foreign key.
 - [x] Mutation timeout handling distinguishes unknown server outcomes and preserves caller abort behavior.
 - [x] Production migrations and deployment are intentionally not performed in this task.
+- [ ] Release security verification remains blocked until the linked Supabase CLI identity has `edge_functions_secrets_read`.
 - [x] Authenticated two-company isolation and multi-workspace selector acceptance were tested locally; see `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.
 - [x] A disposable local-only Super Admin verified Admin → Subscriptions against Starter, Growth, and Business matrix fixtures; no production credentials were used.
 - [x] The local Starter/Growth/Business entitlement matrix was executed through the real UI, including direct Reports/Audit Trail route checks and authenticated cross-workspace subscription-read checks.

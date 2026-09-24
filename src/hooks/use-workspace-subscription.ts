@@ -90,6 +90,7 @@ export const useWorkspaceSubscription = () => {
   const entitlements = getWorkspaceSubscriptionEntitlements(query.data);
 
   return {
+    ...query,
     entitlements,
     workspaceLoading: settingsQuery.isPending,
     workspaceError: settingsQuery.error,
@@ -99,6 +100,5 @@ export const useWorkspaceSubscription = () => {
     isLoading: settingsQuery.isPending || (Boolean(businessId) && query.isPending),
     subscription: query.data,
     refetchWorkspace: settingsQuery.refetch,
-    ...query,
   };
 };

@@ -29,9 +29,10 @@ export class WorkspaceSubscriptionError extends Error {
   }
 }
 
-type ResponseLike = {
+export type ResponseLike = {
   clone: () => ResponseLike;
   json: () => Promise<unknown>;
+  status?: number;
   text: () => Promise<string>;
 };
 
@@ -90,17 +91,16 @@ const getFunctionErrorMessage = async (error: unknown) => {
   return "We could not update your workspace subscription.";
 };
 
-const toSubscriptionError = (error: unknown, response: ResponseLike | undefined) => {
+export const translateWorkspaceSubscriptionError = async (error: unknown, response: ResponseLike | undefined) => {
   const responseErrorPromise = getResponseError(response);
-  return responseErrorPromise.then(async (responseError) => {
-    const message = responseError?.message ?? (await getFunctionErrorMessage(error));
-    const code = responseError?.code;
-    const validCode = code === "CHECKOUT_PENDING" || code === "PROVIDER_PENDING" || code === "CHECKOUT_MISMATCH" || code === "CHECKOUT_WORKSPACE_MISMATCH" || code === "CHECKOUT_WORKSPACE_FORBIDDEN" ? code : null;
-    return new WorkspaceSubscriptionError(message, {
-      code: validCode,
-      retryable: responseError?.retryable ?? (validCode === "CHECKOUT_PENDING" || validCode === "PROVIDER_PENDING"),
-      status: typeof error === "object" && error && "status" in error && typeof error.status === "number" ? error.status : null,
-    });
+  const responseError = await responseErrorPromise;
+  const message = responseError?.message ?? (await getFunctionErrorMessage(error));
+  const code = responseError?.code;
+  const validCode = code === "CHECKOUT_PENDING" || code === "PROVIDER_PENDING" || code === "CHECKOUT_MISMATCH" || code === "CHECKOUT_WORKSPACE_MISMATCH" || code === "CHECKOUT_WORKSPACE_FORBIDDEN" ? code : null;
+  return new WorkspaceSubscriptionError(message, {
+    code: validCode,
+    retryable: responseError?.retryable ?? (validCode === "CHECKOUT_PENDING" || validCode === "PROVIDER_PENDING"),
+    status: response?.status ?? (typeof error === "object" && error && "status" in error && typeof error.status === "number" ? error.status : null),
   });
 };
 
@@ -127,7 +127,7 @@ const invokeWorkspaceSubscriptions = async <TResponse>(
   });
 
   if (error) {
-    throw await toSubscriptionError(error, isResponseLike(response) ? response : undefined);
+    throw await translateWorkspaceSubscriptionError(error, isResponseLike(response) ? response : undefined);
   }
 
   if (!data || typeof data !== "object") {
@@ -156,7 +156,7 @@ const invokePublicWorkspaceSubscriptions = async <TResponse>(
   });
 
   if (error) {
-    throw await toSubscriptionError(error, isResponseLike(response) ? response : undefined);
+    throw await translateWorkspaceSubscriptionError(error, isResponseLike(response) ? response : undefined);
   }
 
   if (!data || typeof data !== "object") {

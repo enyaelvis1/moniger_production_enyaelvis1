@@ -133,10 +133,14 @@ Read-only local preflight counts before release consideration:
 
 - Invalid existing business phones: `0`
 - Invalid existing vendor phones: `0`
-- Invoice/customer cross-workspace links: `0`
-- Bill/vendor cross-workspace links: `0`
-- Payment/invoice cross-workspace links: `0`
-- Payment/bill cross-workspace links: `0`
+- Invoice/customer orphan or cross-workspace links: `0`
+- Bill/vendor orphan or cross-workspace links: `0`
+- Payment/invoice orphan or cross-workspace links: `0`
+- Payment/bill orphan or cross-workspace links: `0`
+- Payout/wallet orphan or cross-workspace links: `0`
+- Payout/bill orphan or cross-workspace links: `0`
+- Payout/vendor orphan or cross-workspace links: `0`
+- Ledger-entry/wallet orphan or cross-workspace links: `0`
 - Phone/link triggers present: `6`
 
 The phone migration does not rewrite legacy rows; existing invalid values would remain until explicitly remediated. The relationship migration protects future inserts/updates and does not repair existing inconsistent links. Release preflight must stop if those counts are non-zero. Recovery is to restore the backup, remove the migration, or remediate records through an approved data migration; no automatic reassignment or deletion is performed here.
@@ -146,29 +150,32 @@ Migrations were applied to local Supabase only:
 - `20260923190000_validate_business_vendor_phone_numbers.sql`
 - `20260923191000_enforce_workspace_record_links.sql`
 - `20260924100000_harden_workspace_integrity.sql`
+- `20260924103000_preserve_wallet_ledger_history.sql`
 
 ## Commands and results
 
-- `npm run test -- --run` — 37 files, 141 tests passed.
+- `npm run test -- --run` — 40 files, 154 tests passed.
 - `npm run test:e2e` — 49 tests collected; 42 passed, 7 skipped.
 - Focused phone/subscription/timeout tests — 13 tests passed after the final fixes.
 - `npm run build` — passed.
 - `npm run lint` — passed with 0 errors and 31 existing warnings.
-- `npm run verify:release:security` — passed.
+- `npm run verify:release:security` — blocked by HTTP 403 because the linked Supabase CLI identity lacks `edge_functions_secrets_read`; the check was not weakened.
 - `supabase db lint --local` — exits successfully with two pre-existing ambiguous-column findings classified as separate follow-up defects; details are recorded above.
 - `git diff --check` — passed.
 
 ## PR review remediation — 2026-09-24
 
 - Checkout verification now resolves the authoritative workspace from the persisted checkout reference, treats a browser workspace ID only as a consistency assertion, rejects unauthorized or mismatched workspaces, and validates provider amount/currency/plan before synchronization.
+- Checkout validation now fails closed when provider currency or expected plan evidence is missing; a missing transaction plan is accepted only when the canonical subscription proves the expected plan. Response translation tests cover retryable pending and non-retryable mismatch responses.
 - Paystack pending responses now use structured `CHECKOUT_PENDING`/`PROVIDER_PENDING` codes and remain retryable; the confirmation page does not navigate until verification succeeds.
 - Workspace subscription gating now keeps workspace loading/errors, subscription loading/errors, and a genuinely missing subscription separate; unresolved state no longer renders the Starter upgrade prompt.
-- Local preflight returned zero mismatches for invoice/customer, bill/vendor, payment links, payout/wallet links, and ledger/wallet links before the composite relationship migration was applied locally. No remote migration was applied.
+- The single-statement local preflight returned zero orphan/mismatch rows for all eight protected relationships. Wallet ledger history now uses a workspace-aware `RESTRICT` foreign key, so deleting a wallet/business cannot silently erase ledger entries. No remote migration was applied.
 - The fixture manifest is sanitized; no user or business UUIDs are retained in this report.
 - Remaining acceptance gap: authenticated Edge Function integration tests for cross-workspace callback authorization require disposable local provider fixtures and remain a follow-up task.
 
 ## Remaining gates
 
-1. Add isolated follow-up migrations/tests for the two unrelated schema-lint findings.
-2. Run Paystack TEST checkout only with isolated approved credentials and local callback configuration for any new provider variants.
-3. Review and commit locally; do not push, merge, deploy, apply remote migrations, or delete accounts/data under the current approval boundary.
+1. Grant the release-check identity `edge_functions_secrets_read`, then rerun `npm run verify:release:security` before release consideration.
+2. Add isolated follow-up migrations/tests for the two unrelated schema-lint findings.
+3. Run Paystack TEST checkout only with isolated approved credentials and local callback configuration for any new provider variants.
+4. Review and commit locally; do not merge, deploy, apply remote migrations, or delete accounts/data under the current approval boundary.
