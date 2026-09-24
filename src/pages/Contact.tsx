@@ -60,7 +60,7 @@ const ContactPage = () => {
         <motion.h1 variants={fadeUp} custom={0} className="text-4xl font-black text-[#0D1B2A] tracking-tight">
           Contact Us
         </motion.h1>
-        <motion.p variants={fadeUp} custom={1} className="mt-4 text-lg leading-relaxed text-[#64748B]">
+        <motion.p variants={fadeUp} custom={1} className="mt-4 text-lg leading-relaxed text-[#52607A]">
           Have questions about moniger.net? We respond within 24 hours.
         </motion.p>
 
@@ -77,14 +77,14 @@ const ContactPage = () => {
                 <c.icon size={22} className="text-[#5B67F7]" />
               </div>
               <p className="mt-4 text-sm font-semibold text-[#0D1B2A]">{c.label}</p>
-              <p className="mt-1 text-sm text-[#64748B]">{c.value}</p>
+              <p className="mt-1 text-sm text-[#52607A]">{c.value}</p>
             </motion.a>
           ))}
         </div>
 
         <motion.div variants={fadeUp} custom={5} className="mt-10 rounded-2xl border border-[#E0DFF0] bg-white p-8">
           <h2 className="text-xl font-bold text-[#0D1B2A]">Send us a message</h2>
-          <p className="mt-2 text-sm text-[#64748B]">Fill out the form and we'll get back to you.</p>
+          <p className="mt-2 text-sm text-[#52607A]">Fill out the form and we'll get back to you.</p>
           {status ? (
             <div id="contact-form-status" role="status" aria-live="polite" aria-atomic="true" className={`mt-4 rounded-xl border px-4 py-3 text-sm ${status.kind === "success" ? "border-[#BBE4C9] bg-[#F0FBF3] text-[#16713A]" : "border-[#F8C9C9] bg-[#FEF2F2] text-[#B42318]"}`}>
               {status.message}
@@ -108,7 +108,7 @@ const ContactPage = () => {
             <label className="block space-y-1.5 text-sm font-medium text-[#0D1B2A]">
               <span className="flex items-center justify-between gap-3">
                 <span>Your message</span>
-                <span className="text-xs font-normal text-[#64748B]">{form.message.length}/300</span>
+                <span className="text-xs font-normal text-[#52607A]">{form.message.length}/300</span>
               </span>
               <textarea id="contact-message" value={form.message} onChange={update("message")} placeholder="Your message..." rows={5} maxLength={300} required className="w-full resize-none rounded-xl border border-[#E0DFF0] bg-[#F3F4FB] px-4 py-3 text-sm font-normal outline-none transition-colors focus:border-[#5B67F7] focus-visible:ring-2 focus-visible:ring-[#5B67F7] focus-visible:ring-offset-2" />
             </label>

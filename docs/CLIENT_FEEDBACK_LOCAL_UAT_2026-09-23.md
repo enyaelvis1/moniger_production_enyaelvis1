@@ -83,6 +83,18 @@ User C was added as a viewer to Companies A and B. Each plan workspace received 
 - Reviewed the required screens and states at 1440×900, 768×1024, and 390×844 using Chromium and sanitized local-only fixtures.
 - Fixed UI-001 (Settings tab clipping on mobile), UI-002 (mobile workspace selector missing), and UI-003 (tablet header horizontal overflow).
 - Final retests confirmed all Settings tabs are visible at 390×844, Business ↔ Growth switching updates the visible plan context, and 768×1024 has no document horizontal overflow.
+- The expanded mobile table review found and fixed UI-004: Payments now explains how to swipe across its intentionally wide table on narrow screens; the document itself remains viewport-contained.
+- Public contrast review found and fixed UI-005: Contact Us secondary text now uses the darker accessible tone, and the `/contact` axe audit passes.
+
+### Expanded route and workflow review — 2026-09-24
+
+- Public/auth routes reviewed at 390×844: Login, Signup, Pricing, Pricing confirmation, and Contact Us. The mobile layouts fit the viewport; Contact Us showed `admin@moniger.net` and the confirmation page remained read-only for the signed-out session.
+- Workspace routes opened and interacted with locally: Dashboard, Customers, Vendors, Invoices, Bills, Payments, Reports, Audit Trail, Settings, Team, Funding, and Marketplace Routing.
+- Business/Growth synthetic workflow: created and edited a customer with business name, street address, city/state, phone, and email; created and edited a vendor; verified the resulting mobile cards, search/filter controls, currency formatting, populated Audit Trail entries, and empty Payments/Reports states.
+- Customer draft persistence passed: a partially completed Add Customer form survived navigation to Vendors and back to Customers before save.
+- Vendor phone filtering passed: alphabetic and unsupported characters were removed in the UI; a valid international number saved and displayed consistently.
+- Direct non-admin access to `/admin/subscriptions` redirected to `/dashboard`. Admin subscription pages were not fully verified in this pass because `PLAYWRIGHT_ADMIN_EMAIL` and `PLAYWRIGHT_ADMIN_PASSWORD` are not configured locally; the credential-gated admin E2E cases remain skipped.
+- Full three-tier baseline create/edit workflows, admin subscription comparison, and real provider delayed/cancelled checkout variants remain open or blocked where the required separate fixture/credential is unavailable. Existing prior Business, Starter, workspace-switch, delayed-provider, and signed-out confirmation evidence remains valid and is not being overstated as a full tier matrix.
 - Before/after screenshots and detailed reproduction data are in [CLIENT_FEEDBACK_UI_OBSERVATIONS_2026-09-24.md](CLIENT_FEEDBACK_UI_OBSERVATIONS_2026-09-24.md).
 
 ## Migration preflight

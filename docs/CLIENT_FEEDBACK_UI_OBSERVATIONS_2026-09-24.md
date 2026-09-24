@@ -60,12 +60,45 @@ This record covers the mandatory visual and interaction review performed during 
 - Evidence: [dashboard tablet](../output/playwright/uat-2026-09-24/dashboard-tablet-768x1024.png), [settings tablet](../output/playwright/uat-2026-09-24/settings-tablet-768x1024.png)
 - Status: Fixed and retested.
 
+### UI-004 — Payments table needed a mobile scroll affordance
+
+- Date: 2026-09-24
+- Route/component: `/payments`, Payments table
+- Role/plan/workspace: authenticated member / Growth / `UAT Growth 20260923 D`
+- Viewport/browser: 390×844 / Chromium
+- Type: Responsive, tables, discoverability
+- Severity: Medium
+- Before: the table was 685px wide inside a 375px viewport. The page correctly contained the overflow, but the right-side columns were clipped from the initial view and there was no visible instruction that the table could be swiped horizontally.
+- Expected: critical payment columns remain accessible, with a clear mobile scroll affordance when a full responsive card transformation is not necessary.
+- Root cause: confirmed in `Payments.tsx`: the table was wrapped in `overflow-x-auto` without mobile guidance.
+- Fix: added a mobile-only “Swipe horizontally to view all payment columns” affordance while preserving the existing accessible table and horizontal scroll behavior.
+- Retest: passed. The affordance is visible above the table, the document remains 375px wide, and the table remains available through its horizontal scroll container.
+- Evidence: [before](../output/playwright/uat-2026-09-24/UI-004-payments-mobile-before.png), [after](../output/playwright/uat-2026-09-24/UI-004-payments-mobile-after.png)
+- Status: Fixed and retested.
+
+### UI-005 — Contact Us secondary text failed contrast audit
+
+- Date: 2026-09-24
+- Route/component: `/contact`, public contact content
+- Role/plan/workspace: signed-out visitor / not applicable
+- Viewport/browser: 1440×900 / Chromium + axe contrast audit
+- Type: Accessibility, visual design
+- Severity: Medium
+- Before: axe reported the muted `#64748B` body/contact text as insufficiently contrasted against the page and card backgrounds.
+- Expected: secondary copy, contact details, and the message counter should meet the project’s automated contrast check.
+- Root cause: confirmed in `Contact.tsx`: several secondary-text elements used the lighter `#64748B` token on the public light surfaces.
+- Fix: changed those secondary-text instances to the darker existing `#52607A` tone.
+- Retest: targeted public contrast audit passed for `/contact`; the full E2E suite passed after the change.
+- Evidence: the public Contact Us screenshot remains in the local Playwright artifact set; no user data is present.
+- Status: Fixed and retested.
+
 ## Screens reviewed with no remaining visual defect observed
 
 - Desktop Dashboard and Settings at 1440×900: cards, navigation, settings content, and action controls fit without overlap or clipping.
 - Mobile Dashboard at 390×844: cards, quick-action FAB, and bottom navigation fit within the viewport.
 - Mobile `/pricing/confirmed` at 390×844: confirmation state and actions fit without overlap.
 - Tablet Dashboard and Settings at 768×1024 after the header fix: no horizontal document overflow.
+- Mobile Payments empty state at 390×844: the table’s horizontal-scroll guidance is visible and the empty state remains readable.
 
 ## Follow-up
 
