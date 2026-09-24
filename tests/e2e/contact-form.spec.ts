@@ -46,7 +46,7 @@ test.describe("Contact form", () => {
     await page.getByRole("button", { name: "Send Message" }).click();
 
     await expect(page.getByRole("status")).toBeVisible();
-    await expect(page.getByRole("status")).toHaveText("We couldn't send your message right now. Please try again or email hello@moniger.net.");
+    await expect(page.getByRole("status")).toHaveText("We couldn't send your message right now. Please try again or email admin@moniger.net.");
   });
 
   test("blocks incomplete and invalid submissions before delivery", async ({ page }) => {

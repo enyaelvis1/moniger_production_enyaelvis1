@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import AppProviders from "./app/AppProviders";
 import AnalyticsBridge from "@/components/app/AnalyticsBridge";
+import RouteLoadingScreen from "@/components/app/RouteLoadingScreen";
 import SessionTimeoutManager from "@/components/app/SessionTimeoutManager";
 
 const Index = lazy(() => import("./pages/Index.tsx"));
@@ -27,26 +28,12 @@ const PayInvoiceConfirmedPage = lazy(() => import("./pages/PayInvoiceConfirmed.t
 const AdminApp = lazy(() => import("./app/AdminApp.tsx"));
 const PlatformApp = lazy(() => import("./app/PlatformApp.tsx"));
 
-const PublicRouteLoadingScreen = () => (
-  <div className="flex min-h-screen items-center justify-center bg-[#F7F6F3] px-6">
-    <div
-      className="flex max-w-sm flex-col items-center gap-3 rounded-2xl border border-[#E8E4DF] bg-white px-6 py-8 text-center shadow-sm"
-      role="status"
-      aria-live="polite"
-    >
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#D8DDF0] border-t-[#5B67F7]" aria-hidden="true" />
-      <p className="text-sm font-medium text-[#10203F]">Loading page...</p>
-      <p className="text-xs text-[#677391]">Preparing the next view.</p>
-    </div>
-  </div>
-);
-
 const App = () => (
   <AppProviders>
     <BrowserRouter>
       <AnalyticsBridge />
       <SessionTimeoutManager />
-      <Suspense fallback={<PublicRouteLoadingScreen />}>
+      <Suspense fallback={<RouteLoadingScreen />}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/about" element={<AboutPage />} />

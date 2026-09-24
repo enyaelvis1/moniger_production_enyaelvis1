@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const publicRoutes = [
   { path: "/pricing", text: "Business" },
-  { path: "/register?plan=growth", text: "Get started" },
+  { path: "/register?plan=growth", text: "Choose your plan" },
   { path: "/pricing/confirmed", text: "Workspace subscription confirmation" },
   { path: "/contact", text: "Contact Us" },
   { path: "/help-centre", text: "Help Centre" },

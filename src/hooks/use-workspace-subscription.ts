@@ -57,7 +57,7 @@ const fetchWorkspaceSubscription = async (businessId: string): Promise<Workspace
   };
 };
 
-const getEntitlements = (subscription: WorkspaceSubscription | null): WorkspaceSubscriptionEntitlements => {
+export const getWorkspaceSubscriptionEntitlements = (subscription: WorkspaceSubscription | null): WorkspaceSubscriptionEntitlements => {
   const isPaidPlan = Boolean(subscription && subscription.plan !== "starter");
   const isActive = Boolean(subscription && ["active", "trial"].includes(subscription.status));
   const isGracePeriod = Boolean(subscription && subscription.status === "past_due");
@@ -75,23 +75,30 @@ const getEntitlements = (subscription: WorkspaceSubscription | null): WorkspaceS
 
 export const useWorkspaceSubscription = () => {
   const { session } = useSupabaseSession();
-  const { data: settings } = useSettingsData(session?.user.id);
+  const settingsQuery = useSettingsData(session?.user.id);
+  const { data: settings } = settingsQuery;
   const businessId = settings?.business?.id ?? null;
 
   const query = useQuery({
     ...financeQueryOptions,
-    enabled: Boolean(businessId),
+    enabled: Boolean(businessId) && !settingsQuery.isPending && !settingsQuery.isError,
     queryFn: () => fetchWorkspaceSubscription(businessId as string),
     queryKey: ["workspace-subscription", businessId],
     staleTime: 60_000,
   });
 
-  const entitlements = getEntitlements(query.data);
+  const entitlements = getWorkspaceSubscriptionEntitlements(query.data);
 
   return {
-    entitlements,
-    isLoading: query.isLoading,
-    subscription: query.data,
     ...query,
+    entitlements,
+    workspaceLoading: settingsQuery.isPending,
+    workspaceError: settingsQuery.error,
+    subscriptionLoading: Boolean(businessId) && query.isPending,
+    subscriptionError: query.error,
+    isResolved: Boolean(businessId) && !query.isPending && !query.isError,
+    isLoading: settingsQuery.isPending || (Boolean(businessId) && query.isPending),
+    subscription: query.data,
+    refetchWorkspace: settingsQuery.refetch,
   };
 };

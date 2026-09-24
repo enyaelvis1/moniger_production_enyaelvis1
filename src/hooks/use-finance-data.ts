@@ -706,8 +706,8 @@ const findExistingLinkedPayment = async (businessId: string, link: { billId?: st
   return (data as ExistingPaymentRow | null) ?? null;
 };
 
-const deletePayment = async (paymentId: string) => {
-  const { error } = await supabase.from("payments").delete().eq("id", paymentId);
+const deletePayment = async (businessId: string, paymentId: string) => {
+  const { error } = await supabase.from("payments").delete().eq("business_id", businessId).eq("id", paymentId);
 
   if (error) {
     throw error;
@@ -735,6 +735,7 @@ const upsertLinkedPayment = async (
         payment_type: values.payment_type,
         status: values.status,
       })
+      .eq("business_id", values.business_id)
       .eq("id", existingPayment.id);
 
     if (error) {
@@ -783,7 +784,7 @@ const syncInvoicePaymentRecord = async ({
 
   if (status === "draft" || status === "cancelled") {
     if (existingPayment) {
-      await deletePayment(existingPayment.id);
+      await deletePayment(businessId, existingPayment.id);
     }
     return;
   }
@@ -877,7 +878,7 @@ const syncBillPaymentRecord = async ({
 
   if (status === "unpaid") {
     if (existingPayment) {
-      await deletePayment(existingPayment.id);
+      await deletePayment(businessId, existingPayment.id);
     }
     return;
   }
@@ -1065,7 +1066,7 @@ const createInvoice = async (businessId: string, userId: string, values: Invoice
       });
     }
   } catch (itemError) {
-    await supabase.from("invoices").delete().eq("id", data.id);
+    await supabase.from("invoices").delete().eq("business_id", businessId).eq("id", data.id);
     throw itemError;
   }
 
@@ -1117,6 +1118,7 @@ const updateInvoice = async (businessId: string, invoice: InvoiceRecord, userId:
       total_amount: totals.totalAmount,
       updated_by: userId,
     })
+    .eq("business_id", businessId)
     .eq("id", invoice.id);
 
   if (updateError) {
@@ -1178,7 +1180,7 @@ const updateInvoice = async (businessId: string, invoice: InvoiceRecord, userId:
 };
 
 const deleteInvoice = async (businessId: string, invoiceId: string, invoiceNumber: string, userId: string) => {
-  const { error } = await supabase.from("invoices").delete().eq("id", invoiceId);
+  const { error } = await supabase.from("invoices").delete().eq("business_id", businessId).eq("id", invoiceId);
 
   if (error) {
     throw error;
@@ -1233,7 +1235,7 @@ const updateInvoiceStatus = async (businessId: string, invoice: InvoiceRecord, u
     updates.paid_at = null;
   }
 
-  const { error } = await supabase.from("invoices").update(updates).eq("id", invoice.id);
+  const { error } = await supabase.from("invoices").update(updates).eq("business_id", businessId).eq("id", invoice.id);
 
   if (error) {
     throw error;
@@ -1497,6 +1499,7 @@ const updateBill = async (businessId: string, bill: BillRecord, userId: string, 
       updated_by: userId,
       vendor_id: values.vendor_id,
     })
+    .eq("business_id", businessId)
     .eq("id", bill.id);
 
   if (error) {
@@ -1535,7 +1538,7 @@ const updateBill = async (businessId: string, bill: BillRecord, userId: string, 
 };
 
 const deleteBill = async (businessId: string, billId: string, billNumber: string, userId: string) => {
-  const { error } = await supabase.from("bills").delete().eq("id", billId);
+  const { error } = await supabase.from("bills").delete().eq("business_id", businessId).eq("id", billId);
 
   if (error) {
     throw error;
@@ -1578,7 +1581,7 @@ const updateBillStatus = async (businessId: string, bill: BillRecord, userId: st
     updates.scheduled_payment_date = null;
   }
 
-  const { error } = await supabase.from("bills").update(updates).eq("id", bill.id);
+  const { error } = await supabase.from("bills").update(updates).eq("business_id", businessId).eq("id", bill.id);
 
   if (error) {
     throw error;

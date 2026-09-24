@@ -11,6 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LocalizationProvider } from "@/contexts/LocalizationContext";
 import { SessionTimeoutProvider } from "@/contexts/SessionTimeoutContext";
+import { WorkspaceSelectionProvider } from "@/contexts/WorkspaceSelectionContext";
 import { captureMonitoringException } from "@/lib/monitoring";
 import { defaultQueryClientOptions } from "@/lib/query";
 
@@ -23,26 +24,28 @@ const AppProviders = ({ children }: PropsWithChildren) => (
     <TooltipProvider>
       <SessionTimeoutProvider>
         <AuthProvider>
-          <LocalizationProvider>
-            <ErrorProvider>
-              <Toaster />
-              <Sonner />
-              <div className="pointer-events-none fixed inset-x-0 top-4 z-50 px-4">
-                <div className="pointer-events-auto mx-auto max-w-3xl">
-                  <ErrorList />
+          <WorkspaceSelectionProvider>
+            <LocalizationProvider>
+              <ErrorProvider>
+                <Toaster />
+                <Sonner />
+                <div className="pointer-events-none fixed inset-x-0 top-4 z-50 px-4">
+                  <div className="pointer-events-auto mx-auto max-w-3xl">
+                    <ErrorList />
+                  </div>
                 </div>
-              </div>
-              <ErrorBoundary
-                onError={(error, errorInfo) => {
-                  captureMonitoringException(error, {
-                    componentStack: errorInfo.componentStack,
-                  });
-                }}
-              >
-                {children}
-              </ErrorBoundary>
-            </ErrorProvider>
-          </LocalizationProvider>
+                <ErrorBoundary
+                  onError={(error, errorInfo) => {
+                    captureMonitoringException(error, {
+                      componentStack: errorInfo.componentStack,
+                    });
+                  }}
+                >
+                  {children}
+                </ErrorBoundary>
+              </ErrorProvider>
+            </LocalizationProvider>
+          </WorkspaceSelectionProvider>
         </AuthProvider>
       </SessionTimeoutProvider>
     </TooltipProvider>

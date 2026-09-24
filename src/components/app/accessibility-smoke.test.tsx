@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { configureAxe } from "vitest-axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppSidebar } from "@/components/app/AppSidebar";
 import NotificationCenter from "@/components/app/NotificationCenter";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -78,12 +79,16 @@ describe("accessibility smoke coverage", () => {
   });
 
   it("has no axe violations for the primary sidebar when Team is active", async () => {
+    const queryClient = new QueryClient();
+
     const { container } = render(
-      <MemoryRouter initialEntries={["/team"]}>
-        <SidebarProvider>
-          <AppSidebar />
-        </SidebarProvider>
-      </MemoryRouter>,
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/team"]}>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
 
     expect(screen.getByRole("link", { name: "Team" })).toHaveAttribute("aria-current", "page");

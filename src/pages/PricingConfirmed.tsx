@@ -9,6 +9,7 @@ import {
   getWorkspaceSubscriptionConfirmationStatus,
   verifyWorkspaceSubscriptionCheckout,
 } from "@/lib/workspace-subscriptions";
+import { useWorkspaceSelection } from "@/contexts/WorkspaceSelectionContext";
 import type { WorkspaceSubscriptionActionResult } from "@/lib/subscriptions";
 
 const formatCurrencyAmount = (amount: number) => {
@@ -39,14 +40,6 @@ const formatDateLabel = (value: string | null) => {
   }
 };
 
-const isRetryableVerificationError = (message: string) => {
-  const normalizedMessage = message.toLowerCase();
-
-  return normalizedMessage.includes("not available yet") ||
-    normalizedMessage.includes("not marked as successful yet") ||
-    normalizedMessage.includes("try again in a moment");
-};
-
 const waitForVerificationRetry = (delayMs: number) =>
   new Promise<void>((resolve) => {
     window.setTimeout(resolve, delayMs);
@@ -54,6 +47,7 @@ const waitForVerificationRetry = (delayMs: number) =>
 
 const PricingConfirmedPage = () => {
   const { isSessionLoading, session } = useSupabaseSession();
+  const { selectedBusinessId } = useWorkspaceSelection();
   const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
@@ -94,6 +88,7 @@ const PricingConfirmedPage = () => {
         try {
           const verification = session
             ? await verifyWorkspaceSubscriptionCheckout({
+              businessId: selectedBusinessId ?? undefined,
               reference,
             })
             : await getWorkspaceSubscriptionConfirmationStatus({
@@ -107,12 +102,17 @@ const PricingConfirmedPage = () => {
 
           return;
         } catch (error) {
+          const subscriptionError =
+            typeof error === "object" && error !== null && "retryable" in error
+              ? (error as { retryable?: boolean })
+              : null;
           const message = error instanceof Error ? error.message : "We could not confirm this workspace subscription.";
+          const retryable = Boolean(subscriptionError?.retryable);
 
-          if (!session || !isRetryableVerificationError(message) || attempt === 2) {
+          if (!session || !retryable || attempt === 2) {
             if (isMounted) {
               setErrorMessage(message);
-              setCanRetryVerification(Boolean(session && isRetryableVerificationError(message)));
+              setCanRetryVerification(Boolean(session && retryable));
             }
 
             return;
@@ -136,15 +136,21 @@ const PricingConfirmedPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [isSessionLoading, reference, session, verificationAttempt]);
+  }, [isSessionLoading, reference, selectedBusinessId, session, verificationAttempt]);
 
   useEffect(() => {
     if (!session || !result || (result.kind !== "verified" && result.kind !== "activated")) {
       return;
     }
 
-    void queryClient.invalidateQueries({ queryKey: ["workspace-subscription", result.subscription.businessId] });
-    navigate("/dashboard", { replace: true });
+    let active = true;
+    const completeNavigation = async () => {
+      await queryClient.invalidateQueries({ queryKey: ["workspace-subscription", result.subscription.businessId], refetchType: "none" });
+      queryClient.removeQueries({ queryKey: ["workspace-subscription", result.subscription.businessId] });
+      if (active) navigate("/dashboard", { replace: true });
+    };
+    void completeNavigation();
+    return () => { active = false; };
   }, [navigate, queryClient, result, session]);
 
   const verifiedSubscription =

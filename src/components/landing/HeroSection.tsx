@@ -235,7 +235,6 @@ const HeroSection = () => {
                     height={40}
                     loading="lazy"
                     decoding="async"
-                    fetchPriority="low"
                     className={`w-auto max-w-[150px] object-contain ${logo.className}`}
                   />
                 </div>

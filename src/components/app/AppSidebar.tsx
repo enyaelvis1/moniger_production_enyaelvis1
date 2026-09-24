@@ -17,6 +17,8 @@ import { useRef, type KeyboardEvent, type MutableRefObject } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/hooks/use-localization";
+import { useSettingsData } from "@/hooks/use-settings-data";
+import { useWorkspaceSelection } from "@/contexts/WorkspaceSelectionContext";
 import {
   Sidebar,
   SidebarContent,
@@ -34,6 +36,8 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { user } = useAuth();
+  const settingsQuery = useSettingsData(user?.id);
+  const { setSelectedBusinessId } = useWorkspaceSelection();
   const { t } = useLocalization();
   const mainNav = [
     { title: t("navigation.dashboard"), url: "/dashboard", icon: LayoutDashboard },
@@ -105,14 +109,29 @@ export function AppSidebar() {
             </span>
             {!collapsed && (
               <div className="flex items-center gap-1 mt-0.5">
-                <span className="text-xs text-muted-foreground truncate">
-                  {user?.user_metadata?.business_name || t("navigation.workspaceFallback")}
-                </span>
-                <ChevronDown
-                  size={12}
-                  className="text-muted-foreground shrink-0"
-                  aria-hidden="true"
-                />
+                {settingsQuery.data?.workspaces && settingsQuery.data.workspaces.length > 1 ? (
+                  <label className="sr-only" htmlFor="workspace-selector">Switch workspace</label>
+                ) : null}
+                {settingsQuery.data?.workspaces && settingsQuery.data.workspaces.length > 1 ? (
+                  <select
+                    id="workspace-selector"
+                    aria-label="Switch workspace"
+                    value={settingsQuery.data.business?.id ?? ""}
+                    onChange={(event) => setSelectedBusinessId(event.target.value)}
+                    className="max-w-[170px] truncate bg-transparent text-xs text-muted-foreground outline-none"
+                  >
+                    {settingsQuery.data.workspaces.map((workspace) => (
+                      <option key={workspace.business_id} value={workspace.business_id}>{workspace.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {settingsQuery.data?.business?.name || user?.user_metadata?.business_name || t("navigation.workspaceFallback")}
+                    </span>
+                    <ChevronDown size={12} className="text-muted-foreground shrink-0" aria-hidden="true" />
+                  </>
+                )}
               </div>
             )}
           </div>
