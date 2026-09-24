@@ -12,13 +12,15 @@ import {
   ChevronDown,
   Wallet,
   ArrowRightLeft,
+  LogOut,
 } from "lucide-react";
 import { useRef, type KeyboardEvent, type MutableRefObject } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/hooks/use-localization";
 import { useSettingsData } from "@/hooks/use-settings-data";
 import { useWorkspaceSelection } from "@/contexts/WorkspaceSelectionContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sidebar,
   SidebarContent,
@@ -35,10 +37,19 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const settingsQuery = useSettingsData(user?.id);
   const { setSelectedBusinessId } = useWorkspaceSelection();
   const { t } = useLocalization();
+  const navigate = useNavigate();
+  const displayName = user?.user_metadata?.name || user?.email || "";
+  const initials = displayName
+    .split(" ")
+    .map((name) => name[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "DA";
+  const profileAvatarUrl = settingsQuery.data?.profile?.avatar_url ?? null;
   const mainNav = [
     { title: t("navigation.dashboard"), url: "/dashboard", icon: LayoutDashboard },
     { title: t("navigation.invoices"), url: "/invoices", icon: FileText },
@@ -61,6 +72,11 @@ export function AppSidebar() {
   const isLegacyTeamView = location.pathname === "/settings" && activeSettingsTab === "team";
   const isTeamView = location.pathname === "/team" || isLegacyTeamView;
   const isSettingsView = location.pathname === "/settings" && !isLegacyTeamView;
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   const handleArrowNavigation = (
     event: KeyboardEvent<HTMLAnchorElement>,
@@ -135,6 +151,13 @@ export function AppSidebar() {
               </div>
             )}
           </div>
+        </div>
+        <div className={`mt-3 flex items-center gap-2 ${collapsed ? "justify-center" : "min-w-0"}`}>
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={profileAvatarUrl ?? undefined} alt={`${displayName || "Your"} profile photo`} />
+            <AvatarFallback className="bg-[#5B67F7] text-white text-xs font-semibold">{initials}</AvatarFallback>
+          </Avatar>
+          {!collapsed ? <span className="min-w-0 truncate text-xs text-muted-foreground">{displayName}</span> : null}
         </div>
       </div>
 
@@ -238,6 +261,20 @@ export function AppSidebar() {
                 <Settings size={18} className="shrink-0" aria-hidden="true" />
                 {!collapsed && <span>{t("navigation.settings")}</span>}
               </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <button
+                type="button"
+                onClick={() => void handleSignOut()}
+                className="flex w-full items-center gap-3 rounded-lg bg-[#B42318] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#912018] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B42318] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-card"
+                aria-label={t("header.accountMenu.signOut")}
+                title={t("header.accountMenu.signOut")}
+              >
+                <LogOut size={18} className="shrink-0" aria-hidden="true" />
+                {!collapsed && <span>{t("header.accountMenu.signOut")}</span>}
+              </button>
             </SidebarMenuButton>
           </SidebarMenuItem>
           </SidebarMenu>

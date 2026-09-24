@@ -363,7 +363,12 @@ const AdminPaymentsPage = () => {
                     <Trash2 size={14} aria-hidden="true" />
                     Delete test
                   </AdminGhostButton>
-                ) : null}
+                ) : (
+                  <AdminGhostButton className="mr-2 h-8 px-2.5 text-xs" disabled title="Live/provider-linked payments are protected">
+                    <Trash2 size={14} aria-hidden="true" />
+                    Protected
+                  </AdminGhostButton>
+                )}
                 {payment.reconciliation.canReconcile ? (
                   <AdminGhostButton
                     className="mr-2 h-8 px-2.5 text-xs"
@@ -472,7 +477,11 @@ const AdminPaymentsPage = () => {
                         >
                           <Trash2 size={14} aria-hidden="true" />
                         </button>
-                      ) : null}
+                      ) : (
+                        <button type="button" disabled title="Live/provider-linked payments are protected" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/30 disabled:cursor-not-allowed">
+                          <Trash2 size={14} aria-hidden="true" />
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"

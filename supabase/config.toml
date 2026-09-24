@@ -3,6 +3,10 @@ project_id = "qfhjlqskucabzxepqbpl"
 [auth.email]
 enable_confirmations = false
 
+[auth.email.template.confirmation]
+subject = "Welcome to Moniger — confirm your email"
+content_path = "./supabase/templates/confirmation.html"
+
 [functions.workspace-email-delivery]
 verify_jwt = false
 

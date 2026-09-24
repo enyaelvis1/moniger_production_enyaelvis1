@@ -1,6 +1,7 @@
-import { useDeferredValue, useMemo, useState } from "react";
-import { CreditCard, Download, Inbox, PencilLine, Search } from "lucide-react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { CreditCard, Download, Inbox, PencilLine, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -104,6 +105,11 @@ const AdminSubscriptionsPage = () => {
   const [editingRow, setEditingRow] = useState<SubscriptionRow | null>(null);
   const [formState, setFormState] = useState<SubscriptionFormState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedBusinessIds, setSelectedBusinessIds] = useState<string[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
   const deferredSearch = useDeferredValue(search);
   const queryPayload = useMemo(
     () => ({
@@ -127,6 +133,60 @@ const AdminSubscriptionsPage = () => {
   const closeEditor = () => {
     setEditingRow(null);
     setFormState(null);
+  };
+
+  const isDeletable = (row: SubscriptionRow) => row.isTestData && row.provider === "manual" && !row.providerSubscriptionId;
+  const rows = subscriptionsQuery.data?.rows ?? [];
+  const visibleBusinessIds = rows.map((row) => row.businessId).join(",");
+  const deletableRows = rows.filter(isDeletable);
+  const selectedRows = rows.filter((row) => selectedBusinessIds.includes(row.businessId));
+  const confirmationPhrase = `DELETE ${selectedRows.length} SUBSCRIPTIONS`;
+
+  useEffect(() => {
+    setSelectedBusinessIds((current) => {
+      const visibleIds = new Set(rows.map((row) => row.businessId));
+      const next = current.filter((id) => visibleIds.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [visibleBusinessIds]);
+
+  const toggleSelection = (businessId: string, checked: boolean) => {
+    setSelectedBusinessIds((current) => checked
+      ? Array.from(new Set([...current, businessId]))
+      : current.filter((id) => id !== businessId));
+  };
+
+  const toggleAllDeletable = (checked: boolean) => {
+    setSelectedBusinessIds(checked ? deletableRows.map((row) => row.businessId) : []);
+  };
+
+  const deleteSubscriptions = async () => {
+    if (selectedRows.length === 0) return;
+    setIsDeleting(true);
+    try {
+      await invokeAdminConsole("subscriptions.delete", {
+        confirmation: deleteConfirmation.trim(),
+        reason: deleteReason.trim(),
+        subscriptionIds: selectedBusinessIds,
+      });
+      await subscriptionsQuery.refetch();
+      setSelectedBusinessIds([]);
+      setDeleteReason("");
+      setDeleteConfirmation("");
+      setIsDeleteDialogOpen(false);
+      toast({
+        title: "Subscriptions deleted",
+        description: `${selectedRows.length} marked test subscription${selectedRows.length === 1 ? "" : "s"} removed and the workspace plan reset to Starter.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Deletion blocked",
+        description: error instanceof Error ? error.message : "The selected subscriptions could not be deleted.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const exportCsv = () => {
@@ -198,6 +258,17 @@ const AdminSubscriptionsPage = () => {
               <Download size={14} aria-hidden="true" />
               Export CSV
             </AdminGhostButton>
+            {deletableRows.length > 0 ? (
+              <Button
+                variant="destructive"
+                disabled={selectedBusinessIds.length === 0}
+                onClick={() => setIsDeleteDialogOpen(true)}
+                className="gap-2"
+              >
+                <Trash2 size={14} aria-hidden="true" />
+                Delete selected ({selectedBusinessIds.length})
+              </Button>
+            ) : null}
           </div>
         )}
       />
@@ -222,6 +293,16 @@ const AdminSubscriptionsPage = () => {
       </div>
 
       <AdminToolbar className="flex-wrap">
+        {deletableRows.length > 0 ? (
+          <label className="flex items-center gap-2 text-xs text-white/60">
+            <Checkbox
+              checked={deletableRows.length > 0 && deletableRows.every((row) => selectedBusinessIds.includes(row.businessId))}
+              onCheckedChange={(checked) => toggleAllDeletable(checked === true)}
+              aria-label="Select all deletable test subscriptions"
+            />
+            Select all eligible test subscriptions
+          </label>
+        ) : null}
         <div className="relative w-full flex-1 sm:min-w-[240px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
           <Input
@@ -294,6 +375,15 @@ const AdminSubscriptionsPage = () => {
             <div key={row.businessId} className="rounded-xl border border-white/5 bg-[#161E2E] p-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div>
+                  <div className="mb-2 flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedBusinessIds.includes(row.businessId)}
+                      disabled={!isDeletable(row)}
+                      onCheckedChange={(checked) => toggleSelection(row.businessId, checked === true)}
+                      aria-label={`Select ${row.businessName}`}
+                    />
+                    <AdminBadge tone={row.isTestData ? "warning" : "neutral"}>{row.isTestData ? "Test data" : "Protected"}</AdminBadge>
+                  </div>
                   <p className="text-sm font-semibold text-[#F1F5F9]">{row.businessName}</p>
                   <p className="mt-1 text-xs text-white/35">{row.ownerEmail}</p>
                 </div>
@@ -311,6 +401,7 @@ const AdminSubscriptionsPage = () => {
                 <PencilLine size={14} aria-hidden="true" />
                 Edit subscription
               </AdminGhostButton>
+              {!isDeletable(row) ? <p className="mt-2 text-xs text-white/35">Provider-linked or live subscriptions cannot be hard-deleted.</p> : null}
             </div>
           ))}
         </div>
@@ -319,18 +410,30 @@ const AdminSubscriptionsPage = () => {
           <table className="min-w-full text-left text-sm text-white/70">
             <AdminTableHead>
               <tr>
+                <th className="w-10 px-3 py-2.5 sm:px-4">
+                  <span className="sr-only">Select</span>
+                </th>
                 <th className="px-3 py-2.5 sm:px-4">Business</th>
                 <th className="px-3 py-2.5 sm:px-4">Plan</th>
                 <th className="px-3 py-2.5 sm:px-4">Cycle</th>
                 <th className="px-3 py-2.5 sm:px-4">Amount</th>
                 <th className="hidden px-3 py-2.5 lg:table-cell sm:px-4">Next Renewal</th>
                 <th className="px-3 py-2.5 sm:px-4">Status</th>
+                <th className="px-3 py-2.5 sm:px-4">Data</th>
                 <th className="px-3 py-2.5 text-right sm:px-4">Actions</th>
               </tr>
             </AdminTableHead>
             <tbody>
               {(subscriptionsQuery.data?.rows ?? []).map((row) => (
                 <tr key={row.businessId} className="border-b border-white/5 hover:bg-white/[0.02]">
+                  <td className="px-3 py-3 sm:px-4">
+                    <Checkbox
+                      checked={selectedBusinessIds.includes(row.businessId)}
+                      disabled={!isDeletable(row)}
+                      onCheckedChange={(checked) => toggleSelection(row.businessId, checked === true)}
+                      aria-label={`Select ${row.businessName}`}
+                    />
+                  </td>
                   <td className="px-3 py-3 sm:px-4">
                     <div className="space-y-1">
                       <p className="font-medium text-[#F1F5F9]">{row.businessName}</p>
@@ -344,6 +447,7 @@ const AdminSubscriptionsPage = () => {
                     {row.nextRenewalAt ? formatAdminDate(row.nextRenewalAt) : "Not scheduled"}
                   </td>
                   <td className="px-3 py-3 sm:px-4"><AdminBadge tone={statusTone[row.status]}>{row.status}</AdminBadge></td>
+                  <td className="px-3 py-3 sm:px-4"><AdminBadge tone={row.isTestData ? "warning" : "neutral"}>{row.isTestData ? "Test data" : "Protected"}</AdminBadge></td>
                   <td className="px-3 py-3 sm:px-4">
                     <div className="flex items-center justify-end gap-2">
                       <button
@@ -518,6 +622,36 @@ const AdminSubscriptionsPage = () => {
             </Button>
             <Button onClick={() => void saveSubscription()} disabled={isSaving} className="bg-[#3B82F6] text-white hover:bg-[#2563EB]">
               {isSaving ? "Saving..." : "Save subscription"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={(open) => !isDeleting && setIsDeleteDialogOpen(open)}>
+        <DialogContent className="border-white/10 bg-[#161E2E] text-[#F1F5F9] sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-200">
+              <Trash2 size={18} aria-hidden="true" />
+              Delete marked test subscriptions
+            </DialogTitle>
+            <DialogDescription className="text-white/55">
+              This permanently removes {selectedRows.length} manual test subscription record{selectedRows.length === 1 ? "" : "s"}, resets the related workspace override, and writes an audit entry. Live and provider-linked subscriptions are never eligible.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-[0.08em] text-white/45" htmlFor="subscription-delete-reason">Cleanup reason</label>
+              <Textarea id="subscription-delete-reason" value={deleteReason} onChange={(event) => setDeleteReason(event.target.value)} placeholder="Explain why these test subscriptions are being removed." className="min-h-[90px] border-white/10 bg-[#0F1621] text-white placeholder:text-white/30" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-[0.08em] text-white/45" htmlFor="subscription-delete-confirmation">Type {confirmationPhrase}</label>
+              <Input id="subscription-delete-confirmation" value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} placeholder={confirmationPhrase} className="border-white/10 bg-[#0F1621] text-white placeholder:text-white/30" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting} className="border border-white/10 bg-white/5 text-white hover:bg-white/10">Cancel</Button>
+            <Button variant="destructive" onClick={() => void deleteSubscriptions()} disabled={isDeleting || deleteReason.trim().length < 10 || deleteConfirmation.trim() !== confirmationPhrase}>
+              {isDeleting ? "Deleting..." : "Delete subscriptions"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Activity,
   ArrowLeft,
@@ -120,7 +120,7 @@ const getInitials = (value: string) =>
     .slice(0, 2)
     .toUpperCase();
 
-const adminEnvironment = (import.meta.env.VITE_SENTRY_ENVIRONMENT?.trim() || import.meta.env.MODE || "unknown").toLowerCase();
+const adminEnvironment = (import.meta.env.DEV ? "development" : import.meta.env.VITE_SENTRY_ENVIRONMENT?.trim() || import.meta.env.MODE || "unknown").toLowerCase();
 const adminEnvironmentLabel = adminEnvironment.charAt(0).toUpperCase() + adminEnvironment.slice(1);
 const adminEnvironmentClass = adminEnvironment === "production"
   ? "border-[#F97066]/25 bg-[#F97066]/10 text-[#F97066]"
@@ -139,8 +139,14 @@ const getRouteMeta = (pathname: string) => {
 const SidebarContent = ({ closeMobile, isDark, collapsed = false }: { closeMobile?: () => void; isDark: boolean; collapsed?: boolean }) => {
   const { user } = useAuth();
   const adminAccess = useAdminAccess();
+  const location = useLocation();
+  const navigationRef = useRef<HTMLDivElement>(null);
   const displayName = user?.user_metadata?.name || user?.email || "Moniger Admin";
   const initials = getInitials(displayName);
+
+  useEffect(() => {
+    navigationRef.current?.scrollTo({ top: 0 });
+  }, [location.pathname]);
 
   return (
     <div className={cn("flex h-full flex-col", isDark ? "bg-[#0A1020] text-[#F1F5F9]" : "bg-[#F8FAFF] text-[#10203F]")}>
@@ -164,7 +170,7 @@ const SidebarContent = ({ closeMobile, isDark, collapsed = false }: { closeMobil
         </div>
       </div>
 
-      <div className={cn("flex-1 overflow-y-auto py-4", collapsed ? "px-1" : "px-2")}>
+      <div ref={navigationRef} className={cn("flex-1 overflow-y-auto py-4", collapsed ? "px-1" : "px-2")}>
         {ADMIN_NAV.map((section) => (
           <div key={section.label} className="mb-4">
             {!collapsed ? <p className={cn("px-5 pb-1 text-[10px] uppercase tracking-[0.12em]", isDark ? "text-white/30" : "text-[#8E97B7]")}>{section.label}</p> : null}

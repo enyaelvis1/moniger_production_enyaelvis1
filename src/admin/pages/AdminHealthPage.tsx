@@ -23,6 +23,51 @@ import {
   formatAdminDateTime,
 } from "@/admin/components/AdminUi";
 
+const webhookEventDescriptions: Record<string, { description: string; name: string }> = {
+  "charge.success": {
+    name: "Charge succeeded",
+    description: "Confirms a customer payment was completed successfully.",
+  },
+  "invoice.payment_failed": {
+    name: "Invoice payment failed",
+    description: "Marks a subscription invoice as needing billing attention.",
+  },
+  "subscription.create": {
+    name: "Subscription created",
+    description: "Creates or activates a recurring workspace subscription.",
+  },
+  "subscription.disable": {
+    name: "Subscription disabled",
+    description: "Stops an existing recurring workspace subscription.",
+  },
+  "subscription.not_renew": {
+    name: "Subscription set to expire",
+    description: "Keeps access active until the current period ends, then stops renewal.",
+  },
+  "transfer.failed": {
+    name: "Transfer failed",
+    description: "Reports that an outgoing provider transfer could not be completed.",
+  },
+  "transfer.reversed": {
+    name: "Transfer reversed",
+    description: "Reports that a previously completed transfer was reversed by the provider.",
+  },
+  "transfer.success": {
+    name: "Transfer succeeded",
+    description: "Confirms that an outgoing provider transfer was completed.",
+  },
+};
+
+const getWebhookEventInfo = (eventType: string) =>
+  webhookEventDescriptions[eventType] ?? {
+    name: eventType
+      .split(".")
+      .map((part) => part.replace(/[_-]/g, " "))
+      .join(" · ")
+      .replace(/\b\w/g, (character) => character.toUpperCase()),
+    description: "Webhook received from the payment provider and recorded for monitoring.",
+  };
+
 const AdminHealthPage = () => {
   const healthQuery = useAdminConsoleQuery<AdminHealthResponse>("health.check");
 
@@ -110,25 +155,33 @@ const AdminHealthPage = () => {
           <table className="min-w-full text-left text-sm text-white/70">
             <AdminTableHead>
               <tr>
-                <th className="px-5 py-3">Event Type</th>
+                <th className="px-5 py-3">Event</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3">Received</th>
                 <th className="px-5 py-3">Processing Time</th>
               </tr>
             </AdminTableHead>
             <tbody>
-              {(healthQuery.data?.webhookEvents ?? []).map((event) => (
-                <tr key={event.id} className={`border-b border-white/5 ${event.status === "failed" ? "bg-[#EF4444]/5" : ""}`}>
-                  <td className="px-5 py-4 font-medium text-[#F1F5F9]">{event.eventType}</td>
-                  <td className="px-5 py-4">
-                    <AdminBadge tone={event.status === "processed" ? "success" : event.status === "failed" ? "danger" : "warning"}>
-                      {event.status}
-                    </AdminBadge>
-                  </td>
-                  <td className="px-5 py-4 text-white/45">{formatAdminDateTime(event.receivedAt)}</td>
-                  <td className="px-5 py-4">{event.processingTimeMs ?? 0}ms</td>
-                </tr>
-              ))}
+              {(healthQuery.data?.webhookEvents ?? []).map((event) => {
+                const eventInfo = getWebhookEventInfo(event.eventType);
+
+                return (
+                  <tr key={event.id} className={`border-b border-white/5 ${event.status === "failed" ? "bg-[#EF4444]/5" : ""}`}>
+                    <td className="px-5 py-4">
+                      <div className="font-medium text-[#F1F5F9]">{eventInfo.name}</div>
+                      <div className="mt-1 text-xs text-white/40">{event.eventType}</div>
+                      <div className="mt-2 max-w-xl text-xs leading-5 text-white/55">{eventInfo.description}</div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <AdminBadge tone={event.status === "processed" ? "success" : event.status === "failed" ? "danger" : "warning"}>
+                        {event.status}
+                      </AdminBadge>
+                    </td>
+                    <td className="px-5 py-4 text-white/45">{formatAdminDateTime(event.receivedAt)}</td>
+                    <td className="px-5 py-4">{event.processingTimeMs ?? 0}ms</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </AdminTableWrapper>

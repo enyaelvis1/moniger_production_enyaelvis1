@@ -150,6 +150,9 @@ const AdminReceivablesPage = () => {
                   <p>Due {formatAdminDate(row.dueDate)}</p>
                   <p>{row.paymentReference ? `Payment ${row.paymentReference}` : "No payment reference"}</p>
                 </div>
+                <button type="button" disabled={!row.isTestData || !row.paymentReference} title={row.isTestData && row.paymentReference ? "Select this marked test receivable for deletion" : "Live or unmarked receivables are protected"} className="mt-3 inline-flex h-8 items-center gap-1 rounded-lg border border-[#EF4444]/20 bg-[#EF4444]/10 px-2.5 text-xs text-[#FCA5A5] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/30" onClick={() => toggleReceivableSelection(row.invoiceId)}>
+                  <Trash2 size={13} aria-hidden="true" /> {row.isTestData && row.paymentReference ? "Select for deletion" : "Protected"}
+                </button>
               </div>
             ))}
           </div>
@@ -168,6 +171,7 @@ const AdminReceivablesPage = () => {
                   <th className="table-header px-4 py-3 text-left">Status</th>
                   <th className="table-header px-4 py-3 text-left">Due</th>
                   <th className="table-header px-4 py-3 text-left">Settlement</th>
+                  <th className="table-header px-4 py-3 text-right">Actions</th>
                 </tr>
               </AdminTableHead>
               <tbody>
@@ -181,6 +185,11 @@ const AdminReceivablesPage = () => {
                     <td className="px-4 py-3"><AdminBadge tone={statusTone(row.status)}>{row.status}</AdminBadge></td>
                     <td className="px-4 py-3 text-white/55">{formatAdminDate(row.dueDate)}</td>
                     <td className="px-4 py-3 text-xs text-white/55">{row.paymentReference ?? "No payment"}{row.paymentStatus ? ` · ${row.paymentStatus}` : ""}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button type="button" disabled={!row.isTestData || !row.paymentReference} title={row.isTestData && row.paymentReference ? "Select this marked test receivable for deletion" : "Live or unmarked receivables are protected"} className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#EF4444]/20 bg-[#EF4444]/10 px-2.5 text-xs text-[#FCA5A5] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/30" onClick={() => toggleReceivableSelection(row.invoiceId)}>
+                        <Trash2 size={13} aria-hidden="true" /> {row.isTestData && row.paymentReference ? "Select delete" : "Protected"}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

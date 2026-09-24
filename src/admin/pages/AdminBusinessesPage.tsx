@@ -6,6 +6,7 @@ import {
   Eye,
   MoreVertical,
   Search,
+  ShieldAlert,
   UserCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -47,6 +48,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { createExportFileName, downloadCsvFile, downloadJsonFile } from "@/lib/export";
@@ -162,6 +164,7 @@ const AdminBusinessesPage = () => {
   const [plan, setPlan] = useState("all");
   const [joined, setJoined] = useState("all");
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
+  const [selectedBusinessIds, setSelectedBusinessIds] = useState<string[]>([]);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const deferredSearch = useDeferredValue(search);
   const [payoutApprovalThreshold, setPayoutApprovalThreshold] = useState("");
@@ -188,6 +191,8 @@ const AdminBusinessesPage = () => {
   const businessesErrorMessage = businessesQuery.error instanceof Error
     ? businessesQuery.error.message
     : "The admin businesses query failed. Check the admin-console edge function and its environment variables.";
+  const businessRows = businessesQuery.data?.rows ?? [];
+  const allBusinessesSelected = businessRows.length > 0 && businessRows.every((business) => selectedBusinessIds.includes(business.businessId));
   const [adminSplitForm, setAdminSplitForm] = useState<AdminSplitFormState>({
     currency: "NGN",
     flatFeeAmount: "",
@@ -265,6 +270,33 @@ const AdminBusinessesPage = () => {
       });
     } finally {
       setPendingAction(null);
+    }
+  };
+
+  const runBulkBusinessAction = async (type: "suspend" | "unsuspend") => {
+    if (selectedBusinessIds.length === 0) return;
+    try {
+      await Promise.all(selectedBusinessIds.map((businessId) => invokeAdminConsole("businesses.action", { businessId, type })));
+      await businessesQuery.refetch();
+      setSelectedBusinessIds([]);
+      toast({ title: "Businesses updated", description: `${selectedBusinessIds.length} workspaces were ${type === "suspend" ? "suspended" : "restored"}.` });
+    } catch (error) {
+      toast({ title: "Bulk action failed", description: error instanceof Error ? error.message : "Unable to update the selected businesses.", variant: "destructive" });
+    }
+  };
+
+  const markSelectedAsTestData = async () => {
+    if (selectedBusinessIds.length === 0) return;
+    const reason = window.prompt("Reason for marking these QA workspaces as test data (at least 10 characters):", "Prepare QA workspace cleanup")?.trim() ?? "";
+    const confirmation = `MARK ${selectedBusinessIds.length} BUSINESSES AS TEST`;
+    if (reason.length < 10 || window.prompt(`Type exactly: ${confirmation}`)?.trim() !== confirmation) return;
+    try {
+      await invokeAdminConsole("testData.mark", { businessIds: selectedBusinessIds, confirmation, reason });
+      await businessesQuery.refetch();
+      setSelectedBusinessIds([]);
+      toast({ title: "QA data marked", description: "The eligible QA workspaces and linked records are now marked as test data." });
+    } catch (error) {
+      toast({ title: "Marking blocked", description: error instanceof Error ? error.message : "Only clearly identified QA/test workspaces can be marked.", variant: "destructive" });
     }
   };
 
@@ -394,11 +426,28 @@ const AdminBusinessesPage = () => {
               <Download size={14} aria-hidden="true" />
               Export CSV
             </AdminGhostButton>
+            {selectedBusinessIds.length > 0 ? (
+              <>
+                <AdminGhostButton onClick={() => void runBulkBusinessAction("suspend")}>
+                  <ShieldAlert size={14} aria-hidden="true" /> Suspend selected
+                </AdminGhostButton>
+                <AdminGhostButton onClick={() => void runBulkBusinessAction("unsuspend")}>Restore selected</AdminGhostButton>
+                <AdminGhostButton onClick={() => void markSelectedAsTestData()}>Mark selected as test</AdminGhostButton>
+              </>
+            ) : null}
           </div>
         )}
       />
 
       <AdminToolbar className="flex-wrap">
+        <label className="flex items-center gap-2 text-xs text-white/60">
+          <Checkbox
+            checked={allBusinessesSelected}
+            onCheckedChange={(checked) => setSelectedBusinessIds(checked === true ? businessRows.map((business) => business.businessId) : [])}
+            aria-label="Select all visible businesses"
+          />
+          Select all visible ({selectedBusinessIds.length} selected)
+        </label>
         <div className="relative w-full flex-1 sm:min-w-[240px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
           <Input
@@ -493,6 +542,12 @@ const AdminBusinessesPage = () => {
             <div key={business.businessId} className="rounded-xl border border-white/5 bg-[#161E2E] p-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div>
+                  <Checkbox
+                    checked={selectedBusinessIds.includes(business.businessId)}
+                    onCheckedChange={(checked) => setSelectedBusinessIds((current) => checked === true ? [...new Set([...current, business.businessId])] : current.filter((id) => id !== business.businessId))}
+                    aria-label={`Select ${business.businessName}`}
+                    className="mb-2"
+                  />
                   <p className="text-sm font-semibold text-[#F1F5F9]">{business.businessName}</p>
                   <p className="mt-1 text-xs text-white/35">{business.ownerEmail}</p>
                 </div>
@@ -517,6 +572,7 @@ const AdminBusinessesPage = () => {
           <table className="min-w-full text-left text-sm text-white/70">
             <AdminTableHead>
               <tr>
+                <th className="w-10 px-3 py-2.5 sm:px-4"><span className="sr-only">Select</span></th>
                 <th className="px-3 py-2.5 sm:px-4">Business</th>
                 <th className="px-3 py-2.5 sm:px-4">Plan</th>
                 <th className="px-3 py-2.5 sm:px-4">Users</th>
@@ -529,6 +585,13 @@ const AdminBusinessesPage = () => {
             <tbody>
               {(businessesQuery.data?.rows ?? []).map((business) => (
                 <tr key={business.businessId} className="border-b border-white/5 hover:bg-white/[0.02]">
+                  <td className="px-3 py-3 sm:px-4">
+                    <Checkbox
+                      checked={selectedBusinessIds.includes(business.businessId)}
+                      onCheckedChange={(checked) => setSelectedBusinessIds((current) => checked === true ? [...new Set([...current, business.businessId])] : current.filter((id) => id !== business.businessId))}
+                      aria-label={`Select ${business.businessName}`}
+                    />
+                  </td>
                   <td className="px-3 py-3 sm:px-4">
                     <button type="button" onClick={() => setSelectedBusinessId(business.businessId)} className="flex items-center gap-3 text-left">
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[linear-gradient(135deg,#3B82F6,#8B5CF6)] text-[10px] font-semibold text-white sm:h-9 sm:w-9 sm:text-xs">

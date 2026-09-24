@@ -10,6 +10,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { useSettingsData, useWorkspaceWalletData } from "@/hooks/use-settings-data";
 import { useAdminAccess } from "@/hooks/use-admin-access";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +39,7 @@ const AppHeader = ({ pageTitle }: { pageTitle: string }) => {
       : walletAvailableBalance;
 
   const displayName = user?.user_metadata?.name || user?.email || "";
+  const profileAvatarUrl = settingsQuery.data?.profile?.avatar_url ?? null;
   const initials = displayName
     ? displayName
         .split(" ")
@@ -152,6 +154,17 @@ const AppHeader = ({ pageTitle }: { pageTitle: string }) => {
           <NotificationCenter businessId={businessId} userId={user?.id} />
         </div>
 
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#B42318] px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#912018] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B42318] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-card max-[520px]:px-2"
+          aria-label={t("header.accountMenu.signOut")}
+          title={t("header.accountMenu.signOut")}
+        >
+          <LogOut size={16} aria-hidden="true" />
+          <span className="hidden xl:inline">{t("header.accountMenu.signOut")}</span>
+        </button>
+
         <DropdownMenu open={accountMenuOpen} onOpenChange={setAccountMenuOpen}>
           <DropdownMenuTrigger asChild>
             <button
@@ -162,7 +175,10 @@ const AppHeader = ({ pageTitle }: { pageTitle: string }) => {
               aria-expanded={accountMenuOpen}
               aria-haspopup="menu"
             >
-              {initials}
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={profileAvatarUrl ?? undefined} alt={`${displayName || "Your"} profile photo`} />
+                <AvatarFallback className="bg-[#5B67F7] text-white text-xs font-semibold">{initials}</AvatarFallback>
+              </Avatar>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent id="account-menu" align="end" className="w-48">

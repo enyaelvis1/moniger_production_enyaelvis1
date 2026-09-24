@@ -90,7 +90,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
   }, [fabOpen]);
 
   return (
-    <div className="min-h-screen bg-[#F3F4FB] dark:bg-background">
+    <div className="min-h-screen bg-muted/30 dark:bg-background">
       <SkipToMainContent />
       <SidebarProvider>
         <div className="min-h-screen flex w-full">
@@ -99,7 +99,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
             <AppHeader pageTitle={pageTitle} />
             <main
               id="main-content"
-              className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 pb-28 page-enter sm:px-4 md:p-6 md:pb-6"
+              className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 pb-28 page-enter sm:px-4 md:p-6 md:pb-6"
             >
               {!isOnline ? (
                 <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-900 shadow-sm">
