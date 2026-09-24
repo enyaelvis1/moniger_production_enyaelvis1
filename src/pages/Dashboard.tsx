@@ -13,7 +13,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { format as formatDashboardDate } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { EmptyState } from "@/components/app/EmptyState";
 import AppLayout from "@/components/app/AppLayout";
@@ -97,6 +97,7 @@ const DashboardSkeleton = () => (
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { formatCurrency, t } = useLocalization();
   const settingsQuery = useSettingsData(user?.id);
@@ -118,6 +119,7 @@ const Dashboard = () => {
 
   const isSettingsLoading = settingsQuery.isLoading && !settingsQuery.data;
   const isOperationsLoading = operationsQuery.isLoading && !operationsQuery.data;
+  const emailConfirmed = searchParams.get("email_confirmed") === "1";
 
   const summaryCards = [
     {
@@ -193,6 +195,17 @@ const Dashboard = () => {
         <DashboardSkeleton />
       ) : (
         <motion.div initial="hidden" animate="visible" className="min-w-0 space-y-8">
+          {emailConfirmed ? (
+            <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-emerald-900 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
+              <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-300" aria-hidden="true" />
+              <div>
+                <p className="font-semibold">Email confirmed successfully</p>
+                <p className="mt-1 text-sm text-emerald-800/80 dark:text-emerald-100/80">
+                  Welcome to Moniger. Your workspace dashboard is ready.
+                </p>
+              </div>
+            </div>
+          ) : null}
           {settingsQuery.error ? (
             <div className="rounded-xl border border-[#F8C9C9] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B42318]">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

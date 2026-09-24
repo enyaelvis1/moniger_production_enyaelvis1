@@ -265,7 +265,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signUp = async (data: { email: string; password: string; name: string; businessName: string; plan?: SubscriptionPlan }) => {
-    const emailRedirectTo = import.meta.env.VITE_SUPABASE_EMAIL_REDIRECT_TO?.trim();
+    const configuredEmailRedirectTo = import.meta.env.VITE_SUPABASE_EMAIL_REDIRECT_TO?.trim();
+    const emailRedirectTo = configuredEmailRedirectTo || `${window.location.origin}/dashboard?email_confirmed=1`;
     const plan = data.plan ?? "starter";
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
