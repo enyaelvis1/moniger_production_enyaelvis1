@@ -103,6 +103,7 @@ export type AdminOverviewResponse = {
   latestBusinesses: Array<{
     businessId: string;
     businessName: string;
+    isTestData: boolean;
     createdAt: string;
     ownerEmail: string;
     ownerName: string | null;
@@ -126,6 +127,7 @@ export type AdminBusinessListItem = {
   defaultCurrency: string;
   email: string | null;
   invoiceCount: number;
+  isTestData: boolean;
   memberCount: number;
   ownerEmail: string;
   ownerName: string | null;
@@ -372,6 +374,7 @@ export type AdminSubscriptionsResponse = {
     billingCycle: "annual" | "free" | "manual" | "monthly";
     businessId: string;
     businessName: string;
+    isTestData: boolean;
     cancelAtPeriodEnd: boolean;
     cancelledAt: string | null;
     currency: string;
@@ -528,6 +531,7 @@ export type AdminConsoleAction =
   | "vendors.list"
   | "subscriptions.list"
   | "subscriptions.update"
+  | "subscriptions.delete"
   | "payments.list"
   | "payments.export"
   | "payments.reconcile"
@@ -536,6 +540,7 @@ export type AdminConsoleAction =
   | "banks.delete"
   | "testData.preview"
   | "testData.delete"
+  | "testData.mark"
   | "testData.receivables.delete"
   | "content.list"
   | "content.save"

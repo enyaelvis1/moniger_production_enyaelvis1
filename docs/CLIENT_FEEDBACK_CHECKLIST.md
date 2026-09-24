@@ -256,6 +256,7 @@ Current implementation branch: `develop`
 - [x] Make the Danger Zone cleanup flow show a clear scope, preview summary, blocked-record count, and exact linked-record confirmation count.
 - [x] Keep a separate staging/QA Supabase project as the recommended option for full test-database resets.
 - [x] Add safe cleanup for explicitly marked supporting test data: customers, vendors, invoices, bills, non-completed checkout sessions, managed content, announcements, and test/sandbox signup alerts.
+- [x] Add Super Admin-only subscription selection and bulk deletion for marked manual test subscriptions; provider-linked and live subscriptions remain protected.
 - [x] Mark legacy QA workspaces from narrowly scoped Playwright/Debug/test identity signals so existing fixtures can be reviewed and cleaned before production cutover.
 
 ### Test after completion
@@ -270,6 +271,7 @@ Current implementation branch: `develop`
 8. Open `Admin → Settings → Danger Zone`, choose `All marked test data`, refresh the preview, and confirm the bulk confirmation count includes linked payment, receivable, and supporting test records.
 9. On `Admin → Management → Receivables`, select one or more eligible test receivables, type the exact bulk confirmation, and confirm deletion succeeds and is audit logged.
 10. Confirm live users, subscriptions, wallet ledger entries, webhook events, and audit logs are never included in the cleanup preview.
+11. On `Admin → Management → Subscriptions`, select marked test subscriptions and confirm bulk deletion requires a reason and exact typed confirmation, creates an audit event, and does not allow provider-linked/live rows to be selected.
 
 ---
 

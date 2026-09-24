@@ -2,6 +2,7 @@ import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Building2, Download, Plus, Search, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -60,6 +61,7 @@ const AdminBanksPage = () => {
   const [newBankCountryCode, setNewBankCountryCode] = useState("NG");
   const [pendingDeleteBank, setPendingDeleteBank] = useState<{ id: string; name: string } | null>(null);
   const [isDeletingBank, setIsDeletingBank] = useState(false);
+  const [selectedBankIds, setSelectedBankIds] = useState<string[]>([]);
 
   const filtered = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
@@ -80,6 +82,7 @@ const AdminBanksPage = () => {
 
   const start = (page - 1) * pageSize;
   const displayed = useMemo(() => (filtered ?? []).slice(start, start + pageSize), [filtered, start, pageSize]);
+  const allDisplayedSelected = displayed.length > 0 && displayed.every((bank) => selectedBankIds.includes(bank.id));
 
   const handleAdd = async () => {
     const name = newBankName.trim();
@@ -124,6 +127,17 @@ const AdminBanksPage = () => {
     }
   };
 
+  const bulkToggleBanks = async (isActive: boolean) => {
+    try {
+      await Promise.all(selectedBankIds.map((id) => updateBank.mutateAsync({ id, values: { is_active: isActive } })));
+      await banksQuery.refetch();
+      setSelectedBankIds([]);
+      toast({ title: "Banks updated", description: `${selectedBankIds.length} banks were ${isActive ? "enabled" : "disabled"}.` });
+    } catch (err) {
+      toast({ title: "Unable to update banks", description: err instanceof Error ? err.message : "Please try again.", variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -136,11 +150,16 @@ const AdminBanksPage = () => {
               <Plus size={14} />
               <span className="ml-2">Add Bank</span>
             </Button>
+            {selectedBankIds.length > 0 ? <AdminGhostButton onClick={() => void bulkToggleBanks(false)}>Disable selected</AdminGhostButton> : null}
           </div>
         )}
       />
 
       <AdminToolbar>
+        <label className="flex items-center gap-2 text-xs text-white/60">
+          <Checkbox checked={allDisplayedSelected} onCheckedChange={(checked) => setSelectedBankIds(checked === true ? displayed.map((bank) => bank.id) : [])} aria-label="Select all visible banks" />
+          Select all visible ({selectedBankIds.length} selected)
+        </label>
         <div className="relative w-full flex-1 sm:min-w-[240px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
           <Input
@@ -183,6 +202,7 @@ const AdminBanksPage = () => {
               <table className="w-full table-auto">
                 <AdminTableHead>
                   <tr>
+                    <th className="w-10 px-4 py-3"><span className="sr-only">Select</span></th>
                     <th className="px-4 py-3 text-left">Bank</th>
                     <th className="px-4 py-3 text-left">Code</th>
                     <th className="px-4 py-3 text-left">Country</th>
@@ -194,6 +214,7 @@ const AdminBanksPage = () => {
                 <tbody>
                   {displayed.map((b) => (
                     <tr key={b.id} className="border-t border-white/5">
+                      <td className="px-4 py-3"><Checkbox checked={selectedBankIds.includes(b.id)} onCheckedChange={(checked) => setSelectedBankIds((current) => checked === true ? [...new Set([...current, b.id])] : current.filter((id) => id !== b.id))} aria-label={`Select ${b.name}`} /></td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <BankLogo name={b.name} />

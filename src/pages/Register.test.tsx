@@ -70,7 +70,7 @@ describe("RegisterPage plan summary", () => {
   it("lets a new customer choose a paid plan before continuing", () => {
     renderPage("/register");
 
-    const businessPlanButton = screen.getByRole("button", { name: /business/i });
+    const businessPlanButton = screen.getAllByRole("button", { name: /business/i })[0];
     expect(businessPlanButton).toHaveAttribute("aria-pressed", "false");
 
     fireEvent.click(businessPlanButton);
@@ -83,9 +83,9 @@ describe("RegisterPage plan summary", () => {
     renderPage("/register");
 
     expect(screen.queryByLabelText("Business name")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /starter plan selected/i }));
-    expect(screen.getByRole("button", { name: "auth.register.next" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "auth.register.next" }));
+    fireEvent.click(screen.getAllByRole("button", { name: /starter plan selected/i })[0]);
+    expect(screen.getByRole("button", { name: "Continue with Starter" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Continue with Starter" }));
 
     expect(screen.getByLabelText("auth.register.businessName")).toBeInTheDocument();
     expect(screen.getByLabelText("auth.register.fullName")).toBeInTheDocument();
@@ -94,7 +94,7 @@ describe("RegisterPage plan summary", () => {
   it("advances to login details and returns to business details with Back", () => {
     renderPage("/register");
 
-    fireEvent.click(screen.getByRole("button", { name: "auth.register.next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue with Starter" }));
     fireEvent.change(screen.getByLabelText("auth.register.businessName"), { target: { value: "Acme Ltd" } });
     fireEvent.change(screen.getByLabelText("auth.register.fullName"), { target: { value: "Ada Lovelace" } });
     fireEvent.click(screen.getByRole("button", { name: "auth.register.next" }));

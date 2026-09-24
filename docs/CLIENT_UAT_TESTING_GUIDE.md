@@ -88,6 +88,24 @@ Expected result:
 - The email is sent successfully.
 - The email content is personalized when the user name is available.
 - The browser URL is cleaned after the reset session is prepared.
+
+### 1.4 Signup confirmation email
+
+Test steps:
+
+1. Create a new Starter, Growth, or Business account with an email address you can access.
+2. Open the signup confirmation email.
+3. Confirm the subject welcomes you to Moniger.
+4. Confirm the email includes the Moniger brand, a thank-you message, and a clear `Confirm my email` button.
+5. Click the button and confirm the account completes email verification and returns to the configured application flow.
+
+Expected result:
+
+- The email subject is `Welcome to Moniger — confirm your email`.
+- The message says welcome and thanks the user for joining Moniger.
+- The confirmation button and fallback URL both use the Supabase confirmation URL.
+- The email includes a safety note for recipients who did not create an account.
+- The email renders cleanly on desktop and mobile email clients.
 - The password can be updated successfully.
 
 ### 1.4 Session persistence security check

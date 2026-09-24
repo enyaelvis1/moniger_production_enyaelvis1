@@ -14,6 +14,7 @@ type AdminConsoleAction =
   | "vendors.list"
   | "subscriptions.list"
   | "subscriptions.update"
+  | "subscriptions.delete"
   | "payments.list"
   | "payments.export"
   | "payments.reconcile"
@@ -22,6 +23,7 @@ type AdminConsoleAction =
   | "banks.delete"
   | "testData.preview"
   | "testData.delete"
+  | "testData.mark"
   | "testData.receivables.delete"
   | "payouts.list"
   | "payouts.export"
@@ -839,6 +841,7 @@ const buildSubscriptionRows = async (adminClient: ReturnType<typeof createClient
       nextRenewalAt: asNullableString(subscription?.next_renewal_at),
       notes: asNullableString(subscription?.notes),
       ownerEmail: business.ownerEmail,
+      isTestData: business.isTestData,
       plan,
       provider: asString(subscription?.provider) || "manual",
       providerCustomerId: asNullableString(subscription?.provider_customer_id),
@@ -1025,7 +1028,7 @@ const buildBusinessRows = async (adminClient: ReturnType<typeof createClient>) =
     memberCountsResponse,
     authUsers,
   ] = await Promise.all([
-    adminClient.from("businesses").select("id, name, email, created_at, owner_user_id, default_currency"),
+    adminClient.from("businesses").select("id, name, email, created_at, owner_user_id, default_currency, is_test_data"),
     adminClient.from("business_admin_overrides").select(
       "business_id, status, plan, payouts_frozen, payout_approval_threshold_amount, payout_limit_per_transaction_amount, payout_limit_daily_amount, payout_limit_weekly_amount",
     ),
@@ -1066,6 +1069,7 @@ const buildBusinessRows = async (adminClient: ReturnType<typeof createClient>) =
       createdAt: asString(business.created_at),
       defaultCurrency: asString(business.default_currency) || "NGN",
       email: asNullableString(business.email),
+      isTestData: Boolean(business.is_test_data),
       invoiceCount: invoiceCountByBusinessId.get(asString(business.id)) ?? 0,
       memberCount: memberCountByBusinessId.get(asString(business.id)) ?? 0,
       ownerEmail: owner?.email ?? "Unknown",
@@ -2120,6 +2124,168 @@ Deno.serve(async (request) => {
         });
 
         return json({ ok: true });
+      }
+
+      case "subscriptions.delete": {
+        if (adminAccess.role !== "super_admin") {
+          return json({ error: "Only Super Admins can delete subscriptions." }, 403);
+        }
+
+        const subscriptionIds = Array.from(new Set(
+          (Array.isArray(payload.subscriptionIds) ? payload.subscriptionIds : [])
+            .filter((value): value is string => typeof value === "string" && value.trim().length > 0),
+        ));
+        const reason = asString(payload.reason).trim();
+        const confirmation = asString(payload.confirmation).trim();
+
+        if (subscriptionIds.length === 0) {
+          return json({ error: "Select at least one subscription." }, 400);
+        }
+        validateTestDataDeletionBatch(subscriptionIds.length);
+        if (reason.length < 10) {
+          return json({ error: "A cleanup reason of at least 10 characters is required." }, 400);
+        }
+
+        const [subscriptionsResponse, businessesResponse] = await Promise.all([
+          adminClient.from("business_subscriptions").select("business_id, provider, provider_subscription_id").in("business_id", subscriptionIds),
+          adminClient.from("businesses").select("id, is_test_data").in("id", subscriptionIds),
+        ]);
+        if (subscriptionsResponse.error) throw subscriptionsResponse.error;
+        if (businessesResponse.error) throw businessesResponse.error;
+
+        const businessById = new Map((businessesResponse.data ?? []).map((row) => [asString(row.id), row]));
+        const rows = (subscriptionsResponse.data ?? []).map((row) => ({
+          businessId: asString(row.business_id),
+          provider: asString(row.provider).toLowerCase(),
+          providerSubscriptionId: asNullableString(row.provider_subscription_id),
+        }));
+        const protectedRows = rows.filter((row) =>
+          businessById.get(row.businessId)?.is_test_data !== true ||
+          Boolean(row.providerSubscriptionId) ||
+          row.provider !== "manual",
+        );
+        if (protectedRows.length > 0) {
+          return json({
+            error: "Only marked test subscriptions without provider billing links can be deleted. Provider-linked and live subscriptions are protected.",
+            protectedBusinessIds: protectedRows.map((row) => row.businessId),
+          }, 409);
+        }
+        if (rows.length !== subscriptionIds.length) {
+          return json({ error: "One or more selected subscriptions no longer exist. Refresh and try again." }, 409);
+        }
+
+        const expectedConfirmation = `DELETE ${rows.length} SUBSCRIPTIONS`;
+        if (confirmation !== expectedConfirmation) {
+          return json({ error: `Type ${expectedConfirmation} to confirm this cleanup.` }, 400);
+        }
+
+        const deleteResponse = await adminClient.from("business_subscriptions").delete().in("business_id", subscriptionIds);
+        if (deleteResponse.error) throw deleteResponse.error;
+        const resetOverrideResponse = await adminClient.from("business_admin_overrides").delete().in("business_id", subscriptionIds);
+        if (resetOverrideResponse.error) throw resetOverrideResponse.error;
+
+        await insertAdminAuditLog({
+          action: "admin_subscriptions_deleted",
+          actorUserId: user.id,
+          adminClient,
+          businessId: subscriptionIds[0] ?? null,
+          detail: {
+            business_ids: subscriptionIds,
+            confirmation,
+            count: subscriptionIds.length,
+            reason,
+            scope: "marked_test_manual_subscriptions",
+          },
+          entityId: subscriptionIds[0] ?? null,
+          entityType: "subscription",
+          summary: "Marked test subscriptions deleted",
+        });
+
+        return json({ ok: true, deletedCount: subscriptionIds.length });
+      }
+
+      case "testData.mark": {
+        if (!canManageTestData(adminAccess.role)) {
+          return json({ error: "Only Super Admins can mark test data." }, 403);
+        }
+
+        const businessIds = Array.from(new Set(
+          (Array.isArray(payload.businessIds) ? payload.businessIds : [])
+            .filter((value): value is string => typeof value === "string" && value.trim().length > 0),
+        ));
+        const vendorIds = Array.from(new Set(
+          (Array.isArray(payload.vendorIds) ? payload.vendorIds : [])
+            .filter((value): value is string => typeof value === "string" && value.trim().length > 0),
+        ));
+        const reason = asString(payload.reason).trim();
+        const confirmation = asString(payload.confirmation).trim();
+        if (businessIds.length === 0 && vendorIds.length === 0) return json({ error: "Select at least one workspace or vendor." }, 400);
+        const markedCount = businessIds.length || vendorIds.length;
+        validateTestDataDeletionBatch(markedCount);
+        if (reason.length < 10) return json({ error: "A reason of at least 10 characters is required." }, 400);
+        const expectedConfirmation = businessIds.length > 0
+          ? `MARK ${businessIds.length} BUSINESSES AS TEST`
+          : `MARK ${vendorIds.length} VENDORS AS TEST`;
+        if (confirmation !== expectedConfirmation) {
+          return json({ error: `Type ${expectedConfirmation} to confirm.` }, 400);
+        }
+
+        if (vendorIds.length > 0) {
+          const vendorResponse = await adminClient.from("vendors").select("id, business_id, is_test_data").in("id", vendorIds);
+          if (vendorResponse.error) throw vendorResponse.error;
+          if ((vendorResponse.data ?? []).length !== vendorIds.length) return json({ error: "One or more selected vendors could not be found." }, 404);
+          const response = await adminClient.from("vendors").update({ is_test_data: true }).in("id", vendorIds);
+          if (response.error) throw response.error;
+          await insertAdminAuditLog({
+            action: "admin_test_data_marked",
+            actorUserId: user.id,
+            adminClient,
+            businessId: asNullableString(vendorResponse.data?.[0]?.business_id),
+            detail: { count: vendorIds.length, reason, scope: "vendors", vendor_ids: vendorIds },
+            entityId: vendorIds[0] ?? null,
+            entityType: "test_data",
+            summary: "Vendors marked as test data",
+          });
+          return json({ ok: true, markedCount: vendorIds.length });
+        }
+
+        const businessesResponse = await adminClient.from("businesses").select("id, name, email, owner_user_id, is_test_data").in("id", businessIds);
+        if (businessesResponse.error) throw businessesResponse.error;
+        const authUsers = await listAllAuthUsers(adminClient);
+        const authById = new Map(authUsers.map((authUser) => [authUser.id, authUser]));
+        const eligible = (businessesResponse.data ?? []).filter((business) => {
+          const owner = authById.get(asString(business.owner_user_id));
+          const identity = `${asString(business.name)} ${asString(business.email)} ${asString(owner?.email)}`.toLowerCase();
+          return business.is_test_data === true || /\b(test|qa|sandbox|playwright|debug)\b/.test(identity) || isClearlyTestAuthUser(owner ?? { id: "" });
+        });
+        if (eligible.length !== businessIds.length) {
+          return json({ error: "Only clearly identified QA/test workspaces can be marked. Live-looking workspaces were rejected." }, 409);
+        }
+
+        const eligibleIds = eligible.map((business) => asString(business.id));
+        const updates = await Promise.all([
+          adminClient.from("businesses").update({ is_test_data: true }).in("id", eligibleIds),
+          adminClient.from("customers").update({ is_test_data: true }).in("business_id", eligibleIds),
+          adminClient.from("vendors").update({ is_test_data: true }).in("business_id", eligibleIds),
+          adminClient.from("invoices").update({ is_test_data: true }).in("business_id", eligibleIds),
+          adminClient.from("bills").update({ is_test_data: true }).in("business_id", eligibleIds),
+          adminClient.from("payments").update({ is_test_data: true }).in("business_id", eligibleIds),
+          adminClient.from("workspace_payouts").update({ is_test_data: true }).in("business_id", eligibleIds),
+        ]);
+        const failedUpdate = updates.find((response) => response.error);
+        if (failedUpdate?.error) throw failedUpdate.error;
+
+        await insertAdminAuditLog({
+          action: "admin_test_data_marked",
+          actorUserId: user.id,
+          adminClient,
+          businessId: eligibleIds[0] ?? null,
+          detail: { business_ids: eligibleIds, count: eligibleIds.length, reason, scope: "qa_workspace_and_linked_records" },
+          entityId: eligibleIds[0] ?? null,
+          entityType: "test_data",
+          summary: "QA workspace and linked records marked as test data",
+        });
+        return json({ ok: true, markedCount: eligibleIds.length });
       }
 
       case "receivables.list":
