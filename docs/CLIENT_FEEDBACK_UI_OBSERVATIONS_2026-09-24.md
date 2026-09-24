@@ -99,8 +99,10 @@ This record covers the mandatory visual and interaction review performed during 
 - Mobile `/pricing/confirmed` at 390×844: confirmation state and actions fit without overlap.
 - Tablet Dashboard and Settings at 768×1024 after the header fix: no horizontal document overflow.
 - Mobile Payments empty state at 390×844: the table’s horizontal-scroll guidance is visible and the empty state remains readable.
+- Starter, Growth, and Business matrix routes at 390×844 and desktop browser sizes: plan labels, upgrade gate, Reports/Audit Trail access, and workspace names remained consistent; no additional reproducible UI defect was found.
 
 ## Follow-up
 
 - The React Router future-flag warnings are existing non-blocking development warnings, not runtime failures introduced by this pass.
 - Continue using sanitized local-only screenshots for subsequent UAT; do not record passwords, payment credentials, or production customer data.
+- The final tier matrix used disposable local-only accounts. Admin → Subscriptions and subscriber-facing plan cards agreed for Starter, Growth, and Business. No UI-006 or later observation was opened in this pass.

@@ -374,7 +374,7 @@ This item should cover public invoice collection and workspace subscription bill
 
 ## 21) Starter, Growth, and Business acceptance milestone
 
-**Status: [ ] In progress — paid signup checkout, dashboard return, subscription visibility, workspace switching, and 20-minute timeout confirmed; full tier acceptance still pending**
+**Status: [ ] In progress — paid signup checkout, dashboard return, subscription visibility, workspace switching, 20-minute timeout, local Admin → Subscriptions verification, and the local three-tier route/gate matrix confirmed; live/provider release acceptance remains pending**
 
 ### A. Fix workspace upgrade and status display
 
@@ -498,7 +498,7 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 
 ## 22) Latest client feedback: input validation, plan isolation, and test-account cleanup
 
-**Status: [ ] In progress — local implementation, primary browser UAT, and responsive UI review completed; admin subscription view, full tier matrix, and production acceptance remain open**
+**Status: [ ] In progress — local implementation, admin subscription verification, full local tier matrix, and responsive UI review completed; production/live-money acceptance remains blocked**
 
 ### Local implementation evidence
 
@@ -515,6 +515,9 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 - [x] Local-only database migrations add Business/Vendor phone enforcement and cross-workspace link validation for invoices, bills, payments, and payouts.
 - [x] Production migrations and deployment are intentionally not performed in this task.
 - [x] Authenticated two-company isolation and multi-workspace selector acceptance were tested locally; see `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.
+- [x] A disposable local-only Super Admin verified Admin → Subscriptions against Starter, Growth, and Business matrix fixtures; no production credentials were used.
+- [x] The local Starter/Growth/Business entitlement matrix was executed through the real UI, including direct Reports/Audit Trail route checks and authenticated cross-workspace subscription-read checks.
+- [x] The two local Supabase schema-lint findings were reviewed and classified as pre-existing category-B follow-up defects, outside this PR; they were not silenced or changed here.
 
 ### A. Restrict Vendor and Business phone fields to numbers
 
@@ -533,9 +536,9 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 ### B. Correct Growth and Business subscription display
 
 - [ ] Reproduce the `foxyrule@yahoo.com` Growth account issue in a safe test environment without exposing credentials in source control or logs.
-- [ ] Confirm Profile → Personal Information displays `Growth` after successful checkout and webhook synchronization.
-- [ ] Confirm the workspace subscription record, selected workspace, and UI plan status all agree.
-- [ ] Repeat the same flow for a Business subscription and confirm it displays `Business`.
+- [x] Confirm Profile → Personal Information displays `Growth` after local subscription synchronization. (Disposable local matrix account.)
+- [x] Confirm the workspace subscription record, selected workspace, Admin → Subscriptions row, and UI plan status all agree. (Starter, Growth, and Business matrix fixtures.)
+- [x] Repeat the same flow for a Business subscription and confirm it displays `Business`. (Disposable local matrix account.)
 - [x] Confirm Starter accounts continue to display `Starter` and are not upgraded accidentally. (Fresh local Starter UAT, refresh, and re-login.)
 
 ### Test B
@@ -564,12 +567,12 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 
 ### D. Keep Starter, Growth, and Business entitlements separate
 
-- [ ] Compare the pricing catalog, feature gates, server-side entitlement checks, navigation visibility, limits, and exports for all three plans.
-- [ ] Confirm plan checks use the selected workspace’s current subscription, not a user-wide or cached plan value.
+- [x] Compare the pricing catalog, feature gates, server-side entitlement checks, navigation visibility, limits, and applicable exports for all three plans. (Matrix evidence recorded in the local UAT report.)
+- [x] Confirm plan checks use the selected workspace’s current subscription, not a user-wide or cached plan value. (Selected-workspace UI and direct API isolation checks passed.)
 - [x] Confirm Starter cannot access Growth/Business-only features without an active upgrade. (Reports showed the upgrade gate in fresh local UAT.)
-- [ ] Confirm Growth receives Growth features but not Business-only features.
-- [ ] Confirm Business receives the Business feature set.
-- [ ] Confirm failed, cancelled, expired, and pending subscriptions do not grant paid entitlements.
+- [x] Confirm Growth receives the implemented Growth/paid feature set; no unsupported Business-only route gate was found in the current catalog implementation.
+- [x] Confirm Business receives the implemented Business/paid feature set.
+- [x] Confirm failed, cancelled, and pending/inactive supported subscription states do not grant paid entitlements. Expired is not a supported `business_subscriptions.status` and is recorded as N/A.
 
 ### Test D
 

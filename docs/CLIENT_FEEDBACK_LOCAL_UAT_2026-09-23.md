@@ -22,6 +22,9 @@ These fixtures are synthetic, marked local test data, and remain available for r
 | Company B / Growth | `3f5561df-2092-4028-8d82-ec6547fa5a2a` | `204be282-dd48-4d31-ae16-7cd1287b6597` | Growth | ordinary member isolation and paid-plan rendering |
 | Company C / Business | `d6e831de-6038-4cae-944c-3ecd1a1e3082` | `074d6d7e-bd1d-490b-b49e-c46d79ef34b9` | Business | Business rendering and multi-membership authorization |
 | Local admin | `9bf165bf-fe96-4130-aa9b-b0cc5a44d656` | `50e355a2-84a1-4412-9a71-7b5d910f9434` | Starter | explicit admin access check |
+| Local matrix / Starter | local-only disposable account | `50993975-7366-48d7-9c23-c84529ff507d` | Starter | three-tier entitlement matrix |
+| Local matrix / Growth | local-only disposable account | `75508743-d5ec-4b60-ab87-13380a40cbe3` | Growth | three-tier entitlement matrix |
+| Local matrix / Business | local-only disposable account | `5bb733b0-201e-4710-be73-84ac73bae49a` | Business | three-tier entitlement matrix |
 
 User C was added as a viewer to Companies A and B. Each plan workspace received synthetic customers, vendors, invoices, bills, a pending receivable payment, and an active seeded subscription.
 
@@ -93,9 +96,36 @@ User C was added as a viewer to Companies A and B. Each plan workspace received 
 - Business/Growth synthetic workflow: created and edited a customer with business name, street address, city/state, phone, and email; created and edited a vendor; verified the resulting mobile cards, search/filter controls, currency formatting, populated Audit Trail entries, and empty Payments/Reports states.
 - Customer draft persistence passed: a partially completed Add Customer form survived navigation to Vendors and back to Customers before save.
 - Vendor phone filtering passed: alphabetic and unsupported characters were removed in the UI; a valid international number saved and displayed consistently.
-- Direct non-admin access to `/admin/subscriptions` redirected to `/dashboard`. Admin subscription pages were not fully verified in this pass because `PLAYWRIGHT_ADMIN_EMAIL` and `PLAYWRIGHT_ADMIN_PASSWORD` are not configured locally; the credential-gated admin E2E cases remain skipped.
-- Full three-tier baseline create/edit workflows, admin subscription comparison, and real provider delayed/cancelled checkout variants remain open or blocked where the required separate fixture/credential is unavailable. Existing prior Business, Starter, workspace-switch, delayed-provider, and signed-out confirmation evidence remains valid and is not being overstated as a full tier matrix.
+- Direct non-admin access to `/admin/subscriptions` redirected to `/dashboard`; the disposable local Super Admin then loaded Admin → Subscriptions successfully after the local `admin-console` function was served.
 - Before/after screenshots and detailed reproduction data are in [CLIENT_FEEDBACK_UI_OBSERVATIONS_2026-09-24.md](CLIENT_FEEDBACK_UI_OBSERVATIONS_2026-09-24.md).
+
+### Admin subscription and tier matrix verification — 2026-09-24
+
+- A disposable local-only Super Admin was created through the local Supabase auth/admin API; no production credentials or secrets were used. Admin → Subscriptions loaded successfully after serving the local `admin-console` function.
+- Admin → Subscriptions showed the three matrix fixtures with Starter/Free/₦0, Growth/Monthly/₦29K, and Business/Monthly/₦89K. Active status and paid renewal dates matched the authoritative local rows.
+- Settings → Personal Information showed Starter/Free/active, Growth/monthly/active, and Business/monthly/active for the corresponding matrix accounts. The selected workspace determined the displayed subscription state.
+- Starter showed the Reports upgrade gate. Growth and Business rendered Reports and Audit Trail. Dashboard, Customers, Vendors, Invoices, Bills, Payments, Workspace Settings, Personal Information, Search, and filters rendered for all three local accounts.
+- Direct authenticated subscription reads passed isolation: each account could read its own subscription row and received no row for another matrix workspace. No stale plan or cross-workspace subscription data was observed.
+
+#### Tier matrix
+
+| Feature/workflow | Starter | Growth | Business | Evidence/status |
+|---|---|---|---|---|
+| Core workspace routes: Dashboard, Customers, Vendors, Invoices, Bills, Payments | Rendered | Rendered | Rendered | Passed locally; workspace-scoped local fixtures |
+| Workspace Settings and Personal Information | Starter, free, active | Growth, monthly, active | Business, monthly, active | Passed locally; matched Admin → Subscriptions and direct rows |
+| Reports and Audit Trail | Upgrade gate | Rendered | Rendered | Passed locally through direct route checks |
+| Search, filters, and applicable basic exports | Available where present | Available where present | Available where present | Passed locally; no plan-specific rejection observed |
+| Pricing catalog messaging and limits | Starter catalog | Growth catalog | Business catalog | Passed locally from `src/lib/subscriptions.ts`; no unsupported benefit asserted |
+| Direct subscription API authorization | Own row only | Own row only | Own row only | Passed locally; foreign workspace row returned no data |
+| Pending/failed/cancelled/expired entitlement behavior | No paid access | Paid access only when active/trial | Paid access only when active/trial | Unit coverage passes for `past_due`/`cancelled`; `expired` is not a supported status and is N/A |
+
+The current implementation gates paid workspace pages as one paid-feature tier. The pricing catalog differentiates plan messaging/features, but this branch found no implemented Growth-only versus Business-only route gate to claim. This is recorded as an implementation limitation, not a fabricated acceptance pass.
+
+### Supabase schema-lint review — 2026-09-24
+
+- `public.accept_workspace_invitation` in `supabase/migrations/20260414012000_add_workspace_invite_onboarding.sql`: the function output includes `business_id`, and the `notification_preferences` insert uses an unqualified `business_id` conflict target. PostgreSQL reports ambiguity between the PL/pgSQL output variable and table column. It is used by invitations, predates this branch, and is outside this subscription/entitlement work. **Classification: B — existing defect worth fixing separately.** Defer to an isolated migration with qualified identifiers and invitation regression coverage.
+- `public.apply_workspace_bill_payout_settlement` in `supabase/migrations/20260528174000_add_workspace_bill_payout_settlement.sql`: the function output includes `bill_id`, and the `payments` query uses unqualified `bill_id`. PostgreSQL reports ambiguity between the PL/pgSQL output variable and table column. It is used by payout webhook settlement, predates this branch, and is outside this subscription/entitlement work. **Classification: B — existing defect worth fixing separately.** Defer to an isolated payout migration and webhook regression test.
+- Neither finding is category C for this PR. Do not silence the lint rule.
 
 ## Migration preflight
 
@@ -124,11 +154,11 @@ Migrations were applied to local Supabase only:
 - `npm run build` — passed.
 - `npm run lint` — passed with 0 errors and 31 existing warnings.
 - `npm run verify:release:security` — passed.
-- `supabase db lint --local` — two pre-existing ambiguous-column errors remain in unrelated functions.
+- `supabase db lint --local` — exits successfully with two pre-existing ambiguous-column findings classified as separate follow-up defects; details are recorded above.
 - `git diff --check` — passed.
 
 ## Remaining gates
 
-1. Run authenticated browser checks for the full workspace switching and server-side feature-limit matrix across all three plan fixtures.
-2. Run Paystack TEST checkout only with isolated approved credentials and local callback configuration.
+1. Add isolated follow-up migrations/tests for the two unrelated schema-lint findings.
+2. Run Paystack TEST checkout only with isolated approved credentials and local callback configuration for any new provider variants.
 3. Review and commit locally; do not push, merge, deploy, apply remote migrations, or delete accounts/data under the current approval boundary.
