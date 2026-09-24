@@ -106,3 +106,8 @@ This record covers the mandatory visual and interaction review performed during 
 - The React Router future-flag warnings are existing non-blocking development warnings, not runtime failures introduced by this pass.
 - Continue using sanitized local-only screenshots for subsequent UAT; do not record passwords, payment credentials, or production customer data.
 - The final tier matrix used disposable local-only accounts. Admin → Subscriptions and subscriber-facing plan cards agreed for Starter, Growth, and Business. No UI-006 or later observation was opened in this pass.
+
+## PR review remediation — 2026-09-24
+
+- Subscription confirmation and workspace gating fixes were checked against the existing local UAT flows. Pending provider responses remain on the confirmation route with retry, while unresolved workspace/subscription reads show loading or error state rather than a Starter upgrade prompt.
+- No production visual pass, deployment, or remote migration was authorized in this remediation pass; database verification was local-only.

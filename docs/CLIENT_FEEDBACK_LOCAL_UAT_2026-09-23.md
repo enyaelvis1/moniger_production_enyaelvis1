@@ -18,13 +18,13 @@ These fixtures are synthetic, marked local test data, and remain available for r
 
 | Fixture | User ID | Business ID | Plan | Purpose |
 |---|---|---|---|---|
-| Company A / Starter | `0a3e7a98-d3ac-4646-a9e8-9442b6d6dc7c` | `67074531-1fc9-4bab-b7b7-6b814a7efdba` | Starter | ordinary member isolation and Starter gating |
-| Company B / Growth | `3f5561df-2092-4028-8d82-ec6547fa5a2a` | `204be282-dd48-4d31-ae16-7cd1287b6597` | Growth | ordinary member isolation and paid-plan rendering |
-| Company C / Business | `d6e831de-6038-4cae-944c-3ecd1a1e3082` | `074d6d7e-bd1d-490b-b49e-c46d79ef34b9` | Business | Business rendering and multi-membership authorization |
-| Local admin | `9bf165bf-fe96-4130-aa9b-b0cc5a44d656` | `50e355a2-84a1-4412-9a71-7b5d910f9434` | Starter | explicit admin access check |
-| Local matrix / Starter | local-only disposable account | `50993975-7366-48d7-9c23-c84529ff507d` | Starter | three-tier entitlement matrix |
-| Local matrix / Growth | local-only disposable account | `75508743-d5ec-4b60-ab87-13380a40cbe3` | Growth | three-tier entitlement matrix |
-| Local matrix / Business | local-only disposable account | `5bb733b0-201e-4710-be73-84ac73bae49a` | Business | three-tier entitlement matrix |
+| Company A / Starter | local-only disposable account | local-only fixture | Starter | ordinary member isolation and Starter gating |
+| Company B / Growth | local-only disposable account | local-only fixture | Growth | ordinary member isolation and paid-plan rendering |
+| Company C / Business | local-only disposable account | local-only fixture | Business | Business rendering and multi-membership authorization |
+| Local admin | local-only disposable account | local-only fixture | Starter | explicit admin access check |
+| Local matrix / Starter | local-only disposable account | local-only fixture | Starter | three-tier entitlement matrix |
+| Local matrix / Growth | local-only disposable account | local-only fixture | Growth | three-tier entitlement matrix |
+| Local matrix / Business | local-only disposable account | local-only fixture | Business | three-tier entitlement matrix |
 
 User C was added as a viewer to Companies A and B. Each plan workspace received synthetic customers, vendors, invoices, bills, a pending receivable payment, and an active seeded subscription.
 
@@ -145,6 +145,7 @@ Migrations were applied to local Supabase only:
 
 - `20260923190000_validate_business_vendor_phone_numbers.sql`
 - `20260923191000_enforce_workspace_record_links.sql`
+- `20260924100000_harden_workspace_integrity.sql`
 
 ## Commands and results
 
@@ -156,6 +157,15 @@ Migrations were applied to local Supabase only:
 - `npm run verify:release:security` — passed.
 - `supabase db lint --local` — exits successfully with two pre-existing ambiguous-column findings classified as separate follow-up defects; details are recorded above.
 - `git diff --check` — passed.
+
+## PR review remediation — 2026-09-24
+
+- Checkout verification now resolves the authoritative workspace from the persisted checkout reference, treats a browser workspace ID only as a consistency assertion, rejects unauthorized or mismatched workspaces, and validates provider amount/currency/plan before synchronization.
+- Paystack pending responses now use structured `CHECKOUT_PENDING`/`PROVIDER_PENDING` codes and remain retryable; the confirmation page does not navigate until verification succeeds.
+- Workspace subscription gating now keeps workspace loading/errors, subscription loading/errors, and a genuinely missing subscription separate; unresolved state no longer renders the Starter upgrade prompt.
+- Local preflight returned zero mismatches for invoice/customer, bill/vendor, payment links, payout/wallet links, and ledger/wallet links before the composite relationship migration was applied locally. No remote migration was applied.
+- The fixture manifest is sanitized; no user or business UUIDs are retained in this report.
+- Remaining acceptance gap: authenticated Edge Function integration tests for cross-workspace callback authorization require disposable local provider fixtures and remain a follow-up task.
 
 ## Remaining gates
 

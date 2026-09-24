@@ -112,7 +112,7 @@ describe("PricingConfirmedPage", () => {
     expect(await screen.findByText("Dashboard")).toBeInTheDocument();
     expect(screen.queryByText(/subscription confirmed/i)).not.toBeInTheDocument();
     await waitFor(() => {
-      expect(queryClient.getQueryState(["workspace-subscription", "business-1"])?.isInvalidated).toBe(true);
+      expect(queryClient.getQueryData(["workspace-subscription", "business-1"])).toBeUndefined();
     });
   });
 
@@ -122,8 +122,8 @@ describe("PricingConfirmedPage", () => {
       session: { access_token: "token" },
     });
     verifyWorkspaceSubscriptionCheckoutMock
-      .mockRejectedValueOnce(new Error("Paystack confirmation is not available yet"))
-      .mockRejectedValueOnce(new Error("Paystack confirmation is not marked as successful yet"))
+      .mockRejectedValueOnce(Object.assign(new Error("Payment verification is still pending"), { code: "CHECKOUT_PENDING", retryable: true }))
+      .mockRejectedValueOnce(Object.assign(new Error("Payment verification is still pending"), { code: "CHECKOUT_PENDING", retryable: true }))
       .mockResolvedValueOnce({
         kind: "verified",
         ok: true,

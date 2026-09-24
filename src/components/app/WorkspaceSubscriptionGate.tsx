@@ -4,20 +4,9 @@ import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
 import WorkspaceUpgradePrompt from "@/components/app/WorkspaceUpgradePrompt";
 
 const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
-  const { entitlements, isError, isLoading, refetch, subscription } = useWorkspaceSubscription();
+  const { entitlements, isError, isLoading, refetch, refetchWorkspace, subscription, workspaceError, workspaceLoading } = useWorkspaceSubscription();
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-[#DCE2F2] bg-white shadow-[0_18px_50px_rgba(16,32,63,0.06)]">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <Loader2 size={28} className="animate-spin text-[#5B67F7]" />
-          <p className="text-sm font-medium text-[#5F6A88]">Checking workspace subscription…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError) {
+  if (workspaceError || isError) {
     return (
       <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-[#F8C9C9] bg-[#FEF2F2] px-6 text-center shadow-[0_18px_50px_rgba(16,32,63,0.06)]">
         <div className="max-w-md space-y-3">
@@ -27,11 +16,22 @@ const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
           </p>
           <button
             type="button"
-            onClick={() => void refetch()}
+            onClick={() => void Promise.all([refetchWorkspace(), refetch()])}
             className="rounded-full bg-[#991B1B] px-4 py-2 text-sm font-semibold text-white hover:bg-[#7F1D1D]"
           >
             Retry subscription check
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (workspaceLoading || isLoading) {
+    return (
+      <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-[#DCE2F2] bg-white shadow-[0_18px_50px_rgba(16,32,63,0.06)]">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Loader2 size={28} className="animate-spin text-[#5B67F7]" />
+          <p className="text-sm font-medium text-[#5F6A88]">Checking workspace subscription…</p>
         </div>
       </div>
     );

@@ -6,16 +6,39 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const SUPABASE_REQUEST_TIMEOUT_MS = 15_000;
+const SUPABASE_MUTATION_TIMEOUT_MS = 30_000;
 
-const fetchWithTimeout: typeof fetch = async (input, init) => {
+export class SupabaseMutationOutcomeUnknownError extends Error {
+  constructor() {
+    super("The request timed out after it was sent. Its server-side outcome is unknown; check the result before retrying.");
+    this.name = "SupabaseMutationOutcomeUnknownError";
+  }
+}
+
+export const fetchWithTimeout: typeof fetch = async (input, init) => {
+  if (init?.signal?.aborted) {
+    throw init.signal.reason ?? new DOMException("The request was aborted.", "AbortError");
+  }
+
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), SUPABASE_REQUEST_TIMEOUT_MS);
+  const method = (init?.method ?? "GET").toUpperCase();
+  const isMutation = !["GET", "HEAD", "OPTIONS"].includes(method);
+  let timedOut = false;
+  const timeoutId = window.setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, isMutation ? SUPABASE_MUTATION_TIMEOUT_MS : SUPABASE_REQUEST_TIMEOUT_MS);
   const abortRequest = () => controller.abort();
 
   init?.signal?.addEventListener("abort", abortRequest, { once: true });
 
   try {
     return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (timedOut && isMutation) {
+      throw new SupabaseMutationOutcomeUnknownError();
+    }
+    throw error;
   } finally {
     window.clearTimeout(timeoutId);
     init?.signal?.removeEventListener("abort", abortRequest);

@@ -513,6 +513,10 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 - [x] Multi-workspace users now have a user-scoped sidebar selector with persisted selection and settings/subscription query scoping; local Business ↔ Growth switching survived refresh and re-login.
 - [x] Paid Growth signup was completed through local Paystack TEST checkout on the configured `localhost:8080` origin and returned directly to the new workspace dashboard; detailed evidence is in `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.
 - [x] Local-only database migrations add Business/Vendor phone enforcement and cross-workspace link validation for invoices, bills, payments, and payouts.
+- [x] Checkout verification resolves the workspace from the persisted checkout session and validates provider amount, currency, and plan before synchronization.
+- [x] Structured provider-pending responses keep delayed verification retryable and prevent premature dashboard navigation.
+- [x] Composite workspace relationship constraints were applied locally after a zero-mismatch read-only preflight; parent moves and concurrent child links are protected atomically.
+- [x] Mutation timeout handling distinguishes unknown server outcomes and preserves caller abort behavior.
 - [x] Production migrations and deployment are intentionally not performed in this task.
 - [x] Authenticated two-company isolation and multi-workspace selector acceptance were tested locally; see `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.
 - [x] A disposable local-only Super Admin verified Admin → Subscriptions against Starter, Growth, and Business matrix fixtures; no production credentials were used.

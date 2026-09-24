@@ -63,6 +63,7 @@ type CheckoutSessionRow = {
   amount: number | null;
   billing_cycle: string | null;
   business_id: string;
+  currency: string | null;
   payer_email: string;
   payer_name: string | null;
   plan: string;
@@ -349,7 +350,7 @@ const loadCheckoutSession = async ({
   const response = await adminClient
     .from("subscription_checkout_sessions")
     .select(
-      "amount, billing_cycle, business_id, payer_email, payer_name, plan, provider_plan_code, reference, replacing_billing_cycle, replacing_email_token, replacing_plan, replacing_subscription_id, status, switch_kind",
+      "amount, billing_cycle, business_id, currency, payer_email, payer_name, plan, provider_plan_code, reference, replacing_billing_cycle, replacing_email_token, replacing_plan, replacing_subscription_id, status, switch_kind",
     )
     .eq("business_id", businessId)
     .eq("reference", reference)
@@ -372,7 +373,7 @@ const loadCheckoutSessionByReference = async ({
   const response = await adminClient
     .from("subscription_checkout_sessions")
     .select(
-      "amount, billing_cycle, business_id, payer_email, payer_name, plan, provider_customer_id, provider_plan_code, provider_subscription_id, reference, replacing_billing_cycle, replacing_email_token, replacing_plan, replacing_subscription_id, status, switch_kind, verified_at",
+      "amount, billing_cycle, business_id, currency, payer_email, payer_name, plan, provider_customer_id, provider_plan_code, provider_subscription_id, reference, replacing_billing_cycle, replacing_email_token, replacing_plan, replacing_subscription_id, status, switch_kind, verified_at",
     )
     .eq("reference", reference)
     .maybeSingle<CheckoutSessionRow>();
@@ -759,9 +760,24 @@ Deno.serve(async (request) => {
   const requestedBusinessId = asNullableString(payload.businessId);
 
   try {
+    let authoritativeCheckoutSession: CheckoutSessionRow | null = null;
+    if (payload.action === "self.verify-checkout") {
+      const reference = asNullableString(payload.reference);
+      if (!reference) {
+        return json({ error: "Missing Paystack checkout reference." }, 400);
+      }
+      authoritativeCheckoutSession = await loadCheckoutSessionByReference({ adminClient, reference });
+      if (!authoritativeCheckoutSession) {
+        return json({ error: "We could not find that workspace subscription checkout session." }, 404);
+      }
+      if (requestedBusinessId && requestedBusinessId !== authoritativeCheckoutSession.business_id) {
+        return json({ error: "The checkout belongs to a different workspace.", code: "CHECKOUT_WORKSPACE_MISMATCH", retryable: false }, 409);
+      }
+    }
+
     const business = await findManagedBusiness({
       adminClient,
-      businessId: requestedBusinessId,
+      businessId: authoritativeCheckoutSession?.business_id ?? requestedBusinessId,
       userId: user.id,
     });
 
@@ -771,8 +787,9 @@ Deno.serve(async (request) => {
           error: requestedBusinessId
             ? "Only workspace owners and admins can update this subscription."
             : "A business workspace is required before you can update your subscription.",
+          code: authoritativeCheckoutSession ? "CHECKOUT_WORKSPACE_FORBIDDEN" : undefined,
         },
-        requestedBusinessId ? 403 : 404,
+        requestedBusinessId || authoritativeCheckoutSession ? 403 : 404,
       );
     }
 
@@ -1011,11 +1028,7 @@ Deno.serve(async (request) => {
         return json({ error: "Missing Paystack checkout reference." }, 400);
       }
 
-      const checkoutSession = await loadCheckoutSession({
-        adminClient,
-        businessId: business.id,
-        reference,
-      });
+      const checkoutSession = authoritativeCheckoutSession ?? await loadCheckoutSession({ adminClient, businessId: business.id, reference });
 
       if (!checkoutSession) {
         return json({ error: "We could not find that workspace subscription checkout session." }, 404);
@@ -1031,7 +1044,20 @@ Deno.serve(async (request) => {
           status: "initialized",
           verificationError: "The Paystack transaction is not marked as successful yet.",
         });
-        return json({ error: "The Paystack checkout has not completed successfully yet." }, 409);
+        return json({ error: "Payment verification is still pending. Try again in a moment.", code: "CHECKOUT_PENDING", retryable: true }, 409);
+      }
+
+      const transaction = transactionVerification as Record<string, unknown>;
+      const expectedAmount = checkoutSession.amount === null ? null : Math.round(checkoutSession.amount * 100);
+      const actualAmount = asNumber(transaction.amount);
+      const expectedCurrency = asString(checkoutSession.currency).toUpperCase();
+      const actualCurrency = asString(transaction.currency).toUpperCase();
+      const providerPlan = transaction.plan && typeof transaction.plan === "object" ? transaction.plan as Record<string, unknown> : null;
+      const actualPlanCode = asNullableString(providerPlan?.plan_code);
+      if ((expectedAmount !== null && actualAmount !== expectedAmount) ||
+        (expectedCurrency && actualCurrency && expectedCurrency !== actualCurrency) ||
+        (checkoutSession.provider_plan_code && actualPlanCode && checkoutSession.provider_plan_code !== actualPlanCode)) {
+        return json({ error: "The payment does not match the selected workspace subscription.", code: "CHECKOUT_MISMATCH", retryable: false }, 409);
       }
 
       const canonicalSubscription = await resolveCanonicalPaystackSubscription({
@@ -1049,7 +1075,9 @@ Deno.serve(async (request) => {
         });
         return json(
           {
-            error: "The checkout payment succeeded, but the Paystack subscription record is not available yet. Try again in a moment.",
+            error: "The checkout payment succeeded, but provider subscription details are still pending. Try again in a moment.",
+            code: "PROVIDER_PENDING",
+            retryable: true,
           },
           409,
         );

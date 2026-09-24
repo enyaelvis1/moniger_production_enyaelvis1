@@ -75,12 +75,13 @@ export const getWorkspaceSubscriptionEntitlements = (subscription: WorkspaceSubs
 
 export const useWorkspaceSubscription = () => {
   const { session } = useSupabaseSession();
-  const { data: settings } = useSettingsData(session?.user.id);
+  const settingsQuery = useSettingsData(session?.user.id);
+  const { data: settings } = settingsQuery;
   const businessId = settings?.business?.id ?? null;
 
   const query = useQuery({
     ...financeQueryOptions,
-    enabled: Boolean(businessId),
+    enabled: Boolean(businessId) && !settingsQuery.isPending && !settingsQuery.isError,
     queryFn: () => fetchWorkspaceSubscription(businessId as string),
     queryKey: ["workspace-subscription", businessId],
     staleTime: 60_000,
@@ -90,8 +91,14 @@ export const useWorkspaceSubscription = () => {
 
   return {
     entitlements,
-    isLoading: query.isLoading,
+    workspaceLoading: settingsQuery.isPending,
+    workspaceError: settingsQuery.error,
+    subscriptionLoading: Boolean(businessId) && query.isPending,
+    subscriptionError: query.error,
+    isResolved: Boolean(businessId) && !query.isPending && !query.isError,
+    isLoading: settingsQuery.isPending || (Boolean(businessId) && query.isPending),
     subscription: query.data,
+    refetchWorkspace: settingsQuery.refetch,
     ...query,
   };
 };
