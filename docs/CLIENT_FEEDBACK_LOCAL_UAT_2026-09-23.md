@@ -43,7 +43,7 @@ User C was added as a viewer to Companies A and B. Each plan workspace received 
 | 22E loading/error recovery | Pass locally | Dashboard, Payments, Reports, Audit Trail rendered data or an explicit state; no permanent spinner was observed. |
 | Default timeout | Pass after fix | Fresh browser with no stored preference displayed `20 minutes`; the missing-value bug was fixed and unit-tested. |
 | Admin access | Pass locally | Local Super Admin opened `/admin/settings`; ordinary User A was redirected to `/dashboard`. |
-| Visual inspection | Pass with notes | Mobile 390×844 layout showed usable bottom navigation and no clipped primary content. Desktop and tablet states were inspected; console only had existing React Router warnings after fixes. |
+| Visual inspection | Pass with notes | Desktop, tablet, and mobile states were inspected. Settings tabs, mobile workspace switching, and tablet header overflow were fixed and retested; console only had existing React Router warnings after fixes. See the dated UI observation register. |
 | Provider checkout | Pass locally | Fresh Business registration opened Paystack TEST automatically at NGN 89,000, returned directly to `/dashboard`, and Settings showed Business after refresh and re-login. |
 | Cleanup/deletion | Not run | No broad cleanup and no existing business/account deletion was authorized or performed. |
 
@@ -78,6 +78,13 @@ User C was added as a viewer to Companies A and B. Each plan workspace received 
 - Signed-out confirmation: `/pricing/confirmed` exposed only public checkout status/reference messaging and sign-in/pricing actions; no workspace name or private billing details were exposed. An invalid reference produced a safe non-private error state.
 - Loading behavior: Dashboard, Payments, Reports, Audit Trail, and Settings resolved during the Business, Starter, and workspace-switch flows. No duplicate full-page spinner or redirect loop was observed. Local browser console contained only existing React Router warnings plus transient local Supabase signup-alert/registration service errors during the Starter run; the account creation and dashboard flow still completed.
 
+### Continuous UI/UX review — 2026-09-24
+
+- Reviewed the required screens and states at 1440×900, 768×1024, and 390×844 using Chromium and sanitized local-only fixtures.
+- Fixed UI-001 (Settings tab clipping on mobile), UI-002 (mobile workspace selector missing), and UI-003 (tablet header horizontal overflow).
+- Final retests confirmed all Settings tabs are visible at 390×844, Business ↔ Growth switching updates the visible plan context, and 768×1024 has no document horizontal overflow.
+- Before/after screenshots and detailed reproduction data are in [CLIENT_FEEDBACK_UI_OBSERVATIONS_2026-09-24.md](CLIENT_FEEDBACK_UI_OBSERVATIONS_2026-09-24.md).
+
 ## Migration preflight
 
 Read-only local preflight counts before release consideration:
@@ -110,7 +117,6 @@ Migrations were applied to local Supabase only:
 
 ## Remaining gates
 
-1. Add or document an approved workspace selector before User C workspace-switch acceptance.
-2. Run authenticated browser checks for all intended workspace switching and server-side feature limits after that selector exists.
-3. Run Paystack TEST checkout only with isolated approved credentials and local callback configuration.
-4. Review and commit locally; do not push, merge, deploy, apply remote migrations, or delete accounts/data under the current approval boundary.
+1. Run authenticated browser checks for the full workspace switching and server-side feature-limit matrix across all three plan fixtures.
+2. Run Paystack TEST checkout only with isolated approved credentials and local callback configuration.
+3. Review and commit locally; do not push, merge, deploy, apply remote migrations, or delete accounts/data under the current approval boundary.

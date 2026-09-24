@@ -498,13 +498,14 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 
 ## 22) Latest client feedback: input validation, plan isolation, and test-account cleanup
 
-**Status: [ ] In progress — local implementation and primary browser UAT completed; admin subscription view, full tier matrix, and production acceptance remain open**
+**Status: [ ] In progress — local implementation, primary browser UAT, and responsive UI review completed; admin subscription view, full tier matrix, and production acceptance remain open**
 
 ### Local implementation evidence
 
 - [x] Shared phone parsing now rejects alphabetic characters, unsupported symbols, misplaced/repeated `+`, and invalid digit lengths instead of silently stripping them.
 - [x] Business settings now includes a validated Business Phone field; Vendor phone inputs use telephone input behavior and the same shared validator.
 - [x] Supabase requests have a bounded 15-second timeout so Dashboard, Payments, Reports, and Audit Trail can reach an error/retry state instead of spinning indefinitely.
+- [x] Complete the mandatory responsive UI review at 1440×900, 768×1024, and 390×844; fix Settings tab clipping, add mobile workspace switching, and remove tablet header overflow. Evidence: `docs/CLIENT_FEEDBACK_UI_OBSERVATIONS_2026-09-24.md`.
 - [x] Subscription-gated pages now distinguish subscription loading, subscription errors, and a genuine missing subscription; a failed subscription read no longer appears as Starter forever.
 - [x] Lazy-route and protected-route full-page loading now share one authoritative `RouteLoadingScreen`, avoiding inconsistent loader handoffs during navigation.
 - [x] Multi-workspace users now have a user-scoped sidebar selector with persisted selection and settings/subscription query scoping; local Business ↔ Growth switching survived refresh and re-login.

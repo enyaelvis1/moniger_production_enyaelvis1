@@ -7,7 +7,7 @@ test.describe("public payment confirmation placeholder", () => {
       waitUntil: "domcontentloaded",
     });
 
-    await expect(page.getByText(/payment confirmation/i)).toBeVisible();
+    await expect(page.getByText("Payment confirmation", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: /we couldn't confirm this payment yet/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /return to payment page/i })).toBeVisible();
   });

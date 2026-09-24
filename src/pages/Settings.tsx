@@ -2427,7 +2427,7 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
           </div>
         ) : (
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="border border-border bg-card">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 border border-border bg-card sm:inline-flex sm:h-10 sm:w-auto sm:grid-cols-none">
             <TabsTrigger value="profile" className="gap-2">
               <User className="h-4 w-4" />
               {t("settings.tabs.profile")}
