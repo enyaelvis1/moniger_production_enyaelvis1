@@ -13,6 +13,7 @@ import { syncCurrentAccountSessionInventory } from "@/hooks/use-account-session-
 import { getSessionIdFromAccessToken } from "@/lib/mfa-recovery";
 import { supabase } from "@/lib/supabase";
 import type { SubscriptionPlan } from "@/lib/subscriptions";
+import { getEmailConfirmationRedirect } from "@/lib/subscription-registration";
 
 export type AuthSignOutScope = "global" | "local" | "others";
 export type AuthSignInResult = {
@@ -266,8 +267,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (data: { email: string; password: string; name: string; businessName: string; plan?: SubscriptionPlan }) => {
     const configuredEmailRedirectTo = import.meta.env.VITE_SUPABASE_EMAIL_REDIRECT_TO?.trim();
-    const emailRedirectTo = configuredEmailRedirectTo || `${window.location.origin}/dashboard?email_confirmed=1`;
     const plan = data.plan ?? "starter";
+    const emailRedirectTo = getEmailConfirmationRedirect({
+      origin: window.location.origin,
+      plan,
+      redirectTo: configuredEmailRedirectTo || `${window.location.origin}/dashboard`,
+    });
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,

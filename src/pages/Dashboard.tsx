@@ -27,10 +27,12 @@ import { useLocalization } from "@/hooks/use-localization";
 import { useOperationsData, type ActivityModule } from "@/hooks/use-operations-data";
 import { useSettingsData, useWorkspaceWalletData } from "@/hooks/use-settings-data";
 import { getFriendlyErrorMessage } from "@/lib/error-handling";
+import { getDefaultSubscriptionBillingCycle, isSubscriptionPlan, type SubscriptionPlan } from "@/lib/subscriptions";
 import {
   clearEmailConfirmationReminder,
   hasEmailConfirmationReminderPending,
 } from "@/lib/email-confirmation-reminder";
+import { initializeWorkspaceSubscriptionCheckout } from "@/lib/workspace-subscriptions";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },
@@ -108,6 +110,8 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [showEmailConfirmationReminder, setShowEmailConfirmationReminder] = useState(false);
+  const [isPaymentLoading, setIsPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const { formatCurrency, t } = useLocalization();
   const settingsQuery = useSettingsData(user?.id);
   const businessId = settingsQuery.data?.business?.id;
@@ -129,6 +133,8 @@ const Dashboard = () => {
   const isSettingsLoading = settingsQuery.isLoading && !settingsQuery.data;
   const isOperationsLoading = operationsQuery.isLoading && !operationsQuery.data;
   const emailConfirmed = searchParams.get("email_confirmed") === "1";
+  const signupPlan = searchParams.get("signup_plan");
+  const pendingSignupPlan: SubscriptionPlan | null = isSubscriptionPlan(signupPlan) && signupPlan !== "starter" ? signupPlan : null;
   useEffect(() => {
     if (!user?.id) {
       setShowEmailConfirmationReminder(false);
@@ -143,6 +149,32 @@ const Dashboard = () => {
 
     setShowEmailConfirmationReminder(hasEmailConfirmationReminderPending(user.id));
   }, [emailConfirmed, user?.id]);
+  const startPendingSignupPayment = async () => {
+    if (!pendingSignupPlan || isPaymentLoading) {
+      return;
+    }
+
+    setIsPaymentLoading(true);
+    setPaymentError(null);
+
+    try {
+      const checkoutResult = await initializeWorkspaceSubscriptionCheckout({
+        billingCycle: getDefaultSubscriptionBillingCycle(pendingSignupPlan),
+        plan: pendingSignupPlan,
+      });
+
+      if (checkoutResult.kind === "checkout") {
+        window.location.assign(checkoutResult.authorizationUrl);
+        return;
+      }
+
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : "We could not start payment. Please try again.");
+    } finally {
+      setIsPaymentLoading(false);
+    }
+  };
 
   const summaryCards = [
     {
@@ -248,6 +280,23 @@ const Dashboard = () => {
                   Welcome to Moniger. Your workspace dashboard is ready.
                 </p>
               </div>
+            </div>
+          ) : null}
+          {pendingSignupPlan ? (
+            <div className="rounded-2xl border border-[#C7D2FE] bg-[#EEF2FF] px-5 py-5 text-[#172554] shadow-sm dark:border-indigo-400/30 dark:bg-indigo-500/10 dark:text-indigo-100">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-semibold">Complete your {pendingSignupPlan === "business" ? "Business" : "Growth"} plan setup</p>
+                  <p className="mt-1 text-sm leading-6 text-indigo-900/80 dark:text-indigo-100/80">
+                    Your email is confirmed. Continue to secure Paystack checkout to activate your workspace plan.
+                  </p>
+                </div>
+                <Button type="button" onClick={() => void startPendingSignupPayment()} disabled={isPaymentLoading} className="shrink-0">
+                  {isPaymentLoading ? "Preparing payment…" : "Continue to payment"}
+                  {!isPaymentLoading ? <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /> : null}
+                </Button>
+              </div>
+              {paymentError ? <p className="mt-3 text-sm text-red-700 dark:text-red-200">{paymentError}</p> : null}
             </div>
           ) : null}
           {settingsQuery.error ? (
