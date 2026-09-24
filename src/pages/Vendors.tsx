@@ -6,7 +6,7 @@ import StatusBadge from "@/components/app/StatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettingsData } from "@/hooks/use-settings-data";
 import { useToast } from "@/hooks/use-toast";
-import { useVendorMutations, useVendorsDirectory, useBanksList, useBankMutations, type VendorDirectoryItem } from "@/hooks/use-directory-data";
+import { useVendorMutations, useVendorsDirectory, useBanksList, type VendorDirectoryItem } from "@/hooks/use-directory-data";
 import { useSearchParamState } from "@/hooks/use-search-param";
 import { Button } from "@/components/ui/button";
 import { AdvancedFilter } from "@/components/ui/advanced-filter";
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatNaira, nigerianBanks } from "@/data/seedData";
+import { formatNaira } from "@/data/seedData";
 import { getFormFieldAriaProps } from "@/lib/accessibility";
 import {
   getStringFilterValue,
@@ -115,7 +115,6 @@ const VendorsPage = () => {
   const businessId = settingsQuery.data?.business?.id;
   const vendorsQuery = useVendorsDirectory(businessId);
   const banksQuery = useBanksList();
-  const { createBank } = useBankMutations(businessId, user?.id);
   const [bankFilter, setBankFilter] = useState("");
   const { createVendor, deleteVendor, updateVendor } = useVendorMutations(businessId, user?.id);
 
@@ -274,7 +273,7 @@ const VendorsPage = () => {
       accountName: vendor.accountName ?? "",
       accountNumber: vendor.accountNumber ?? "",
       bankName: vendor.bankName ?? "",
-      bankId: vendor.bankId ?? vendor.bankName ?? "",
+      bankId: vendor.bankId ?? "",
       businessName: vendor.businessName,
       contactName: vendor.contactName ?? "",
       email: vendor.email ?? "",
@@ -384,7 +383,7 @@ const VendorsPage = () => {
 
     const normalizedBusinessName = normalizeRequiredText(form.businessName);
 
-    // Determine bank selection: prefer bankId (DB id). If a name was chosen and not present in DB, create it.
+    // Workspace users may select an existing bank, but bank creation is admin-only.
     let selectedBankId: string | null = form.bankId?.trim() || null;
     let selectedBankName: string | null = form.bankName || null;
 
@@ -393,21 +392,18 @@ const VendorsPage = () => {
       if (foundById) {
         selectedBankName = foundById.name;
       } else {
-        // Maybe the value is a fallback name; try to find by label
+        // Support legacy drafts that stored a bank name instead of its database id.
         const foundByName = banksQuery.data?.find((b) => b.name.toLowerCase() === selectedBankId?.toLowerCase());
         if (foundByName) {
           selectedBankId = foundByName.id;
           selectedBankName = foundByName.name;
-        } else if (!selectedBankId.match?.(/^[0-9a-fA-F-]{36}$/)) {
-          // treat as a name string and create the bank
-          try {
-            const created = await createBank.mutateAsync(selectedBankId);
-            selectedBankId = created?.id ?? selectedBankId;
-            selectedBankName = created?.name ?? selectedBankName;
-          } catch (err) {
-            toast({ title: "Unable to add bank", description: getErrorMessage(err, "Please try again."), variant: "destructive" });
-            return;
-          }
+        } else {
+          toast({
+            title: "Select an active bank",
+            description: "Choose a bank from the approved bank list. Contact an administrator to add a missing bank.",
+            variant: "destructive",
+          });
+          return;
         }
       }
     }
@@ -818,7 +814,7 @@ const VendorsPage = () => {
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2 md:col-span-2">
                           <Label>Bank Name</Label>
-                          <Select value={form.bankId || form.bankName} onValueChange={(value) => setForm((current) => ({ ...current, bankId: value }))}>
+                          <Select value={form.bankId} onValueChange={(value) => setForm((current) => ({ ...current, bankId: value }))}>
                             <SelectTrigger className="rounded-lg">
                               <SelectValue placeholder="Select bank" />
                             </SelectTrigger>
@@ -836,7 +832,7 @@ const VendorsPage = () => {
 
                                 const bankOptions: { value: string; label: string }[] = banksQuery.data && banksQuery.data.length > 0
                                   ? banksQuery.data.map((b) => ({ value: b.id, label: b.name }))
-                                  : nigerianBanks.map((n) => ({ value: n, label: n }));
+                                  : [];
 
                                 const filtered = normalizedQuery
                                   ? bankOptions.filter((opt) => opt.label.toLowerCase().includes(normalizedQuery))
@@ -849,29 +845,10 @@ const VendorsPage = () => {
                                         {opt.label}
                                       </SelectItem>
                                     ))}
-                                    {normalizedQuery && !bankOptions.some((n) => n.label.toLowerCase() === normalizedQuery) ? (
-                                      <div className="px-2 py-2">
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={async () => {
-                                            const newName = bankFilter.trim();
-                                            if (!newName) return;
-                                            try {
-                                              const created = await createBank.mutateAsync(newName);
-                                              // created should be the inserted bank row { id, name, is_active }
-                                              setForm((current) => ({ ...current, bankId: created?.id ?? newName, bankName: created?.name ?? newName }));
-                                              setBankFilter("");
-                                              toast({ title: "Bank added", description: `${newName} has been added.` });
-                                            } catch (err) {
-                                              toast({ title: "Unable to add bank", description: getErrorMessage(err, "Please try again."), variant: "destructive" });
-                                            }
-                                          }}
-                                          className="w-full"
-                                        >
-                                          Add "{bankFilter.trim()}"
-                                        </Button>
-                                      </div>
+                                    {filtered.length === 0 ? (
+                                      <p className="px-2 py-2 text-sm text-muted-foreground">
+                                        {banksQuery.isLoading ? "Loading approved banks…" : "No approved bank matches your search."}
+                                      </p>
                                     ) : null}
                                   </>
                                 );
