@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Check, CheckCircle2, Eye, EyeOff, Loader2, X } from "lucide-react";
+import { Check, CheckCircle2, ChevronDown, Eye, EyeOff, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import AuthShell, {
@@ -210,6 +210,7 @@ const RegisterPage = () => {
     return isSubscriptionPlan(plan) ? plan : "starter";
   }, [directPlan, nextPath]);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>(initialSelectedPlan);
+  const [showPlanDetails, setShowPlanDetails] = useState(false);
   useEffect(() => {
     setSelectedPlan(initialSelectedPlan);
   }, [initialSelectedPlan]);
@@ -606,7 +607,7 @@ const RegisterPage = () => {
               step === 1 ? t("auth.register.planSelectionSubtitle") : step === 2 ? t("auth.register.stepOneSubtitle") : t("auth.register.stepTwoSubtitle")
             }
           />
-          <div className="mt-5 flex items-center justify-between gap-4 rounded-[14px] border border-[#DDE2FF] bg-[#F5F6FF] px-4 py-3">
+          <div className="mt-5 hidden items-center justify-between gap-4 rounded-[14px] border border-[#DDE2FF] bg-[#F5F6FF] px-4 py-3 md:flex">
             <div>
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#5B67F7]">Selected plan</p>
               <p className="mt-1 text-[15px] font-semibold text-[#15203B]">{selectedPlanLabel}</p>
@@ -729,7 +730,51 @@ const RegisterPage = () => {
               <p className="text-[13px] leading-6 text-[#677391]">
                 Start free, or choose a paid plan and complete secure Paystack checkout after creating your account.
               </p>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2 md:hidden">
+                {registrationPlanOptions.map(({ eyebrow, paymentLabel, plan }) => {
+                  const planDetails = defaultSubscriptionCatalog[plan];
+                  const isSelected = selectedPlan === plan;
+
+                  return (
+                    <button
+                      type="button"
+                      key={plan}
+                      aria-label={isSelected ? `${plan} plan selected` : `Choose ${plan} plan`}
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        setSelectedPlan(plan);
+                        if (error) setError("");
+                      }}
+                      className={`flex w-full items-center gap-3 rounded-[16px] border px-4 py-3 text-left transition-colors ${
+                        isSelected
+                          ? "border-[#5B67F7] bg-[#F5F6FF] shadow-[0_8px_20px_rgba(91,103,247,0.1)]"
+                          : "border-[#DDE2EF] bg-white hover:border-[#9EA9D8] hover:bg-[#FAFBFF]"
+                      } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B67F7] focus-visible:ring-offset-2`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                          isSelected ? "border-[#5B67F7] bg-[#5B67F7]" : "border-[#C9D0E6] bg-white"
+                        }`}
+                      >
+                        <Check size={11} className={isSelected ? "text-white" : "text-transparent"} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center justify-between gap-3">
+                          <span className="font-semibold capitalize text-[#15203B]">{plan}</span>
+                          <span className="shrink-0 text-sm font-bold text-[#10203F]">
+                            {plan === "starter" ? "Free" : planDetails.priceLabel}
+                          </span>
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-[#677391]">{eyebrow}</span>
+                        <span className="mt-1 block text-xs text-[#677391]">{paymentLabel}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="hidden gap-4 md:grid md:grid-cols-3">
                 {registrationPlanOptions.map(({ eyebrow, paymentLabel, plan }) => {
                   const planDetails = defaultSubscriptionCatalog[plan];
                   const isSelected = selectedPlan === plan;
@@ -794,10 +839,42 @@ const RegisterPage = () => {
                   );
                 })}
               </div>
+
+              <div className="mt-3 md:hidden">
+                <button
+                  type="button"
+                  aria-expanded={showPlanDetails}
+                  onClick={() => setShowPlanDetails((current) => !current)}
+                  className="flex w-full items-center justify-between rounded-[12px] border border-[#E5E9F3] bg-[#FAFBFF] px-4 py-3 text-sm font-semibold text-[#4A56E0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5B67F7] focus-visible:ring-offset-2"
+                >
+                  <span>Compare plan details</span>
+                  <ChevronDown size={17} className={`transition-transform ${showPlanDetails ? "rotate-180" : ""}`} aria-hidden="true" />
+                </button>
+                {showPlanDetails ? (
+                  <div className="mt-2 space-y-2 rounded-[14px] border border-[#E5E9F3] bg-white p-3">
+                    {registrationPlanOptions.map(({ plan }) => {
+                      const planDetails = defaultSubscriptionCatalog[plan];
+                      return (
+                        <div key={plan} className="rounded-[10px] bg-[#F8F9FD] px-3 py-2.5">
+                          <p className="text-sm font-semibold capitalize text-[#15203B]">{plan}</p>
+                          <ul className="mt-1.5 space-y-1">
+                            {planDetails.features.map((feature) => (
+                              <li key={feature} className="flex items-start gap-1.5 text-xs leading-5 text-[#677391]">
+                                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5B67F7]" aria-hidden="true" />
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
             </fieldset>
-            <div className="pt-2">
-              <button type="submit" className={authPrimaryButtonClassName}>
-                {isPaidPlanSelection ? "Continue to account setup" : t("auth.register.next")}
+            <div className="sticky bottom-3 z-10 -mx-2 rounded-[16px] border border-[#E5E9F3] bg-white/95 p-2 shadow-[0_8px_24px_rgba(15,23,42,0.1)] backdrop-blur md:static md:m-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none">
+              <button type="submit" className={`${authPrimaryButtonClassName} w-full sm:w-auto`}>
+                {isPaidPlanSelection ? "Continue to account setup" : "Continue with Starter"}
               </button>
             </div>
           </>
