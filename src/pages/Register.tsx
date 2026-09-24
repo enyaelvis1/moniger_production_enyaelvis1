@@ -656,12 +656,14 @@ const RegisterPage = () => {
               </>
             ) : (
               <>
-                <p className="text-base font-semibold text-[#1E3A8A]">{t("auth.register.checkInbox")}</p>
+                <p className="text-base font-semibold text-[#1E3A8A]">{isPaidPlanSelection ? "Confirm your email to continue" : t("auth.register.checkInbox")}</p>
                 <p className="mt-2 leading-7">
                   {t("auth.register.successCreatedFor", { email: successState.email })}
                 </p>
                 <p className="mt-2 leading-7 text-[#3157A7]">
-                  {t("auth.register.inboxHelp")}
+                  {isPaidPlanSelection
+                    ? "After you confirm your email, Moniger will open your dashboard with a secure Paystack payment prompt for your selected plan."
+                    : t("auth.register.inboxHelp")}
                 </p>
               </>
             )}

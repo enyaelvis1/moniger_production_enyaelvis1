@@ -268,9 +268,10 @@ Live cutover checklist after Paystack approval:
 - [ ] A visible workspace selector is still required before multi-membership workspace-switch acceptance can be completed.
 - [ ] The new migrations are applied to the local Supabase instance only; remote migration and production deployment remain intentionally pending approval.
 
-### 2026-09-24 — Signup access and email reminder
+### 2026-09-24 — Signup confirmation and payment continuation
 
-- [x] Production Auth is configured for immediate signup sessions so new users can enter the dashboard before confirming their email.
-- [x] The dashboard shows a user-scoped email-confirmation reminder after signup; the reminder clears after the confirmation callback or dismissal.
-- [x] Paid-plan signup continues directly to Paystack checkout after the account session is created.
+- [x] Production Auth requires email confirmation before a new signup receives an authenticated session.
+- [x] The branded confirmation email redirects to `/dashboard?email_confirmed=1` after the verification link is used.
+- [x] Paid-plan signup carries the selected plan through the confirmation redirect and shows a dashboard payment prompt after the email is confirmed.
+- [x] The dashboard payment prompt starts the authenticated Paystack checkout; successful verification at `/pricing/confirmed` returns the user directly to `/dashboard`.
 - [ ] Confirm the final production signup behavior with one disposable Starter account and one disposable paid-plan account.
