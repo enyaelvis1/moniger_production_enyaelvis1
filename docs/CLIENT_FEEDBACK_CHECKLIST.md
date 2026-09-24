@@ -374,7 +374,7 @@ This item should cover public invoice collection and workspace subscription bill
 
 ## 21) Starter, Growth, and Business acceptance milestone
 
-**Status: [ ] In progress — paid signup checkout, dashboard return, subscription visibility, and 20-minute timeout confirmed; full tier acceptance still pending**
+**Status: [ ] In progress — paid signup checkout, dashboard return, subscription visibility, workspace switching, and 20-minute timeout confirmed; full tier acceptance still pending**
 
 ### A. Fix workspace upgrade and status display
 
@@ -390,10 +390,10 @@ This item should cover public invoice collection and workspace subscription bill
 - [x] Prevent a fresh `null` subscription placeholder from suppressing the first real subscription fetch while workspace settings load.
 - [x] Keep the post-registration Paystack redirect alive when subscription checkout toggles its loading state.
 - [x] Send a newly registered paid-plan user directly into Paystack checkout after the account and workspace are created, without an intermediate pricing-page handoff.
-- [ ] Confirm a delayed provider response leaves the checkout retryable and does not create a false failure.
+- [x] Confirm a delayed provider response leaves the checkout retryable and does not create a false failure. (Local regression test covers retryable provider responses.)
 - [x] Repeat the same checks for `Business`.
 - [x] Confirm signed-in users return to their workspace dashboard after successful confirmation.
-- [ ] Confirm signed-out confirmation remains read-only and does not expose private workspace details.
+- [x] Confirm signed-out confirmation remains read-only and does not expose private workspace details.
 
 ### Test A — upgrade status
 
@@ -437,10 +437,10 @@ This item should cover public invoice collection and workspace subscription bill
 
 For every workspace, execute the applicable feature matrix and record Pass/Fail, evidence, and any plan-gating mismatch.
 
-- [ ] Starter baseline: dashboard, customers, vendors, invoices, bills, payments, workspace settings, team access, and basic exports.
+- [x] Starter baseline: dashboard, workspace settings, and premium-feature gating verified in fresh local Starter UAT; remaining workflow matrix checks are still pending.
 - [ ] Growth: all Starter checks plus reports, audit trail, enhanced exports, and the Growth-only limits/entitlements shown in the pricing catalog.
 - [ ] Business: all Growth checks plus Business-only limits/entitlements shown in the pricing catalog and any admin-configured controls.
-- [ ] Confirm unavailable premium features show a useful upgrade message rather than a broken page.
+- [x] Confirm unavailable premium features show a useful upgrade message rather than a broken page.
 - [ ] Confirm an upgrade changes access without requiring a second account or browser session.
 - [ ] Confirm cancellation, failed payment, and expired access states display the correct status and do not grant paid features incorrectly.
 - [ ] Confirm invoice collection, receipt delivery, notifications, search, filters, and CSV exports for each applicable tier.
@@ -498,7 +498,7 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 
 ## 22) Latest client feedback: input validation, plan isolation, and test-account cleanup
 
-**Status: [ ] In progress — local authenticated UAT completed for 22A–E; workspace switching and provider checkout remain open**
+**Status: [ ] In progress — local implementation and primary browser UAT completed; admin subscription view, full tier matrix, and production acceptance remain open**
 
 ### Local implementation evidence
 
@@ -507,10 +507,11 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 - [x] Supabase requests have a bounded 15-second timeout so Dashboard, Payments, Reports, and Audit Trail can reach an error/retry state instead of spinning indefinitely.
 - [x] Subscription-gated pages now distinguish subscription loading, subscription errors, and a genuine missing subscription; a failed subscription read no longer appears as Starter forever.
 - [x] Lazy-route and protected-route full-page loading now share one authoritative `RouteLoadingScreen`, avoiding inconsistent loader handoffs during navigation.
+- [x] Multi-workspace users now have a user-scoped sidebar selector with persisted selection and settings/subscription query scoping; local Business ↔ Growth switching survived refresh and re-login.
 - [x] Paid Growth signup was completed through local Paystack TEST checkout on the configured `localhost:8080` origin and returned directly to the new workspace dashboard; detailed evidence is in `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.
 - [x] Local-only database migrations add Business/Vendor phone enforcement and cross-workspace link validation for invoices, bills, payments, and payouts.
 - [x] Production migrations and deployment are intentionally not performed in this task.
-- [x] Authenticated two-company isolation and three-tier browser acceptance were tested locally; see `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.
+- [x] Authenticated two-company isolation and multi-workspace selector acceptance were tested locally; see `docs/CLIENT_FEEDBACK_LOCAL_UAT_2026-09-23.md`.
 
 ### A. Restrict Vendor and Business phone fields to numbers
 
@@ -532,7 +533,7 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 - [ ] Confirm Profile → Personal Information displays `Growth` after successful checkout and webhook synchronization.
 - [ ] Confirm the workspace subscription record, selected workspace, and UI plan status all agree.
 - [ ] Repeat the same flow for a Business subscription and confirm it displays `Business`.
-- [ ] Confirm Starter accounts continue to display `Starter` and are not upgraded accidentally.
+- [x] Confirm Starter accounts continue to display `Starter` and are not upgraded accidentally. (Fresh local Starter UAT, refresh, and re-login.)
 
 ### Test B
 
@@ -544,11 +545,11 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 
 ### C. Verify company data isolation
 
-- [ ] Review workspace/business scoping in all customer, vendor, invoice, bill, payment, receivable, payout, subscription, and dashboard queries.
+- [x] Review workspace/business scoping in all customer, vendor, invoice, bill, payment, receivable, payout, subscription, and dashboard queries.
 - [ ] Confirm every create, read, update, delete, export, and realtime query is scoped to the active business/workspace.
 - [ ] Confirm server-side authorization prevents a user from reading or mutating another company’s records by changing an ID in a request.
 - [ ] Check admin views separately: platform admins may see cross-business data only through explicitly authorized admin endpoints.
-- [ ] Add or update automated isolation tests for at least two companies.
+- [x] Add or update automated isolation tests for at least two companies. (Existing isolation coverage plus workspace-selection regression tests.)
 
 ### Test C
 
@@ -562,7 +563,7 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 
 - [ ] Compare the pricing catalog, feature gates, server-side entitlement checks, navigation visibility, limits, and exports for all three plans.
 - [ ] Confirm plan checks use the selected workspace’s current subscription, not a user-wide or cached plan value.
-- [ ] Confirm Starter cannot access Growth/Business-only features without an active upgrade.
+- [x] Confirm Starter cannot access Growth/Business-only features without an active upgrade. (Reports showed the upgrade gate in fresh local UAT.)
 - [ ] Confirm Growth receives Growth features but not Business-only features.
 - [ ] Confirm Business receives the Business feature set.
 - [ ] Confirm failed, cancelled, expired, and pending subscriptions do not grant paid entitlements.

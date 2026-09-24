@@ -1,16 +1,16 @@
-# Client Feedback Local UAT — 2026-09-23
+# Client Feedback Local UAT — 2026-09-24
 
 Local acceptance evidence for `fix/moniger-client-feedback-22`. This is not production approval. All fixtures below were created against the local Supabase instance at `127.0.0.1:54321`; credentials are intentionally excluded.
 
 ## Environment
 
-- Frontend: `http://127.0.0.1:8081`
+- Frontend: `http://localhost:8080`
 - Supabase API: local `127.0.0.1:54321`
 - Mail capture: local Mailpit, no external delivery used
 - Branch: `fix/moniger-client-feedback-22`
 - Base: `develop`
 - Viewports inspected: 1440×900, 768×1024, 390×844
-- Provider checkout: not run; local seeded subscriptions are not provider verification
+- Provider checkout: Paystack TEST checkout completed for fresh Business registration; Starter control completed without checkout
 
 ## Disposable fixture manifest
 
@@ -37,14 +37,14 @@ User C was added as a viewer to Companies A and B. Each plan workspace received 
 | 22C forged writes | Pass | Foreign workspace inserts returned `42501`; parent workspace changes and foreign linked invoice inserts returned `23514`; no unauthorized rows were created. |
 | 22C legitimate write/delete | Pass | A and B created and deleted a synthetic same-workspace customer; post-delete lookup returned no row. |
 | 22C User C authorized membership | Pass | User C could read rows from Companies A, B, and C through the real local API session. |
-| 22C UI workspace switching | Not run / product gap | No workspace selector is currently exposed; `useSettingsData` selects one active membership. A multi-workspace selector is required before this case can be accepted. |
+| 22C UI workspace switching | Pass locally | Fresh Business user was given a second local-only Growth membership. Sidebar selector switched Business ↔ Growth repeatedly, changed the dashboard activity/plan context, survived refresh, and restored the selected workspace after sign-out/sign-in. |
 | 22D Starter access gating | Pass locally | Starter Reports displayed the upgrade prompt and did not render paid reports. |
 | 22D Growth/Business access | Pass locally | Growth and Business rendered their protected workspace pages with their seeded active subscriptions. |
 | 22E loading/error recovery | Pass locally | Dashboard, Payments, Reports, Audit Trail rendered data or an explicit state; no permanent spinner was observed. |
 | Default timeout | Pass after fix | Fresh browser with no stored preference displayed `20 minutes`; the missing-value bug was fixed and unit-tested. |
 | Admin access | Pass locally | Local Super Admin opened `/admin/settings`; ordinary User A was redirected to `/dashboard`. |
 | Visual inspection | Pass with notes | Mobile 390×844 layout showed usable bottom navigation and no clipped primary content. Desktop and tablet states were inspected; console only had existing React Router warnings after fixes. |
-| Provider checkout | Blocked | No isolated local Paystack TEST checkout credentials/callback configuration were used. Seeded subscriptions are not checkout evidence. |
+| Provider checkout | Pass locally | Fresh Business registration opened Paystack TEST automatically at NGN 89,000, returned directly to `/dashboard`, and Settings showed Business after refresh and re-login. |
 | Cleanup/deletion | Not run | No broad cleanup and no existing business/account deletion was authorized or performed. |
 
 ## Observation register
@@ -53,7 +53,7 @@ User C was added as a viewer to Companies A and B. Each plan workspace received 
 |---|---|---|---|---|
 | OBS-001 | Settings → Business Phone | Chromium rejected `[+0-9 ()-]+` as an invalid Unicode-regex pattern. | Medium | Fixed in `Settings.tsx` and `Vendors.tsx` by escaping `-`; reload produced 0 console errors. |
 | OBS-002 | Settings → Security | Missing local timeout storage was converted with `Number(null)` and clamped to 1 minute. | High | Fixed in `SessionTimeoutContext.tsx`; fresh browser and unit test now show 20 minutes. |
-| OBS-003 | Multi-workspace User C | The app has no visible workspace selector and settings chooses one membership. | High / product capability | Open; do not claim workspace-switch acceptance. |
+| OBS-003 | Multi-workspace User C | The app previously had no visible workspace selector and settings chose one membership. | High / product capability | Fixed locally with a user-scoped selector, settings query scoping, persistence, and regression tests. |
 | OBS-004 | Browser console | React Router future-flag warnings remain. | Low / baseline | Not introduced by this task; no application errors remained in retested flows. |
 | OBS-005 | Route transitions | Suspense and protected-route transitions used different full-page loader implementations, creating a visible loader handoff risk. | Medium | Fixed in `App.tsx` by using the shared `RouteLoadingScreen` for both transitions; landing-page `fetchPriority` warning also removed from `HeroSection.tsx`. |
 
@@ -68,6 +68,15 @@ User C was added as a viewer to Companies A and B. Each plan workspace received 
 - The `.test` paid-signup attempt was rejected by the intended Paystack email-domain guard before checkout; it did not create a paid checkout.
 - The UI-created disposable signup accounts/workspaces remain only in local Supabase for review; no production accounts or data were changed.
 - Screenshots are retained as ignored local artifacts under `output/playwright/phase2-local/`; no credentials or tokens are stored in the repository.
+
+### Final pre-PR browser UAT — 2026-09-24
+
+- Fresh Business registration selected Business, opened Paystack TEST automatically, completed the NGN 89,000 success flow, returned directly to `/dashboard`, and showed Business/active in Settings. Hard refresh and sign-out/sign-in preserved Business. The account was not an admin, so Admin subscription UI was not exercised in this browser account; local database state and dashboard subscription activity matched Business.
+- Fresh Starter registration selected Starter, did not open Paystack, redirected directly to `/dashboard`, remained Starter after refresh and sign-out/sign-in, and showed the Reports upgrade gate.
+- Multi-workspace selector: the Business disposable user received a second local-only viewer membership in `UAT Growth 20260923 D`. The sidebar selector showed both workspaces; switching changed the selected workspace and Growth/Business subscription context without stale dashboard activity. The selection survived refresh and re-login.
+- Delayed provider response: added a regression test covering two retryable provider responses followed by successful verification; the page remained in a retryable verification state and redirected only after the successful result.
+- Signed-out confirmation: `/pricing/confirmed` exposed only public checkout status/reference messaging and sign-in/pricing actions; no workspace name or private billing details were exposed. An invalid reference produced a safe non-private error state.
+- Loading behavior: Dashboard, Payments, Reports, Audit Trail, and Settings resolved during the Business, Starter, and workspace-switch flows. No duplicate full-page spinner or redirect loop was observed. Local browser console contained only existing React Router warnings plus transient local Supabase signup-alert/registration service errors during the Starter run; the account creation and dashboard flow still completed.
 
 ## Migration preflight
 
@@ -90,10 +99,11 @@ Migrations were applied to local Supabase only:
 
 ## Commands and results
 
-- `npm run test -- --run` — 36 files, 138 tests passed.
+- `npm run test -- --run` — 37 files, 141 tests passed.
+- `npm run test:e2e` — 49 tests collected; 42 passed, 7 skipped.
 - Focused phone/subscription/timeout tests — 13 tests passed after the final fixes.
 - `npm run build` — passed.
-- `npm run lint` — passed with 0 errors and 27 existing warnings.
+- `npm run lint` — passed with 0 errors and 31 existing warnings.
 - `npm run verify:release:security` — passed.
 - `supabase db lint --local` — two pre-existing ambiguous-column errors remain in unrelated functions.
 - `git diff --check` — passed.

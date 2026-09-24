@@ -9,6 +9,7 @@ import {
   settingsQueryOptions,
 } from "@/lib/query";
 import { supabase } from "@/lib/supabase";
+import { resolveSelectedWorkspaceId, useWorkspaceSelection } from "@/contexts/WorkspaceSelectionContext";
 
 type ProfileRow = Tables<"profiles">;
 type BusinessRow = Tables<"businesses">;
@@ -79,6 +80,12 @@ export type SettingsData = {
   business: BusinessRow | null;
   membership: Pick<BusinessMemberRow, "business_id" | "role" | "status"> | null;
   profile: ProfileRow | null;
+  workspaces: Array<{
+    business_id: string;
+    name: string;
+    role: Enums<"business_role">;
+    status: Enums<"business_member_status">;
+  }>;
 };
 
 export type ProfileUpdateInput = {
@@ -107,7 +114,7 @@ export type PasswordUpdateInput = {
   password: string;
 };
 
-const settingsQueryKey = (userId: string) => ["settings", userId] as const;
+const settingsQueryKey = (userId: string, selectedBusinessId?: string | null) => ["settings", userId, selectedBusinessId ?? "auto"] as const;
 const privacyPreferencesQueryKey = (businessId: string, userId: string) => ["privacy-preferences", businessId, userId] as const;
 const securityActivityQueryKey = (businessId: string, userId: string) => ["security-activity", businessId, userId] as const;
 const workspaceWalletQueryKey = (businessId: string) => ["workspace-wallet", businessId] as const;
@@ -185,7 +192,7 @@ const fetchSecurityActivity = async (businessId: string, userId: string): Promis
   }));
 };
 
-const fetchSettingsData = async (userId: string): Promise<SettingsData> => {
+const fetchSettingsData = async (userId: string, selectedBusinessId?: string | null): Promise<SettingsData> => {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("*")
@@ -196,18 +203,43 @@ const fetchSettingsData = async (userId: string): Promise<SettingsData> => {
     throw profileError;
   }
 
-  const { data: membership, error: membershipError } = await supabase
+  const { data: memberships, error: membershipError } = await supabase
     .from("business_members")
     .select("business_id, role, status")
     .eq("user_id", userId)
     .eq("status", "active")
-    .order("joined_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order("joined_at", { ascending: true });
 
   if (membershipError) {
     throw membershipError;
   }
+
+  const activeMemberships = (memberships ?? []).filter((entry) => entry.status === "active") as Array<
+    Pick<BusinessMemberRow, "business_id" | "role" | "status">
+  >;
+  const businessIds = activeMemberships.map((entry) => entry.business_id);
+  const { data: workspaceRows, error: workspaceError } = businessIds.length
+    ? await supabase.from("businesses").select("id, name").in("id", businessIds)
+    : { data: [], error: null };
+
+  if (workspaceError) {
+    throw workspaceError;
+  }
+
+  const workspaceNames = new Map((workspaceRows ?? []).map((row) => [row.id, row.name]));
+  const workspaces = activeMemberships
+    .filter((entry) => workspaceNames.has(entry.business_id))
+    .map((entry) => ({
+      business_id: entry.business_id,
+      name: workspaceNames.get(entry.business_id) ?? "Workspace",
+      role: entry.role,
+      status: entry.status,
+    }));
+  const selectedWorkspaceId = resolveSelectedWorkspaceId(
+    activeMemberships.map((entry) => entry.business_id),
+    selectedBusinessId ?? null,
+  );
+  const membership = activeMemberships.find((entry) => entry.business_id === selectedWorkspaceId) ?? null;
 
   let business: BusinessRow | null = null;
 
@@ -245,6 +277,7 @@ const fetchSettingsData = async (userId: string): Promise<SettingsData> => {
     business,
     membership,
     profile,
+    workspaces,
   };
 };
 
@@ -550,13 +583,16 @@ const updatePassword = async (
   }
 };
 
-export const useSettingsData = (userId?: string) =>
-  useQuery({
-    queryKey: userId ? settingsQueryKey(userId) : ["settings", "guest"],
-    queryFn: () => fetchSettingsData(userId!),
-    enabled: Boolean(userId),
+export const useSettingsData = (userId?: string) => {
+  const { selectedBusinessId, selectionReady } = useWorkspaceSelection();
+
+  return useQuery({
+    queryKey: userId ? settingsQueryKey(userId, selectedBusinessId) : ["settings", "guest"],
+    queryFn: () => fetchSettingsData(userId!, selectedBusinessId),
+    enabled: Boolean(userId && selectionReady),
     ...settingsQueryOptions,
   });
+};
 
 export const useUpdateProfile = (userId?: string) => {
   const queryClient = useQueryClient();
@@ -574,7 +610,7 @@ export const useUpdateProfile = (userId?: string) => {
         return;
       }
 
-      await queryClient.invalidateQueries({ queryKey: settingsQueryKey(userId) });
+      await queryClient.invalidateQueries({ queryKey: ["settings", userId] });
     },
   });
 };
@@ -591,7 +627,7 @@ export const useUpdateBusiness = (userId?: string) => {
       }
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: settingsQueryKey(userId) }),
+        queryClient.invalidateQueries({ queryKey: ["settings", userId] }),
         queryClient.invalidateQueries({ queryKey: ["operations", variables.businessId] }),
       ]);
     },
