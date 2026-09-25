@@ -1198,6 +1198,7 @@ Deno.serve(async (request) => {
       cancel_at_period_end: false,
       cancelled_at: null,
       currency: subscriptionCurrency,
+      expired_at: null,
       last_payment_reference: null,
       next_renewal_at: nextRenewalAt,
       plan,

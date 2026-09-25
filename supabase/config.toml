@@ -13,6 +13,9 @@ verify_jwt = false
 [functions.workspace-digest-automation]
 verify_jwt = false
 
+[functions.subscription-renewal-automation]
+verify_jwt = false
+
 [functions.admin-console]
 verify_jwt = false
 
