@@ -274,8 +274,8 @@ Live cutover checklist after Paystack approval:
 
 ### 2026-09-24 — Signup confirmation and payment continuation
 
-- [x] Production Auth requires email confirmation before a new signup receives an authenticated session.
-- [x] The branded confirmation email redirects to `/dashboard?email_confirmed=1` after the verification link is used.
-- [x] Paid-plan signup carries the selected plan through the confirmation redirect and shows a dashboard payment prompt after the email is confirmed.
-- [x] The dashboard payment prompt starts the authenticated Paystack checkout; successful verification at `/pricing/confirmed` returns the user directly to `/dashboard`.
-- [ ] Confirm the final production signup behavior with one disposable Starter account and one disposable paid-plan account.
+- [x] Paid Growth and Business signup now initializes the Paystack checkout immediately after account creation, even while the signup email remains unconfirmed.
+- [x] The public checkout session is tied server-side to the newly created user-owned workspace and cannot activate access from the browser alone.
+- [x] Paystack confirmation and webhook reconciliation remain the source of truth for paid workspace activation.
+- [x] The confirmation email redirects to `/dashboard?email_confirmed=1` after verification; operational dashboard access remains protected until the paid subscription is active.
+- [ ] Confirm the final production signup behavior with one disposable Starter account and one disposable paid-plan account, including payment before email confirmation and dashboard access after confirmation.

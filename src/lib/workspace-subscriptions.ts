@@ -6,7 +6,7 @@ import type {
 } from "@/lib/subscriptions";
 
 type WorkspaceSubscriptionAction = "self.cancel" | "self.initialize-checkout" | "self.start-growth-trial" | "self.update" | "self.verify-checkout";
-type WorkspaceSubscriptionPublicAction = "public.confirmation-status";
+type WorkspaceSubscriptionPublicAction = "public.confirmation-status" | "public.initialize-signup-checkout";
 
 export type WorkspaceSubscriptionErrorCode =
   | "CHECKOUT_PENDING"
@@ -208,6 +208,21 @@ export const initializeWorkspaceSubscriptionCheckout = ({
     billingCycle,
     businessId: businessId ?? null,
     plan,
+  });
+
+export const initializeSignupSubscriptionCheckout = ({
+  billingCycle,
+  plan,
+  signupUserId,
+}: {
+  billingCycle: SubscriptionBillingCycle;
+  plan: SubscriptionPlan;
+  signupUserId: string;
+}) =>
+  invokePublicWorkspaceSubscriptions<WorkspaceSubscriptionActionResult>("public.initialize-signup-checkout", {
+    billingCycle,
+    plan,
+    signupUserId,
   });
 
 export const verifyWorkspaceSubscriptionCheckout = ({

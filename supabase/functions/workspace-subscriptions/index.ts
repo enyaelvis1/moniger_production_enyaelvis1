@@ -23,6 +23,7 @@ import { validatePaystackCheckout } from "../_shared/paystack-checkout-validatio
 
 type SubscriptionAction =
   | "public.confirmation-status"
+  | "public.initialize-signup-checkout"
   | "self.cancel"
   | "self.initialize-checkout"
   | "self.start-growth-trial"
@@ -35,6 +36,7 @@ type SubscriptionRequest = {
   businessId?: string | null;
   plan?: string | null;
   reference?: string | null;
+  signupUserId?: string | null;
 };
 
 type BusinessContext = {
@@ -286,6 +288,36 @@ const findManagedBusiness = async ({
     defaultCurrency: asNullableString(ownedBusinessResponse.data.default_currency),
     id: asString(ownedBusinessResponse.data.id),
     name: asString(ownedBusinessResponse.data.name),
+  };
+};
+
+const findSignupBusiness = async ({
+  adminClient,
+  userId,
+}: {
+  adminClient: ReturnType<typeof createClient>;
+  userId: string;
+}): Promise<BusinessContext | null> => {
+  const response = await adminClient
+    .from("businesses")
+    .select("id, name, default_currency")
+    .eq("owner_user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  if (!response.data) {
+    return null;
+  }
+
+  return {
+    defaultCurrency: asNullableString(response.data.default_currency),
+    id: asString(response.data.id),
+    name: asString(response.data.name),
   };
 };
 
@@ -718,6 +750,7 @@ Deno.serve(async (request) => {
 
   if (
     payload.action !== "public.confirmation-status" &&
+    payload.action !== "public.initialize-signup-checkout" &&
     payload.action !== "self.cancel" &&
     payload.action !== "self.initialize-checkout" &&
     payload.action !== "self.start-growth-trial" &&
@@ -769,26 +802,55 @@ Deno.serve(async (request) => {
     }
   }
 
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader) {
-    return json({ error: "Missing authorization header." }, 401);
+  const isPublicSignupCheckout = payload.action === "public.initialize-signup-checkout";
+  let user: {
+    id: string;
+    email?: string | null;
+    user_metadata?: Record<string, unknown>;
+  } | null = null;
+
+  if (isPublicSignupCheckout) {
+    const signupUserId = asNullableString(payload.signupUserId);
+    if (!signupUserId) {
+      return json({ error: "Missing signup account reference." }, 400);
+    }
+
+    const signupUserResponse = await adminClient.auth.admin.getUserById(signupUserId);
+    if (signupUserResponse.error || !signupUserResponse.data.user) {
+      return json({ error: "The signup account could not be found." }, 404);
+    }
+
+    user = signupUserResponse.data.user;
+
+    const requestedSignupPlan = normalizePlan(payload.plan);
+    const recordedSignupPlan = asString(signupUserResponse.data.user.user_metadata?.signup_plan);
+    if (!["growth", "business"].includes(requestedSignupPlan) || recordedSignupPlan !== requestedSignupPlan) {
+      return json({ error: "The signup plan does not match the requested paid checkout." }, 409);
+    }
+  } else {
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader) {
+      return json({ error: "Missing authorization header." }, 401);
+    }
+
+    const requestClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
+
+    const userResponse = await requestClient.auth.getUser();
+    if (userResponse.error || !userResponse.data.user) {
+      return json({ error: "You need an active session before updating workspace subscriptions." }, 401);
+    }
+
+    user = userResponse.data.user;
   }
 
-  const requestClient = createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        Authorization: authHeader,
-      },
-    },
-  });
-
-  const {
-    data: { user },
-    error: userError,
-  } = await requestClient.auth.getUser();
-
-  if (userError || !user) {
-    return json({ error: "You need an active session before updating workspace subscriptions." }, 401);
+  if (!user) {
+    return json({ error: "The workspace subscription account could not be resolved." }, 401);
   }
 
   const requestedBusinessId = asNullableString(payload.businessId);
@@ -809,11 +871,13 @@ Deno.serve(async (request) => {
       }
     }
 
-    const business = await findManagedBusiness({
-      adminClient,
-      businessId: authoritativeCheckoutSession?.business_id ?? requestedBusinessId,
-      userId: user.id,
-    });
+    const business = isPublicSignupCheckout
+      ? await findSignupBusiness({ adminClient, userId: user.id })
+      : await findManagedBusiness({
+        adminClient,
+        businessId: authoritativeCheckoutSession?.business_id ?? requestedBusinessId,
+        userId: user.id,
+      });
 
     if (!business) {
       return json(
@@ -968,13 +1032,17 @@ Deno.serve(async (request) => {
       );
     }
 
-    if (payload.action === "self.initialize-checkout") {
+    if (payload.action === "self.initialize-checkout" || isPublicSignupCheckout) {
       if (plan === "starter" || billingCycle === "free" || billingCycle === "manual") {
         return json({ error: "Use the direct subscription update action for free or manual plans." }, 400);
       }
 
       if (!payerEmail) {
         return json({ error: "Your account needs a valid email address before starting subscription checkout." }, 400);
+      }
+
+      if (isPublicSignupCheckout && existingSubscription && (existingSubscription.plan !== "starter" || existingSubscription.status !== "active")) {
+        return json({ error: "This signup workspace is not eligible for an initial paid checkout." }, 409);
       }
 
       if (isUnsupportedPaystackEmail(payerEmail)) {
