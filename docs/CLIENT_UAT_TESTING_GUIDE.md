@@ -94,10 +94,12 @@ Expected result:
 Test steps:
 
 1. Create a new Starter, Growth, or Business account with an email address you can access.
-2. Open the signup confirmation email.
-3. Confirm the subject welcomes you to Moniger.
-4. Confirm the email includes the Moniger brand, a thank-you message, and a clear `Confirm my email` button.
-5. Click the button and confirm the account completes email verification and returns to the configured application flow.
+2. For Growth or Business, confirm that Paystack checkout opens immediately after account creation, before opening the confirmation email.
+3. Complete the test checkout and return to the pricing confirmation page.
+4. Open the signup confirmation email.
+5. Confirm the subject welcomes you to Moniger.
+6. Confirm the email includes the Moniger brand, a thank-you message, and a clear `Confirm my email` button.
+7. Click the button and confirm the account completes email verification and returns to the configured application flow.
 
 Expected result:
 
@@ -106,7 +108,8 @@ Expected result:
 - The confirmation button and fallback URL both use the Supabase confirmation URL.
 - The email includes a safety note for recipients who did not create an account.
 - The email renders cleanly on desktop and mobile email clients.
-- The password can be updated successfully.
+- A paid workspace cannot use operational dashboard tabs until Paystack payment is confirmed.
+- After email confirmation and successful payment reconciliation, the user can enter the dashboard.
 
 ### 1.4 Session persistence security check
 

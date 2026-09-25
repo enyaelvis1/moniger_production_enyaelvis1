@@ -32,38 +32,7 @@ const workspacePayoutsQueryKey = (businessId: string) => ["workspace-payouts", b
 const fetchWorkspacePayoutHistory = async (businessId: string): Promise<WorkspacePayoutHistoryItem[]> => {
   const { data, error } = await supabase
     .from("workspace_payouts")
-    .select(
-      `
-        id,
-        amount,
-        currency,
-        status,
-        failure_reason,
-        provider_reference,
-        provider_transfer_code,
-        reserved_at,
-        scheduled_for,
-        cancelled_at,
-        last_attempt_at,
-        next_retry_at,
-        retry_count,
-        submitted_at,
-        completed_at,
-        reversed_at,
-        created_at,
-        bill:bills (
-          bill_number,
-          bill_date
-        ),
-        vendor:vendors (
-          business_name
-        ),
-        bank:banks (
-          name,
-          bank_code
-        )
-      `,
-    )
+    .select("id, amount, currency, status, failure_reason, provider_reference, provider_transfer_code, reserved_at, scheduled_for, cancelled_at, last_attempt_at, next_retry_at, retry_count, submitted_at, completed_at, reversed_at, created_at, bill_id, vendor_id, vendor_bank_id")
     .eq("business_id", businessId)
     .order("created_at", { ascending: false });
 
@@ -71,10 +40,27 @@ const fetchWorkspacePayoutHistory = async (businessId: string): Promise<Workspac
     throw error;
   }
 
-  return (data ?? []).map((row) => {
-    const bill = Array.isArray(row.bill) ? row.bill[0] : row.bill;
-    const vendor = Array.isArray(row.vendor) ? row.vendor[0] : row.vendor;
-    const bank = Array.isArray(row.bank) ? row.bank[0] : row.bank;
+  const rows = data ?? [];
+  const billIds = [...new Set(rows.map((row) => row.bill_id).filter((id): id is string => Boolean(id)))];
+  const vendorIds = [...new Set(rows.map((row) => row.vendor_id).filter((id): id is string => Boolean(id)))];
+  const bankIds = [...new Set(rows.map((row) => row.vendor_bank_id).filter((id): id is string => Boolean(id)))];
+  const [billsResponse, vendorsResponse, banksResponse] = await Promise.all([
+    billIds.length ? supabase.from("bills").select("id, bill_number, bill_date").in("id", billIds) : Promise.resolve({ data: [], error: null }),
+    vendorIds.length ? supabase.from("vendors").select("id, business_name").in("id", vendorIds) : Promise.resolve({ data: [], error: null }),
+    bankIds.length ? supabase.from("banks").select("id, name, bank_code").in("id", bankIds) : Promise.resolve({ data: [], error: null }),
+  ]);
+  const relatedError = billsResponse.error ?? vendorsResponse.error ?? banksResponse.error;
+  if (relatedError) {
+    throw relatedError;
+  }
+  const billMap = new Map((billsResponse.data ?? []).map((bill) => [bill.id, bill]));
+  const vendorMap = new Map((vendorsResponse.data ?? []).map((vendor) => [vendor.id, vendor]));
+  const bankMap = new Map((banksResponse.data ?? []).map((bank) => [bank.id, bank]));
+
+  return rows.map((row) => {
+    const bill = row.bill_id ? billMap.get(row.bill_id) : undefined;
+    const vendor = row.vendor_id ? vendorMap.get(row.vendor_id) : undefined;
+    const bank = row.vendor_bank_id ? bankMap.get(row.vendor_bank_id) : undefined;
 
     return {
       amount: Number(row.amount ?? 0),

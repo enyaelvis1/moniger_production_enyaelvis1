@@ -1,7 +1,17 @@
 project_id = "qfhjlqskucabzxepqbpl"
 
+[auth]
+site_url = "https://moniger.net"
+additional_redirect_urls = ["https://moniger.net", "https://www.moniger.net", "https://moniger.net/settings", "https://www.moniger.net/settings", "https://moniger.net/pricing/confirmed", "https://www.moniger.net/pricing/confirmed", "https://moniger.net/pay/*/confirmed", "https://www.moniger.net/pay/*/confirmed", "http://localhost:8080", "http://localhost:8081", "http://localhost:8080/settings", "http://localhost:8081/settings", "http://localhost:8080/pricing/confirmed", "http://localhost:8081/pricing/confirmed", "http://localhost:8080/pay/*/confirmed", "http://localhost:8081/pay/*/confirmed", "https://moniger.net/dashboard", "https://www.moniger.net/dashboard", "http://localhost:8080/dashboard", "http://localhost:8081/dashboard", "https://moniger.net/dashboard**", "https://www.moniger.net/dashboard**", "http://localhost:8080/dashboard**", "http://localhost:8081/dashboard**"]
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
 [auth.email]
-enable_confirmations = false
+max_frequency = "1m0s"
+
+enable_confirmations = true
 
 [auth.email.template.confirmation]
 subject = "Welcome to Moniger — confirm your email"

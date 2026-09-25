@@ -2,6 +2,16 @@
 
 Use this runbook only for records created in an explicitly labelled QA or sandbox environment. The cleanup action is destructive, super-admin-only, and must never be used as a general financial-record deletion tool.
 
+## Local full reset
+
+For local testing only, run:
+
+```bash
+npm run reset:local-data
+```
+
+The script resets the local Supabase database and reapplies the repository migrations. It requires answering `yes` to the prompt and typing the exact phrase `DELETE ALL LOCAL DATA`. It does not target the linked production project. Use the guarded Admin → Settings → Danger Zone cleanup for marked test records in a shared or hosted environment.
+
 ## Qualification rules
 
 A record is eligible only when it has an explicit test marker:
