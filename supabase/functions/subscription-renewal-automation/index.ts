@@ -7,11 +7,14 @@ type SubscriptionRow = {
   currency: string;
   next_renewal_at: string | null;
   plan: "business" | "growth" | "starter";
-  status: "active" | "past_due";
+  status: "active" | "past_due" | "trial";
 };
 
 type BusinessRow = { id: string; name: string; owner_user_id: string };
 type NoticeType = "14_day" | "48_hour" | "expired";
+
+const DEFAULT_NOTICE_DAYS = 14;
+const DEFAULT_FINAL_NOTICE_HOURS = 48;
 
 const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, content-type, x-client-info, x-cron-secret",
@@ -30,17 +33,21 @@ const buildEmail = ({
   noticeType,
   plan,
   renewalAt,
+  noticeDays = DEFAULT_NOTICE_DAYS,
+  finalNoticeHours = DEFAULT_FINAL_NOTICE_HOURS,
 }: {
   appBaseUrl: string;
   businessName: string;
   noticeType: NoticeType;
   plan: SubscriptionRow["plan"];
   renewalAt: string;
+  noticeDays?: number;
+  finalNoticeHours?: number;
 }) => {
   const label = planLabel(plan);
   const renewalDate = new Intl.DateTimeFormat("en-NG", { dateStyle: "long", timeZone: "Africa/Lagos" }).format(new Date(renewalAt));
   const isExpired = noticeType === "expired";
-  const timing = noticeType === "14_day" ? "in 14 days" : noticeType === "48_hour" ? "in 48 hours" : "has expired";
+  const timing = noticeType === "14_day" ? `in ${noticeDays} days` : noticeType === "48_hour" ? `in ${finalNoticeHours} hours` : "has expired";
   const subject = isExpired
     ? `Your Moniger ${label} subscription has expired`
     : `Your Moniger ${label} subscription renews ${timing}`;
@@ -110,16 +117,31 @@ Deno.serve(async (request) => {
   const appBaseUrl = (Deno.env.get("APP_BASE_URL")?.trim() || "https://moniger.net").replace(/\/$/, "");
   const now = new Date();
   const nowMs = now.getTime();
-  const fourteenDayStart = new Date(nowMs + 13 * 24 * 60 * 60 * 1000);
-  const fourteenDayEnd = new Date(nowMs + 15 * 24 * 60 * 60 * 1000);
-  const fortyEightHourStart = new Date(nowMs + 36 * 60 * 60 * 1000);
-  const fortyEightHourEnd = new Date(nowMs + 60 * 60 * 60 * 1000);
+  const { data: configRow } = await adminClient
+    .from("platform_config")
+    .select("value")
+    .eq("key", "subscription_renewal_settings")
+    .maybeSingle();
+  const config = configRow?.value && typeof configRow.value === "object" && !Array.isArray(configRow.value)
+    ? configRow.value as Record<string, unknown>
+    : {};
+  const noticeDays = typeof config.noticeDays === "number" && Number.isFinite(config.noticeDays)
+    ? Math.min(60, Math.max(1, Math.round(config.noticeDays)))
+    : DEFAULT_NOTICE_DAYS;
+  const finalNoticeHours = typeof config.finalNoticeHours === "number" && Number.isFinite(config.finalNoticeHours)
+    ? Math.min(168, Math.max(1, Math.round(config.finalNoticeHours)))
+    : DEFAULT_FINAL_NOTICE_HOURS;
+  const noticeWindowHours = 2;
+  const noticeStart = new Date(nowMs + (noticeDays * 24 - noticeWindowHours) * 60 * 60 * 1000);
+  const noticeEnd = new Date(nowMs + (noticeDays * 24 + noticeWindowHours) * 60 * 60 * 1000);
+  const finalNoticeStart = new Date(nowMs + (finalNoticeHours - noticeWindowHours) * 60 * 60 * 1000);
+  const finalNoticeEnd = new Date(nowMs + (finalNoticeHours + noticeWindowHours) * 60 * 60 * 1000);
 
   const { data: rows, error: subscriptionError } = await adminClient
     .from("business_subscriptions")
     .select("amount, business_id, currency, next_renewal_at, plan, status")
     .in("plan", ["growth", "business"])
-    .in("status", ["active", "past_due"])
+    .in("status", ["active", "past_due", "trial"])
     .not("next_renewal_at", "is", null);
   if (subscriptionError) return json({ error: subscriptionError.message }, 500);
 
@@ -156,7 +178,7 @@ Deno.serve(async (request) => {
       const authUser = await adminClient.auth.admin.getUserById(business.owner_user_id);
       const recipient = authUser.data.user?.email?.trim().toLowerCase() ?? "";
       if (!recipient) throw new Error("Workspace owner email could not be loaded.");
-      const email = buildEmail({ appBaseUrl, businessName: business.name, noticeType, plan: subscription.plan, renewalAt });
+      const email = buildEmail({ appBaseUrl, businessName: business.name, finalNoticeHours, noticeDays, noticeType, plan: subscription.plan, renewalAt });
       const provider = await sendViaResend({
         apiKey: resendApiKey,
         from: fromAddress,
@@ -196,7 +218,7 @@ Deno.serve(async (request) => {
         .from("business_subscriptions")
         .update({ expired_at: now.toISOString(), status: "expired", updated_at: now.toISOString() })
         .eq("business_id", subscription.business_id)
-        .in("status", ["active", "past_due"])
+        .in("status", ["active", "past_due", "trial"])
         .lte("next_renewal_at", now.toISOString())
         .select("business_id");
       if (expiryError) {
@@ -211,8 +233,8 @@ Deno.serve(async (request) => {
       }
       continue;
     }
-    if (renewalDate >= fourteenDayStart && renewalDate <= fourteenDayEnd) await deliver(subscription, business, "14_day", renewalAt);
-    if (renewalDate >= fortyEightHourStart && renewalDate <= fortyEightHourEnd) await deliver(subscription, business, "48_hour", renewalAt);
+    if (renewalDate >= noticeStart && renewalDate <= noticeEnd) await deliver(subscription, business, "14_day", renewalAt);
+    if (renewalDate >= finalNoticeStart && renewalDate <= finalNoticeEnd) await deliver(subscription, business, "48_hour", renewalAt);
   }
 
   return json({ expired, failed, processed: subscriptions.length, sent, skipped });

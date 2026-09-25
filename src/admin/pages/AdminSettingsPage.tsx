@@ -99,6 +99,10 @@ const AdminSettingsPage = () => {
   const [bannerText, setBannerText] = useState(String(configByKey.get("landing_banner")?.text ?? ""));
   const [maintenanceMode, setMaintenanceMode] = useState(Boolean(configByKey.get("maintenance_mode")?.enabled));
   const [adminPageSize, setAdminPageSize] = useState(() => String(configByKey.get("admin_page_size")?.value ?? 25));
+  const [renewalNoticeDays, setRenewalNoticeDays] = useState("14");
+  const [renewalFinalNoticeHours, setRenewalFinalNoticeHours] = useState("48");
+  const [growthTrialDuration, setGrowthTrialDuration] = useState("14");
+  const [growthTrialDurationUnit, setGrowthTrialDurationUnit] = useState<"days" | "minutes">("days");
   const [billingCatalogDraft, setBillingCatalogDraft] = useState<BillingCatalogDraft>(() =>
     createBillingCatalogDraft(defaultSubscriptionCatalog),
   );
@@ -135,6 +139,15 @@ const AdminSettingsPage = () => {
 
   useEffect(() => {
     setAdminPageSize(String(configByKey.get("admin_page_size")?.value ?? 25));
+  }, [configByKey]);
+
+  useEffect(() => {
+    const renewalSettings = configByKey.get("subscription_renewal_settings");
+    setRenewalNoticeDays(String(renewalSettings?.noticeDays ?? 14));
+    setRenewalFinalNoticeHours(String(renewalSettings?.finalNoticeHours ?? 48));
+    const trialSettings = configByKey.get("subscription_trial_settings");
+    setGrowthTrialDuration(String(trialSettings?.durationValue ?? 14));
+    setGrowthTrialDurationUnit(trialSettings?.durationUnit === "minutes" ? "minutes" : "days");
   }, [configByKey]);
 
   useEffect(() => {
@@ -349,6 +362,91 @@ const AdminSettingsPage = () => {
               <div className="rounded-xl border border-white/5 bg-[#0F1621] p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
+                    <p className="font-medium text-[#F1F5F9]">Subscription renewal notices</p>
+                    <p className="mt-1 max-w-2xl text-sm text-white/45">
+                      Configure when Growth and Business owners receive advance renewal reminders. Expiry enforcement remains
+                      server-side and cannot be disabled from this screen.
+                    </p>
+                  </div>
+                  <p className="text-xs text-white/45">Super Admin only</p>
+                </div>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="renewal-notice-days" className="text-white/80">First reminder (days before renewal)</Label>
+                    <Input
+                      id="renewal-notice-days"
+                      type="number"
+                      min={1}
+                      max={60}
+                      step={1}
+                      value={renewalNoticeDays}
+                      disabled={adminAccess.role !== "super_admin"}
+                      onChange={(event) => setRenewalNoticeDays(event.target.value)}
+                      className="border-white/10 bg-[#0F1621] text-white placeholder:text-white/30"
+                    />
+                    <p className="text-xs text-white/40">Default: 14 days.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="renewal-final-notice-hours" className="text-white/80">Final reminder (hours before renewal)</Label>
+                    <Input
+                      id="renewal-final-notice-hours"
+                      type="number"
+                      min={1}
+                      max={168}
+                      step={1}
+                      value={renewalFinalNoticeHours}
+                      disabled={adminAccess.role !== "super_admin"}
+                      onChange={(event) => setRenewalFinalNoticeHours(event.target.value)}
+                      className="border-white/10 bg-[#0F1621] text-white placeholder:text-white/30"
+                    />
+                    <p className="text-xs text-white/40">Default: 48 hours.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/5 bg-[#0F1621] p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-[#F1F5F9]">Growth trial duration</p>
+                    <p className="mt-1 max-w-2xl text-sm text-white/45">
+                      Set the one-time Starter-to-Growth trial length for testing and controlled rollout. The production default is 14 days.
+                    </p>
+                  </div>
+                  <p className="text-xs text-white/45">Super Admin only</p>
+                </div>
+                <div className="mt-4 flex flex-wrap items-end gap-4">
+                  <div className="w-full max-w-xs space-y-2">
+                    <Label htmlFor="growth-trial-duration" className="text-white/80">Trial length</Label>
+                    <Input
+                      id="growth-trial-duration"
+                      type="number"
+                      min={1}
+                      max={growthTrialDurationUnit === "minutes" ? 20160 : 30}
+                      step={1}
+                      value={growthTrialDuration}
+                      disabled={adminAccess.role !== "super_admin"}
+                      onChange={(event) => setGrowthTrialDuration(event.target.value)}
+                      className="border-white/10 bg-[#0F1621] text-white placeholder:text-white/30"
+                    />
+                  </div>
+                  <div className="w-full max-w-xs space-y-2">
+                    <Label htmlFor="growth-trial-duration-unit" className="text-white/80">Unit</Label>
+                    <select
+                      id="growth-trial-duration-unit"
+                      value={growthTrialDurationUnit}
+                      disabled={adminAccess.role !== "super_admin"}
+                      onChange={(event) => setGrowthTrialDurationUnit(event.target.value as "days" | "minutes")}
+                      className="h-10 w-full rounded-md border border-white/10 bg-[#0F1621] px-3 text-sm text-white outline-none focus:ring-2 focus:ring-[#3B82F6]"
+                    >
+                      <option value="days">Days</option>
+                      <option value="minutes">Minutes (testing)</option>
+                    </select>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-white/40">Allowed range: 1–30 days or 1–20,160 minutes. A trial already started is not changed.</p>
+              </div>
+              <div className="rounded-xl border border-white/5 bg-[#0F1621] p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
                     <p className="font-medium text-[#F1F5F9]">Billing catalog</p>
                     <p className="mt-1 text-sm text-white/45">
                       Update the public pricing cards from one shared catalog. The landing page and `/pricing` read from
@@ -437,8 +535,20 @@ const AdminSettingsPage = () => {
                     const adminPageSizeValue = Number(adminPageSize);
                     const pageSizeToSave = Number.isFinite(adminPageSizeValue) && adminPageSizeValue > 0 ? adminPageSizeValue : 25;
                     const billingCatalogToSave = parseBillingCatalogDraft(billingCatalogDraft);
+                    const noticeDaysValue = Number(renewalNoticeDays);
+                    const finalNoticeHoursValue = Number(renewalFinalNoticeHours);
+                    const growthTrialDurationValue = Number(growthTrialDuration);
+                    if (adminAccess.role === "super_admin" && (!Number.isInteger(noticeDaysValue) || noticeDaysValue < 1 || noticeDaysValue > 60 || !Number.isInteger(finalNoticeHoursValue) || finalNoticeHoursValue < 1 || finalNoticeHoursValue > 168)) {
+                      toast({ title: "Invalid renewal timing", description: "Use whole numbers between 1–60 days and 1–168 hours.", variant: "destructive" });
+                      return;
+                    }
+                    const maxTrialDuration = growthTrialDurationUnit === "minutes" ? 20160 : 30;
+                    if (adminAccess.role === "super_admin" && (!Number.isInteger(growthTrialDurationValue) || growthTrialDurationValue < 1 || growthTrialDurationValue > maxTrialDuration)) {
+                      toast({ title: "Invalid trial duration", description: `Use a whole number between 1 and ${maxTrialDuration.toLocaleString()} ${growthTrialDurationUnit}.`, variant: "destructive" });
+                      return;
+                    }
 
-                    await Promise.all([
+                    const configUpdates = [
                       invokeAdminConsole("settings.platformConfig", {
                         key: "support_email",
                         value: { value: supportEmail },
@@ -459,7 +569,18 @@ const AdminSettingsPage = () => {
                         key: "billing_catalog",
                         value: billingCatalogToSave,
                       }),
-                    ]);
+                    ];
+                    if (adminAccess.role === "super_admin") {
+                      configUpdates.push(invokeAdminConsole("settings.platformConfig", {
+                        key: "subscription_renewal_settings",
+                        value: { noticeDays: noticeDaysValue, finalNoticeHours: finalNoticeHoursValue },
+                      }));
+                      configUpdates.push(invokeAdminConsole("settings.platformConfig", {
+                        key: "subscription_trial_settings",
+                        value: { durationValue: growthTrialDurationValue, durationUnit: growthTrialDurationUnit },
+                      }));
+                    }
+                    await Promise.all(configUpdates);
                     toast({ title: "Config saved", description: "Platform configuration was updated." });
                     await refreshSettings();
                   }}

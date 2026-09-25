@@ -23,6 +23,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
 import { containerClass } from "./landing-shared";
 
 type MenuKey = "features" | "about";
@@ -362,6 +364,12 @@ const MobileNavLink = ({ to, children, onClick }: { to: string; children: React.
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { subscription } = useWorkspaceSubscription();
+  const isSignedIn = Boolean(user);
+  const currentPlan = subscription
+    ? `${subscription.plan.charAt(0).toUpperCase()}${subscription.plan.slice(1)}${subscription.status === "trial" ? " trial" : ""}`
+    : "Workspace";
   const [scrolled, setScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<MenuKey | null>(null);
@@ -546,18 +554,34 @@ const Navbar = () => {
           </div>
 
           <div className="hidden items-center gap-4 lg:flex">
-            <Link
-              to="/login"
-              className="inline-flex items-center justify-center rounded-full border border-[#D0CEE4] px-5 py-2 text-[14px] font-medium tracking-[-0.01em] text-[#0D1B2A] transition-all duration-200 hover:border-[#5B67F7] hover:text-[#5B67F7] hover:shadow-[0_2px_8px_rgba(91,103,247,0.1)]"
-            >
-              Sign In
-            </Link>
-            <Link
-              to="/register"
-              className="inline-flex items-center justify-center rounded-full bg-[#5B67F7] px-6 py-2.5 text-[14px] font-medium tracking-[-0.01em] text-white shadow-[0_4px_16px_rgba(91,103,247,0.3),0_1px_4px_rgba(91,103,247,0.15)] transition-all duration-200 hover:bg-[#4A56E0] hover:shadow-[0_8px_24px_rgba(91,103,247,0.4)] active:scale-[0.97]"
-            >
-              Get Started
-            </Link>
+            {isSignedIn ? (
+              <>
+                <span className="rounded-full border border-[#D0CEE4] bg-white/70 px-4 py-2 text-[13px] font-medium text-[#374151]">
+                  Signed in{subscription ? ` · ${currentPlan}` : ""}
+                </span>
+                <Link
+                  to="/dashboard"
+                  className="inline-flex items-center justify-center rounded-full bg-[#5B67F7] px-6 py-2.5 text-[14px] font-medium tracking-[-0.01em] text-white shadow-[0_4px_16px_rgba(91,103,247,0.3),0_1px_4px_rgba(91,103,247,0.15)] transition-all duration-200 hover:bg-[#4A56E0] hover:shadow-[0_8px_24px_rgba(91,103,247,0.4)] active:scale-[0.97]"
+                >
+                  Open dashboard
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="inline-flex items-center justify-center rounded-full border border-[#D0CEE4] px-5 py-2 text-[14px] font-medium tracking-[-0.01em] text-[#0D1B2A] transition-all duration-200 hover:border-[#5B67F7] hover:text-[#5B67F7] hover:shadow-[0_2px_8px_rgba(91,103,247,0.1)]"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="inline-flex items-center justify-center rounded-full bg-[#5B67F7] px-6 py-2.5 text-[14px] font-medium tracking-[-0.01em] text-white shadow-[0_4px_16px_rgba(91,103,247,0.3),0_1px_4px_rgba(91,103,247,0.15)] transition-all duration-200 hover:bg-[#4A56E0] hover:shadow-[0_8px_24px_rgba(91,103,247,0.4)] active:scale-[0.97]"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
 
           <button
@@ -768,33 +792,55 @@ const Navbar = () => {
               >
                 Support
               </button>
-              <button
-                type="button"
-                onClick={() => handleMobileNavigation("/login")}
-                className="w-full border-b border-[#E8E6F0] py-3.5 text-left text-[16px] font-medium text-[#0D1B2A] pointer-events-auto cursor-pointer"
-              >
-                Sign In
-              </button>
+              {isSignedIn ? (
+                <button
+                  type="button"
+                  onClick={() => handleMobileNavigation("/dashboard")}
+                  className="w-full border-b border-[#E8E6F0] py-3.5 text-left text-[16px] font-medium text-[#0D1B2A] pointer-events-auto cursor-pointer"
+                >
+                  Signed in{subscription ? ` · ${currentPlan}` : ""}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleMobileNavigation("/login")}
+                  className="w-full border-b border-[#E8E6F0] py-3.5 text-left text-[16px] font-medium text-[#0D1B2A] pointer-events-auto cursor-pointer"
+                >
+                  Sign In
+                </button>
+              )}
             </div>
 
             <div
               className="mt-auto flex flex-col gap-2 border-t border-[#E0DFF0] bg-[#FAFAFF] px-6 pt-5"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
             >
-              <button
-                type="button"
-                onClick={() => handleMobileNavigation("/register")}
-                className="inline-flex w-full items-center justify-center rounded-full bg-[#5B67F7] px-5 py-3.5 text-[15px] font-medium text-white shadow-[0_4px_16px_rgba(91,103,247,0.3)] transition-all hover:bg-[#4A56E0] pointer-events-auto cursor-pointer"
-              >
-                Get Started Free
-              </button>
-              <button
-                type="button"
-                onClick={() => handleMobileNavigation("/login")}
-                className="inline-flex w-full items-center justify-center rounded-full border border-[#D0CEE4] bg-[#F3F4FB] px-5 py-3.5 text-[15px] font-medium text-[#0D1B2A] transition-colors hover:border-[#5B67F7] pointer-events-auto cursor-pointer"
-              >
-                Open Workspace
-              </button>
+              {isSignedIn ? (
+                <button
+                  type="button"
+                  onClick={() => handleMobileNavigation("/dashboard")}
+                  className="inline-flex w-full items-center justify-center rounded-full bg-[#5B67F7] px-5 py-3.5 text-[15px] font-medium text-white shadow-[0_4px_16px_rgba(91,103,247,0.3)] transition-all hover:bg-[#4A56E0] pointer-events-auto cursor-pointer"
+                >
+                  Open dashboard
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleMobileNavigation("/register")}
+                    className="inline-flex w-full items-center justify-center rounded-full bg-[#5B67F7] px-5 py-3.5 text-[15px] font-medium text-white shadow-[0_4px_16px_rgba(91,103,247,0.3)] transition-all hover:bg-[#4A56E0] pointer-events-auto cursor-pointer"
+                  >
+                    Get Started Free
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMobileNavigation("/login")}
+                    className="inline-flex w-full items-center justify-center rounded-full border border-[#D0CEE4] bg-[#F3F4FB] px-5 py-3.5 text-[15px] font-medium text-[#0D1B2A] transition-colors hover:border-[#5B67F7] pointer-events-auto cursor-pointer"
+                  >
+                    Open Workspace
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </>

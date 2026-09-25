@@ -49,6 +49,14 @@ Current implementation branch: `develop`
   - Confirm you cannot navigate back to protected routes without signing in again.
   - (If warning modal added) wait to warning time, click “Stay signed in”, confirm session remains active.
 
+### Subscription renewal visibility
+
+- [x] Show the selected workspace's current plan and subscription status beside the user's profile in the workspace sidebar.
+- [x] Show Growth/Business renewal countdown on the workspace dashboard with a link to subscription settings.
+- [x] Allow Super Admins to configure the first and final renewal reminder timing; defaults remain 14 days and 48 hours.
+- [x] Keep expiry enforcement server-side and prevent non-Super Admin configuration writes.
+- [x] Allow an eligible Starter workspace to start one configurable Growth trial directly from the dashboard; Super Admins can set 1–30 days or 1–20,160 minutes for testing, with a 14-day default. Record trial usage and expire it server-side.
+
 ---
 
 ## 3) Deleting a customer while transactions are processing

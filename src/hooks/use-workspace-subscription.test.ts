@@ -35,4 +35,28 @@ describe("workspace subscription entitlements", () => {
     expect(entitlements.isPaidPlan).toBe(false);
     expect(entitlements.canAccessPaidFeatures).toBe(false);
   });
+
+  it("removes paid access immediately when the renewal timestamp has passed", () => {
+    const expiredTrial = {
+      ...subscription("growth", "trial"),
+      nextRenewalAt: "2026-09-25T00:00:00.000Z",
+    };
+    const entitlements = getWorkspaceSubscriptionEntitlements(expiredTrial, new Date("2026-09-25T00:01:00.000Z").getTime());
+
+    expect(entitlements.isExpired).toBe(true);
+    expect(entitlements.isActive).toBe(false);
+    expect(entitlements.canAccessPaidFeatures).toBe(false);
+  });
+
+  it("does not let an old paid renewal date block a reset Starter workspace", () => {
+    const resetStarter = {
+      ...subscription("starter", "active"),
+      nextRenewalAt: "2026-01-01T00:00:00.000Z",
+    };
+    const entitlements = getWorkspaceSubscriptionEntitlements(resetStarter, new Date("2026-09-25T00:01:00.000Z").getTime());
+
+    expect(entitlements.isActive).toBe(true);
+    expect(entitlements.isExpired).toBe(false);
+    expect(entitlements.canAccessPaidFeatures).toBe(false);
+  });
 });

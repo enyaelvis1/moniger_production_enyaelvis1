@@ -76,6 +76,8 @@ That changes the implementation priority:
 - [x] Self-service cancellation stops Paystack renewal, preserves access through the recorded renewal date, and records `cancel_at_period_end` with an audit event.
 - [x] Paystack `invoice.payment_failed` events set the workspace subscription to `past_due` and notify active workspace finance users with a Settings recovery link; hosted retry and email-delivery verification remain release gates.
 - [x] Added an hourly subscription-renewal automation path for 14-day and 48-hour reminders, idempotent delivery tracking, and expiry locking when an unpaid paid subscription passes its renewal date.
+- [x] Added a workspace dashboard renewal countdown and Super Admin controls for the first-reminder and final-reminder timing; the default remains 14 days and 48 hours, and expiry enforcement remains server-side.
+- [x] Added a one-time, server-authorized Growth trial from the Starter dashboard; Super Admins can configure its duration in days or minutes for local testing, with a 14-day default. Trial access expires through the same renewal automation and cannot be restarted for the workspace.
 
 ### Customer payment collection
 
