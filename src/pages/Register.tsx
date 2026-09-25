@@ -21,7 +21,10 @@ import {
 } from "@/lib/subscriptions";
 import { getRegistrationDestination } from "@/lib/subscription-registration";
 import { markEmailConfirmationReminderPending } from "@/lib/email-confirmation-reminder";
-import { initializeWorkspaceSubscriptionCheckout } from "@/lib/workspace-subscriptions";
+import {
+  initializeSignupSubscriptionCheckout,
+  initializeWorkspaceSubscriptionCheckout,
+} from "@/lib/workspace-subscriptions";
 
 const getPasswordStrength = (
   t: (key: string, params?: Record<string, string | number>) => string,
@@ -535,23 +538,25 @@ const RegisterPage = () => {
 
       markEmailConfirmationReminderPending(result.userId);
 
-      if (result.needsEmailConfirmation) {
-        setSuccessState({
-          email: normalizedEmail,
-          redirectToDashboard: false,
-        });
-        return;
-      }
-
       if (isPaidPlanSelection) {
         let checkoutError: unknown = null;
 
+        if (result.needsEmailConfirmation && !result.userId) {
+          throw new Error("Your account was created, but we could not start the secure payment session.");
+        }
+
         for (let attempt = 1; attempt <= PAID_CHECKOUT_MAX_ATTEMPTS; attempt += 1) {
           try {
-            const checkoutResult = await initializeWorkspaceSubscriptionCheckout({
-              billingCycle: getDefaultSubscriptionBillingCycle(selectedPlan),
-              plan: selectedPlan,
-            });
+            const checkoutResult = result.needsEmailConfirmation
+              ? await initializeSignupSubscriptionCheckout({
+                billingCycle: getDefaultSubscriptionBillingCycle(selectedPlan),
+                plan: selectedPlan,
+                signupUserId: result.userId ?? "",
+              })
+              : await initializeWorkspaceSubscriptionCheckout({
+                billingCycle: getDefaultSubscriptionBillingCycle(selectedPlan),
+                plan: selectedPlan,
+              });
 
             if (checkoutResult.kind === "checkout") {
               window.location.assign(checkoutResult.authorizationUrl);
@@ -574,6 +579,14 @@ const RegisterPage = () => {
         throw checkoutError ?? new Error("Unable to start Paystack checkout.");
       }
 
+      if (result.needsEmailConfirmation) {
+        setSuccessState({
+          email: normalizedEmail,
+          redirectToDashboard: false,
+        });
+        return;
+      }
+
       setSuccessState({
         email: normalizedEmail,
         redirectToDashboard: true,
@@ -591,6 +604,7 @@ const RegisterPage = () => {
       topActionLabel={t("auth.register.logIn")}
       topActionTo={loginPath}
       cardClassName="max-w-[1180px]"
+      contentClassName={step === 1 ? "mt-6" : undefined}
       cardHeader={
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4 text-[13px] font-medium text-[#677391]">
@@ -730,6 +744,9 @@ const RegisterPage = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {step === 1 ? (
           <>
+            <button type="submit" className={`${authPrimaryButtonClassName} w-full sm:w-auto`}>
+              {isPaidPlanSelection ? "Continue to account setup" : "Continue with Starter"}
+            </button>
             <fieldset className="space-y-3">
               <legend className="text-[14px] font-semibold text-[#15203B]">Choose your workspace plan</legend>
               <p className="text-[13px] leading-6 text-[#677391]">
@@ -794,7 +811,7 @@ const RegisterPage = () => {
                         setSelectedPlan(plan);
                         if (error) setError("");
                       }}
-                      className={`flex h-full flex-col rounded-[18px] border p-5 text-left transition-colors ${
+                      className={`flex h-full flex-col rounded-[18px] border p-4 text-left transition-colors sm:p-5 ${
                         isSelected
                           ? "border-[#5B67F7] bg-[#F8F9FF] shadow-[0_12px_28px_rgba(91,103,247,0.12)]"
                           : "border-[#DDE2EF] bg-white hover:border-[#9EA9D8] hover:bg-[#FAFBFF]"
@@ -818,12 +835,12 @@ const RegisterPage = () => {
                           <Check size={12} className={isSelected ? "text-white" : "text-transparent"} />
                         </span>
                       </span>
-                      <span className="mt-5 block text-[26px] font-extrabold tracking-[-0.04em] text-[#10203F]">
+                      <span className="mt-4 block text-[26px] font-extrabold tracking-[-0.04em] text-[#10203F]">
                         {plan === "starter" ? "Free" : planDetails.priceLabel.replace("/mo", "")}
                         {plan !== "starter" ? <span className="ml-1 text-[13px] font-normal tracking-normal text-[#677391]">/month</span> : null}
                       </span>
                       <span className="mt-1 block text-[12px] text-[#677391]">{paymentLabel}</span>
-                      <ul className="my-5 flex-1 space-y-3 border-t border-[#E5E9F3] pt-5">
+                      <ul className="my-3 grid flex-1 grid-cols-2 gap-x-3 gap-y-2 border-t border-[#E5E9F3] pt-3 text-[12px] sm:my-4 sm:gap-y-2.5 sm:pt-4 sm:text-[13px]">
                         {planDetails.features.map((feature) => (
                           <li key={feature} className="flex items-start gap-2 text-[13px] leading-5 text-[#677391]">
                             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#5B67F7]" aria-hidden="true" />
@@ -877,11 +894,6 @@ const RegisterPage = () => {
                 ) : null}
               </div>
             </fieldset>
-            <div className="sticky bottom-3 z-10 -mx-2 rounded-[16px] border border-[#E5E9F3] bg-white/95 p-2 shadow-[0_8px_24px_rgba(15,23,42,0.1)] backdrop-blur md:static md:m-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none">
-              <button type="submit" className={`${authPrimaryButtonClassName} w-full sm:w-auto`}>
-                {isPaidPlanSelection ? "Continue to account setup" : "Continue with Starter"}
-              </button>
-            </div>
           </>
         ) : step === 2 ? (
           <>

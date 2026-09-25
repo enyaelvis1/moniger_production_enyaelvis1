@@ -19,6 +19,7 @@
     "test:e2e:headed": "playwright test --headed",
     "create:test-user": "node scripts/create-test-user.mjs",
     "create:admin-test-users": "node scripts/create-admin-test-users.mjs",
+    "reset:local-data": "node scripts/reset-local-platform-data.mjs",
     "verify:webhook:routed": "node scripts/verify-routed-paystack-webhook.mjs",
     "verify:release:security": "node scripts/verify-release-security-config.mjs",
     "verify:production:routes": "node scripts/verify-production-routes.mjs",

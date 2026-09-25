@@ -261,8 +261,8 @@ const PricingConfirmedPage = () => {
                   <div>
                     <p className="text-lg font-semibold text-[#14532D]">Checkout received</p>
                     <p className="mt-2 text-sm leading-[1.8] text-[#166534]">
-                      Your Paystack checkout for the {publicConfirmation.plan} plan was recorded. Sign in to confirm the
-                      final workspace billing details.
+                      Your Paystack checkout for the {publicConfirmation.plan} plan was recorded. Check your inbox and
+                      confirm your email to finish activating access to the workspace dashboard.
                     </p>
                   </div>
                 </div>
@@ -284,7 +284,7 @@ const PricingConfirmedPage = () => {
 
                 <div className="flex flex-wrap gap-3">
                   <Button asChild>
-                    <Link to={loginPath}>Sign in to continue</Link>
+                    <Link to={loginPath}>Sign in after email confirmation</Link>
                   </Button>
                   <Button asChild variant="outline">
                     <Link to="/pricing">Back to pricing</Link>
@@ -295,8 +295,8 @@ const PricingConfirmedPage = () => {
               <>
                 <div className="rounded-[18px] border border-[#DBEAFE] bg-[#EFF6FF] px-5 py-5 text-sm leading-[1.8] text-[#1D4ED8]">
                   We have your Paystack checkout reference, but the workspace subscription is still waiting for final
-                  confirmation. If this takes longer than expected, sign in and we’ll verify it directly for your
-                  workspace.
+                  confirmation. Check your inbox first, then sign in after confirming your email so we can finish
+                  activating the workspace.
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="rounded-[18px] border border-[#E6EAF6] bg-[#FBFCFF] p-5">
@@ -314,7 +314,7 @@ const PricingConfirmedPage = () => {
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <Button asChild>
-                    <Link to={loginPath}>Sign in to verify now</Link>
+                    <Link to={loginPath}>Sign in after email confirmation</Link>
                   </Button>
                   <Button asChild variant="outline">
                     <Link to="/pricing">Back to pricing</Link>

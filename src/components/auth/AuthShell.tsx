@@ -21,6 +21,7 @@ type AuthShellProps = {
   children: ReactNode;
   bottomPanel?: ReactNode;
   cardClassName?: string;
+  contentClassName?: string;
 };
 
 const PlatformMark = () => (
@@ -53,6 +54,7 @@ const AuthShell = ({
   children,
   bottomPanel,
   cardClassName,
+  contentClassName,
 }: AuthShellProps) => (
   <div className="min-h-screen bg-[#F3F4FB] text-[#15203B]">
     {/* Subtle gradient overlay */}
@@ -84,7 +86,7 @@ const AuthShell = ({
       >
         <div className="px-6 py-8 sm:px-12 sm:py-14">
           {cardHeader}
-          <div className="mt-10">{children}</div>
+          <div className={cn("mt-10", contentClassName)}>{children}</div>
         </div>
 
         {bottomPanel ? (

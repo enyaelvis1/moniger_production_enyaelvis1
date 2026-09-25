@@ -138,6 +138,9 @@ const Dashboard = () => {
   const emailConfirmed = searchParams.get("email_confirmed") === "1";
   const signupPlan = searchParams.get("signup_plan");
   const pendingSignupPlan: SubscriptionPlan | null = isSubscriptionPlan(signupPlan) && signupPlan !== "starter" ? signupPlan : null;
+  const showPendingSignupPayment = Boolean(
+    pendingSignupPlan && !workspaceSubscription.entitlements.hasConfirmedPaidSubscription,
+  );
   useEffect(() => {
     if (!user?.id) {
       setShowEmailConfirmationReminder(false);
@@ -291,7 +294,7 @@ const Dashboard = () => {
               </div>
             </div>
           ) : null}
-          {pendingSignupPlan ? (
+          {showPendingSignupPayment ? (
             <div className="rounded-2xl border border-[#C7D2FE] bg-[#EEF2FF] px-5 py-5 text-[#172554] shadow-sm dark:border-indigo-400/30 dark:bg-indigo-500/10 dark:text-indigo-100">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
