@@ -699,6 +699,12 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
   const [sessionTimeoutInput, setSessionTimeoutInput] = useState(() => String(sessionTimeoutMinutes));
   const [emailDeliveryStatus, setEmailDeliveryStatus] = useState<EmailDeliveryStatus>(null);
   const currentDeviceSnapshot = useMemo(() => getCurrentDeviceSnapshot(), []);
+  const parsedSessionTimeoutInput = Number(sessionTimeoutInput);
+  const isSessionTimeoutInputValid = Number.isInteger(parsedSessionTimeoutInput)
+    && parsedSessionTimeoutInput >= 1
+    && parsedSessionTimeoutInput <= 120;
+  const isSessionTimeoutDirty = isSessionTimeoutInputValid
+    && parsedSessionTimeoutInput !== sessionTimeoutMinutes;
 
   const settings = settingsQuery.data;
   const activeTabParam = searchParams.get("tab");
@@ -2980,16 +2986,27 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
                         step={1}
                         value={sessionTimeoutInput}
                         onChange={(event) => {
-                          const nextValue = event.target.value;
-                          setSessionTimeoutInput(nextValue);
-
-                          const parsedValue = Number(nextValue);
-                          if (Number.isFinite(parsedValue)) {
-                            setSessionTimeoutMinutes(parsedValue);
-                          }
+                          setSessionTimeoutInput(event.target.value);
                         }}
                       />
                     </div>
+
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        if (!isSessionTimeoutInputValid) {
+                          return;
+                        }
+
+                        setSessionTimeoutMinutes(parsedSessionTimeoutInput);
+                        toast({ title: "Inactivity timeout saved", description: `This device will sign out after ${parsedSessionTimeoutInput} minute${parsedSessionTimeoutInput === 1 ? "" : "s"} of inactivity.` });
+                      }}
+                      disabled={!isSessionTimeoutDirty}
+                      className="gap-2"
+                    >
+                      <Save className="h-4 w-4" />
+                      Save
+                    </Button>
 
                     <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
                       Current timeout: <span className="font-medium text-foreground">{sessionTimeoutMinutes} minute{sessionTimeoutMinutes === 1 ? "" : "s"}</span>
