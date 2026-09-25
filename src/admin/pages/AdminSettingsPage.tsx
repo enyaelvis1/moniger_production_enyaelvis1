@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Database, ShieldCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Database, Save, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -116,6 +116,12 @@ const AdminSettingsPage = () => {
   const [isCleaningTestData, setIsCleaningTestData] = useState(false);
   const [revokingAdminUserId, setRevokingAdminUserId] = useState<string | null>(null);
   const testDataDeletionCount = testDataPreview?.confirmationCount ?? 0;
+  const parsedSessionTimeoutInput = Number(sessionTimeoutInput);
+  const isSessionTimeoutInputValid = Number.isInteger(parsedSessionTimeoutInput)
+    && parsedSessionTimeoutInput >= 1
+    && parsedSessionTimeoutInput <= 120;
+  const isSessionTimeoutDirty = isSessionTimeoutInputValid
+    && parsedSessionTimeoutInput !== sessionTimeoutMinutes;
 
   const previewTestData = useCallback(async (resource = testDataResource) => {
     try {
@@ -309,17 +315,28 @@ const AdminSettingsPage = () => {
                     step={1}
                     value={sessionTimeoutInput}
                     onChange={(event) => {
-                      const nextValue = event.target.value;
-                      setSessionTimeoutInput(nextValue);
-
-                      const parsedValue = Number(nextValue);
-                      if (Number.isFinite(parsedValue)) {
-                        setSessionTimeoutMinutes(parsedValue);
-                      }
+                      setSessionTimeoutInput(event.target.value);
                     }}
                     className="border-white/10 bg-[#0F1621] text-white placeholder:text-white/30"
                   />
                 </div>
+
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (!isSessionTimeoutInputValid) {
+                      return;
+                    }
+
+                    setSessionTimeoutMinutes(parsedSessionTimeoutInput);
+                    toast({ title: "Inactivity timeout saved", description: `Admin sessions will sign out after ${parsedSessionTimeoutInput} minute${parsedSessionTimeoutInput === 1 ? "" : "s"} of inactivity.` });
+                  }}
+                  disabled={!isSessionTimeoutDirty}
+                  className="gap-2 bg-[#3B82F6] text-white hover:bg-[#2563EB]"
+                >
+                  <Save className="h-4 w-4" />
+                  Save timeout
+                </Button>
 
                 <div className="rounded-xl border border-white/5 bg-[#0F1621] p-4 text-sm text-white/60">
                   Current timeout: <span className="font-medium text-[#F1F5F9]">{sessionTimeoutMinutes} minute{sessionTimeoutMinutes === 1 ? "" : "s"}</span>
