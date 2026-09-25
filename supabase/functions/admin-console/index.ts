@@ -2067,6 +2067,10 @@ Deno.serve(async (request) => {
           : asNumber(payload.amount);
         const nextRenewalAt = asNullableString(payload.nextRenewalAt);
         const cancelAtPeriodEnd = Boolean(payload.cancelAtPeriodEnd);
+        const resetTrialEligibility = Boolean(payload.resetTrialEligibility);
+        if (resetTrialEligibility && adminAccess.role !== "super_admin") {
+          return json({ error: "Only Super Admins can reset trial eligibility." }, 403);
+        }
         const cancelledAt = status === "cancelled"
           ? asNullableString(payload.cancelledAt) ?? new Date().toISOString()
           : null;
@@ -2087,6 +2091,9 @@ Deno.serve(async (request) => {
           provider_subscription_id: asNullableString(payload.providerSubscriptionId),
           started_at: asNullableString(payload.startedAt) ?? new Date().toISOString(),
           status,
+          ...(resetTrialEligibility && plan === "starter"
+            ? { trial_ends_at: null, trial_started_at: null, trial_used_at: null }
+            : {}),
           updated_by: user.id,
         });
 
@@ -2117,6 +2124,7 @@ Deno.serve(async (request) => {
             next_renewal_at: nextRenewalAt,
             plan,
             provider: asString(payload.provider) || "manual",
+            reset_trial_eligibility: resetTrialEligibility && plan === "starter",
             status,
           },
           entityId: businessId,
@@ -3929,8 +3937,32 @@ Deno.serve(async (request) => {
       }
 
       case "settings.platformConfig": {
+        const configKey = asString(payload.key);
+        if (configKey === "subscription_renewal_settings" && asString(adminAccess.role) !== "super_admin") {
+          return json({ error: "Only super admins can configure subscription renewal settings." }, 403);
+        }
+        if (configKey === "subscription_renewal_settings") {
+          const config = asRecord(payload.value);
+          const noticeDays = Number(config.noticeDays);
+          const finalNoticeHours = Number(config.finalNoticeHours);
+          if (!Number.isInteger(noticeDays) || noticeDays < 1 || noticeDays > 60 || !Number.isInteger(finalNoticeHours) || finalNoticeHours < 1 || finalNoticeHours > 168) {
+            return json({ error: "Renewal notice timing must be a whole number between 1–60 days and 1–168 hours." }, 400);
+          }
+        }
+        if (configKey === "subscription_trial_settings") {
+          if (asString(adminAccess.role) !== "super_admin") {
+            return json({ error: "Only super admins can configure subscription trial settings." }, 403);
+          }
+          const config = asRecord(payload.value);
+          const durationValue = Number(config.durationValue);
+          const durationUnit = asString(config.durationUnit);
+          const maxDuration = durationUnit === "minutes" ? 20160 : durationUnit === "days" ? 30 : 0;
+          if (!Number.isInteger(durationValue) || durationValue < 1 || durationValue > maxDuration) {
+            return json({ error: "Trial duration must be a whole number between 1–30 days or 1–20,160 minutes." }, 400);
+          }
+        }
         await adminClient.from("platform_config").upsert({
-          key: asString(payload.key),
+          key: configKey,
           value: asRecord(payload.value),
         }, {
           onConflict: "key",
