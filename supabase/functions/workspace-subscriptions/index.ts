@@ -988,6 +988,38 @@ Deno.serve(async (request) => {
         userId: user.id,
       });
 
+      // Keep the selected paid plan pending until Paystack verification succeeds.
+      // This prevents a new Growth/Business workspace from inheriting the
+      // Starter access state while checkout is still unpaid. When replacing an
+      // existing managed Paystack subscription, the old active subscription
+      // remains usable until the replacement is verified.
+      if (!isReplacingManagedPaystackSubscription) {
+        const pendingSubscriptionResponse = await adminClient.from("business_subscriptions").upsert({
+          amount,
+          billing_cycle: billingCycle,
+          business_id: business.id,
+          cancel_at_period_end: false,
+          cancelled_at: null,
+          currency: subscriptionCurrency,
+          expired_at: null,
+          last_payment_reference: null,
+          next_renewal_at: null,
+          plan,
+          provider: "paystack",
+          provider_customer_id: null,
+          provider_email_token: null,
+          provider_plan_code: paystackPlan.planCode,
+          provider_subscription_id: null,
+          started_at: existingSubscription?.started_at ?? new Date().toISOString(),
+          status: "paused",
+          updated_by: user.id,
+        });
+
+        if (pendingSubscriptionResponse.error) {
+          throw pendingSubscriptionResponse.error;
+        }
+      }
+
       await safeInsertAuditLog({
         action: "subscription.checkout_initialized",
         adminClient,
