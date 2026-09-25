@@ -20,6 +20,7 @@ const PaymentsPage = lazy(() => import("../pages/Payments.tsx"));
 const ReportsPage = lazy(() => import("../pages/Reports.tsx"));
 const AuditTrailPage = lazy(() => import("../pages/AuditTrail.tsx"));
 const SettingsPage = lazy(() => import("../pages/Settings.tsx"));
+const SubscriptionManagementPage = lazy(() => import("../pages/SubscriptionManagement.tsx"));
 const TeamPage = lazy(() => import("../pages/Team.tsx"));
 const NotFound = lazy(() => import("../pages/NotFound.tsx"));
 
@@ -30,7 +31,7 @@ const PlatformApp = () => (
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><WorkspaceSubscriptionGate><Dashboard /></WorkspaceSubscriptionGate></ProtectedRoute>} />
         <Route path="/wallet" element={<ProtectedRoute><WorkspaceSubscriptionGate><WalletPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
         <Route path="/wallet/confirmed" element={<ProtectedRoute><WalletFundingConfirmedPage /></ProtectedRoute>} />
         <Route path="/marketplace-routing" element={<ProtectedRoute><WorkspaceSubscriptionGate><MarketplaceRoutingPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
@@ -43,6 +44,7 @@ const PlatformApp = () => (
         <Route path="/team" element={<ProtectedRoute><WorkspaceSubscriptionGate><TeamPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
         <Route path="/audit-trail" element={<ProtectedRoute><WorkspaceSubscriptionGate><AuditTrailPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/subscription" element={<ProtectedRoute><SubscriptionManagementPage /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

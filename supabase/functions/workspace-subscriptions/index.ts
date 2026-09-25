@@ -25,6 +25,7 @@ type SubscriptionAction =
   | "public.confirmation-status"
   | "self.cancel"
   | "self.initialize-checkout"
+  | "self.start-growth-trial"
   | "self.update"
   | "self.verify-checkout";
 
@@ -58,6 +59,9 @@ type ExistingSubscriptionRow = {
   provider_subscription_id: string | null;
   started_at: string | null;
   status: string | null;
+  trial_ends_at: string | null;
+  trial_started_at: string | null;
+  trial_used_at: string | null;
 };
 
 type CheckoutSessionRow = {
@@ -327,7 +331,7 @@ const loadExistingSubscription = async ({
   const response = await adminClient
     .from("business_subscriptions")
     .select(
-      "amount, billing_cycle, cancel_at_period_end, cancelled_at, currency, last_payment_reference, next_renewal_at, plan, provider, provider_customer_id, provider_email_token, provider_plan_code, provider_subscription_id, started_at, status",
+      "amount, billing_cycle, cancel_at_period_end, cancelled_at, currency, last_payment_reference, next_renewal_at, plan, provider, provider_customer_id, provider_email_token, provider_plan_code, provider_subscription_id, started_at, status, trial_ends_at, trial_started_at, trial_used_at",
     )
     .eq("business_id", businessId)
     .maybeSingle<ExistingSubscriptionRow>();
@@ -337,6 +341,34 @@ const loadExistingSubscription = async ({
   }
 
   return response.data;
+};
+
+const loadGrowthTrialDurationMs = async (adminClient: ReturnType<typeof createClient>) => {
+  const response = await adminClient
+    .from("platform_config")
+    .select("value")
+    .eq("key", "subscription_trial_settings")
+    .maybeSingle();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  const config = response.data?.value && typeof response.data.value === "object" && !Array.isArray(response.data.value)
+    ? response.data.value as Record<string, unknown>
+    : {};
+  const durationValue = asNumber(config.durationValue);
+  const durationUnit = asString(config.durationUnit);
+  if (durationValue && Number.isInteger(durationValue) && durationValue >= 1) {
+    if (durationUnit === "minutes" && durationValue <= 20160) {
+      return durationValue * 60 * 1000;
+    }
+    if (durationUnit === "days" && durationValue <= 30) {
+      return durationValue * 24 * 60 * 60 * 1000;
+    }
+  }
+
+  return 14 * 24 * 60 * 60 * 1000;
 };
 
 const loadCheckoutSession = async ({
@@ -688,6 +720,7 @@ Deno.serve(async (request) => {
     payload.action !== "public.confirmation-status" &&
     payload.action !== "self.cancel" &&
     payload.action !== "self.initialize-checkout" &&
+    payload.action !== "self.start-growth-trial" &&
     payload.action !== "self.update" &&
     payload.action !== "self.verify-checkout"
   ) {
@@ -807,6 +840,76 @@ Deno.serve(async (request) => {
       asNullableString(user.user_metadata?.name) ??
       asNullableString(user.user_metadata?.full_name) ??
       business.name;
+
+    if (payload.action === "self.start-growth-trial") {
+      if (!existingSubscription || existingSubscription.plan !== "starter" || existingSubscription.status !== "active") {
+        return json({ error: "A Growth trial is only available from an active Starter workspace." }, 409);
+      }
+      if (existingSubscription.trial_used_at || existingSubscription.trial_started_at || existingSubscription.trial_ends_at) {
+        return json({ error: "This workspace has already used its Growth trial." }, 409);
+      }
+
+      const trialStartedAt = new Date();
+      const trialDurationMs = await loadGrowthTrialDurationMs(adminClient);
+      const trialEndsAt = new Date(trialStartedAt.getTime() + trialDurationMs);
+      const trialDurationMinutes = Math.round(trialDurationMs / (60 * 1000));
+      const growthDefaults = getDefaultSubscriptionConfig("growth");
+      const trialResponse = await adminClient
+        .from("business_subscriptions")
+        .update({
+          amount: getResolvedAmount({ billingCycle: "monthly", defaults: growthDefaults }),
+          billing_cycle: "monthly",
+          cancel_at_period_end: false,
+          cancelled_at: null,
+          currency: business.defaultCurrency ?? "NGN",
+          expired_at: null,
+          last_payment_reference: null,
+          next_renewal_at: trialEndsAt.toISOString(),
+          plan: "growth",
+          provider: "manual",
+          provider_customer_id: null,
+          provider_email_token: null,
+          provider_plan_code: null,
+          provider_subscription_id: null,
+          started_at: trialStartedAt.toISOString(),
+          status: "trial",
+          trial_ends_at: trialEndsAt.toISOString(),
+          trial_started_at: trialStartedAt.toISOString(),
+          trial_used_at: trialStartedAt.toISOString(),
+          updated_at: trialStartedAt.toISOString(),
+          updated_by: user.id,
+        })
+        .eq("business_id", business.id)
+        .eq("plan", "starter")
+        .eq("status", "active")
+        .is("trial_used_at", null)
+        .is("trial_started_at", null)
+        .select("business_id")
+        .maybeSingle();
+      if (trialResponse.error) throw trialResponse.error;
+      if (!trialResponse.data) return json({ error: "The trial could not be started because the workspace changed. Refresh and try again." }, 409);
+
+      await safeInsertAuditLog({
+        action: "workspace_growth_trial_started",
+        adminClient,
+        businessId: business.id,
+        detail: { ends_at: trialEndsAt.toISOString(), plan: "growth", trial_duration_minutes: trialDurationMinutes },
+        entityId: business.id,
+        summary: `${trialDurationMinutes >= 1440 ? `${Math.round(trialDurationMinutes / 1440)}-day` : `${trialDurationMinutes}-minute`} Growth trial started`,
+        userId: user.id,
+      });
+
+      return json(buildActivatedResponse({
+        amount: getResolvedAmount({ billingCycle: "monthly", defaults: growthDefaults }),
+        billingCycle: "monthly",
+        business,
+        nextRenewalAt: trialEndsAt.toISOString(),
+        plan: "growth",
+        provider: "manual",
+        reference: null,
+        status: "trial",
+      }));
+    }
 
     if (payload.action === "self.cancel") {
       if (!isManagedPaystackSubscription(existingSubscription)) {

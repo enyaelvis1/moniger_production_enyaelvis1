@@ -19,7 +19,7 @@ type WorkspaceUpgradePromptProps = {
   isCancelled?: boolean;
   isExpired?: boolean;
   isGracePeriod?: boolean;
-  reason: "paid-plan-required" | "inactive-plan";
+  reason: "paid-plan-required" | "inactive-plan" | "manage-subscription";
 };
 
 const upgradeBullets = [
@@ -51,7 +51,9 @@ const WorkspaceUpgradePrompt = ({
   }, [currentPlan]);
 
   const heading =
-    reason === "inactive-plan"
+    reason === "manage-subscription"
+      ? "Manage your workspace subscription"
+      : reason === "inactive-plan"
       ? isCancelled
         ? "Your workspace subscription is cancelled"
         : isExpired
@@ -60,7 +62,9 @@ const WorkspaceUpgradePrompt = ({
       : "Upgrade your workspace to continue";
 
   const body =
-    reason === "inactive-plan"
+    reason === "manage-subscription"
+      ? "Review your current plan and upgrade securely with recurring Paystack billing."
+      : reason === "inactive-plan"
       ? isCancelled
         ? "Renew or upgrade your workspace subscription to restore access to premium features."
         : isExpired
@@ -112,12 +116,12 @@ const WorkspaceUpgradePrompt = ({
               <Sparkles size={14} />
               Premium workspace feature
             </div>
-            <h1 className="mt-4 text-3xl font-bold tracking-[-0.04em] text-[#10203F] sm:text-4xl">{heading}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5F6A88] sm:text-[15px]">
+            <h1 className="mt-4 text-3xl font-bold tracking-[-0.04em] text-[#10203F] dark:text-slate-100 sm:text-4xl">{heading}</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5F6A88] dark:text-slate-300 sm:text-[15px]">
               {body}{currentPlan ? ` Your current plan is ${currentPlan}.` : ""}
             </p>
           </div>
-          <Link to="/settings?tab=business" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#DCE2F2] bg-white px-4 text-sm font-semibold text-[#10203F] shadow-sm transition-colors hover:bg-[#F8FAFF]">
+          <Link to="/settings?tab=business" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#DCE2F2] bg-white px-4 text-sm font-semibold text-[#10203F] shadow-sm transition-colors hover:bg-[#F8FAFF] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
             Workspace settings <ChevronRight size={16} />
           </Link>
         </div>
@@ -153,7 +157,7 @@ const WorkspaceUpgradePrompt = ({
                         <p key={bullet} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-[#22A06B]" />{bullet}</p>
                       ))}
                     </div>
-                    <Button type="button" onClick={() => void startUpgrade(plan)} disabled={isLoading} className={`mt-6 h-11 w-full rounded-xl text-sm font-semibold shadow-none ${isRecommended ? "bg-[#10203F] hover:bg-[#1A2D57]" : "border-[#DCE2F2] bg-white text-[#10203F] hover:bg-[#F4F6FF] hover:text-[#10203F]"}`} variant={isRecommended ? "default" : "outline"}>
+                    <Button type="button" onClick={() => void startUpgrade(plan)} disabled={isLoading} className={`mt-6 h-11 w-full rounded-xl text-sm font-semibold shadow-none ${isRecommended ? "bg-[#10203F] text-white hover:bg-[#1A2D57] dark:bg-[#1D4ED8] dark:text-white dark:hover:bg-[#2563EB]" : "border-[#DCE2F2] bg-white text-[#10203F] hover:bg-[#F4F6FF] hover:text-[#10203F]"}`} variant={isRecommended ? "default" : "outline"}>
                       {pendingPlan === plan && isLoading ? "Opening checkout…" : `Upgrade to ${label}`} <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
@@ -165,13 +169,13 @@ const WorkspaceUpgradePrompt = ({
           </section>
 
           <aside className="h-fit rounded-3xl border border-[#DCE2F2] bg-[#10203F] p-5 text-white shadow-[0_16px_45px_rgba(16,32,63,0.12)] sm:p-6">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/60"><BadgeInfo size={14} /> Plan status</div>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/85"><BadgeInfo size={14} /> Plan status</div>
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.07] p-4">
-              <div className="flex items-center justify-between gap-3"><p className="text-xs uppercase tracking-[0.12em] text-white/55">Current plan</p><span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/75">{activePlan}</span></div>
+              <div className="flex items-center justify-between gap-3"><p className="text-xs uppercase tracking-[0.12em] text-white/80">Current plan</p><span className="rounded-full bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white">{activePlan}</span></div>
               <p className="mt-3 text-2xl font-bold">{catalogForPlan(activePlan).priceLabel}</p>
-              <p className="mt-2 text-sm leading-6 text-white/65">{isCancelled ? "Cancelled — renew to restore access." : isExpired ? "Expired — renew to restore access." : isGracePeriod ? "Past due — billing needs attention." : "Premium features are not included on this plan."}</p>
+              <p className="mt-2 text-sm leading-6 text-white/85">{isCancelled ? "Cancelled — renew to restore access." : isExpired ? "Expired — renew to restore access." : isGracePeriod ? "Past due — billing needs attention." : "Premium features are not included on this plan."}</p>
             </div>
-            <div className="mt-5 space-y-3 text-sm text-white/70">
+            <div className="mt-5 space-y-3 text-sm text-white/85">
               <p className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-[#71E0B0]" /> Secure recurring billing</p>
               <p className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-[#71E0B0]" /> Upgrade takes effect after confirmation</p>
               <p className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-[#71E0B0]" /> Cancel or manage from settings</p>
