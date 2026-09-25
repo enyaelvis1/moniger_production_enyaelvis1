@@ -506,7 +506,6 @@ const AdminSubscriptionsPage = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="trial">Trial</SelectItem>
                     <SelectItem value="past_due">Past due</SelectItem>
                     <SelectItem value="paused">Paused</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>

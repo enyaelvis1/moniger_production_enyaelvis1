@@ -8,9 +8,11 @@ const subscription = (plan: WorkspaceSubscription["plan"], status: WorkspaceSubs
   cancelAtPeriodEnd: false,
   cancelledAt: null,
   currency: "NGN",
+  lastPaymentReference: plan === "starter" ? null : "PSK-TEST-REFERENCE",
   nextRenewalAt: null,
   plan,
   provider: plan === "starter" ? "manual" : "paystack",
+  providerSubscriptionId: plan === "starter" ? null : "SUB-TEST-REFERENCE",
   status,
   updatedAt: "2026-09-23T00:00:00.000Z",
 });
@@ -18,7 +20,9 @@ const subscription = (plan: WorkspaceSubscription["plan"], status: WorkspaceSubs
 describe("workspace subscription entitlements", () => {
   it("keeps Starter, Growth, and Business plans distinct", () => {
     expect(getWorkspaceSubscriptionEntitlements(subscription("starter", "active")).canAccessPaidFeatures).toBe(false);
+    expect(getWorkspaceSubscriptionEntitlements(subscription("starter", "active")).hasConfirmedPaidSubscription).toBe(false);
     expect(getWorkspaceSubscriptionEntitlements(subscription("growth", "active")).canAccessPaidFeatures).toBe(true);
+    expect(getWorkspaceSubscriptionEntitlements(subscription("growth", "active")).hasConfirmedPaidSubscription).toBe(true);
     expect(getWorkspaceSubscriptionEntitlements(subscription("business", "active")).canAccessPaidFeatures).toBe(true);
   });
 
@@ -28,6 +32,18 @@ describe("workspace subscription entitlements", () => {
     expect(getWorkspaceSubscriptionEntitlements(subscription("business", "cancelled")).canAccessPaidFeatures).toBe(false);
     expect(getWorkspaceSubscriptionEntitlements(subscription("business", "expired")).isExpired).toBe(true);
     expect(getWorkspaceSubscriptionEntitlements(subscription("business", "expired")).canAccessPaidFeatures).toBe(false);
+  });
+
+  it("does not grant paid access to an unpaid manual paid-plan row", () => {
+    const unpaidGrowth = {
+      ...subscription("growth", "active"),
+      lastPaymentReference: null,
+      provider: "manual",
+      providerSubscriptionId: null,
+    };
+
+    expect(getWorkspaceSubscriptionEntitlements(unpaidGrowth).isActive).toBe(false);
+    expect(getWorkspaceSubscriptionEntitlements(unpaidGrowth).canAccessPaidFeatures).toBe(false);
   });
 
   it("does not treat a missing subscription as Starter while it is unresolved", () => {

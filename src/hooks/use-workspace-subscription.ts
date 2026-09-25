@@ -13,8 +13,10 @@ export type WorkspaceSubscription = {
   cancelledAt: string | null;
   currency: string;
   nextRenewalAt: string | null;
+  lastPaymentReference: string | null;
   plan: "business" | "growth" | "starter";
   provider: string;
+  providerSubscriptionId: string | null;
   status: "active" | "cancelled" | "expired" | "past_due" | "paused" | "trial";
   trialEndsAt: string | null;
   trialStartedAt: string | null;
@@ -24,6 +26,7 @@ export type WorkspaceSubscription = {
 export type WorkspaceSubscriptionEntitlements = {
   canAccessStarterFeatures: boolean;
   canAccessPaidFeatures: boolean;
+  hasConfirmedPaidSubscription: boolean;
   isActive: boolean;
   isCancelled: boolean;
   isExpired: boolean;
@@ -34,7 +37,7 @@ export type WorkspaceSubscriptionEntitlements = {
 const fetchWorkspaceSubscription = async (businessId: string): Promise<WorkspaceSubscription | null> => {
   const { data, error } = await supabase
     .from("business_subscriptions")
-    .select("amount, billing_cycle, business_id, cancel_at_period_end, cancelled_at, currency, next_renewal_at, plan, provider, status, trial_ends_at, trial_started_at, updated_at")
+    .select("amount, billing_cycle, business_id, cancel_at_period_end, cancelled_at, currency, last_payment_reference, next_renewal_at, plan, provider, provider_subscription_id, status, trial_ends_at, trial_started_at, updated_at")
     .eq("business_id", businessId)
     .maybeSingle();
 
@@ -53,9 +56,11 @@ const fetchWorkspaceSubscription = async (businessId: string): Promise<Workspace
     cancelAtPeriodEnd: Boolean(data.cancel_at_period_end),
     cancelledAt: data.cancelled_at,
     currency: data.currency ?? "NGN",
+    lastPaymentReference: data.last_payment_reference,
     nextRenewalAt: data.next_renewal_at,
     plan: data.plan as WorkspaceSubscription["plan"],
     provider: data.provider ?? "manual",
+    providerSubscriptionId: data.provider_subscription_id,
     status: data.status as WorkspaceSubscription["status"],
     trialEndsAt: data.trial_ends_at,
     trialStartedAt: data.trial_started_at,
@@ -65,13 +70,24 @@ const fetchWorkspaceSubscription = async (businessId: string): Promise<Workspace
 
 export const getWorkspaceSubscriptionEntitlements = (subscription: WorkspaceSubscription | null, now = Date.now()): WorkspaceSubscriptionEntitlements => {
   const isPaidPlan = Boolean(subscription && subscription.plan !== "starter");
+  const hasConfirmedPaidSubscription = Boolean(
+    subscription &&
+    subscription.provider === "paystack" &&
+    subscription.providerSubscriptionId &&
+    subscription.lastPaymentReference,
+  );
   const renewalHasPassed = Boolean(
     isPaidPlan &&
     subscription?.nextRenewalAt &&
     ["active", "trial"].includes(subscription.status) &&
     new Date(subscription.nextRenewalAt).getTime() <= now,
   );
-  const isActive = Boolean(subscription && ["active", "trial"].includes(subscription.status) && !renewalHasPassed);
+  const isActive = Boolean(
+    subscription &&
+    ["active", "trial"].includes(subscription.status) &&
+    !renewalHasPassed &&
+    (!isPaidPlan || hasConfirmedPaidSubscription),
+  );
   const isGracePeriod = Boolean(subscription && subscription.status === "past_due");
   const isCancelled = Boolean(subscription && subscription.status === "cancelled");
   const isExpired = Boolean(subscription && (subscription.status === "expired" || renewalHasPassed));
@@ -79,6 +95,7 @@ export const getWorkspaceSubscriptionEntitlements = (subscription: WorkspaceSubs
   return {
     canAccessPaidFeatures: isActive && isPaidPlan && !isCancelled,
     canAccessStarterFeatures: true,
+    hasConfirmedPaidSubscription,
     isActive,
     isCancelled,
     isExpired,
