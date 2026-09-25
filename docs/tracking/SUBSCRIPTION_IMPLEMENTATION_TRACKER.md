@@ -19,6 +19,13 @@ Track:
 
 This document should be updated whenever subscription implementation changes.
 
+## Renewal enforcement update — 2026-09-25
+
+- Paid Growth and Business workspace operations are unavailable until the subscription is active. Dashboard and Workspace Settings remain available for renewal and billing recovery; Starter workspaces remain usable.
+- `business_subscriptions.status` now supports `expired`, with `expired_at` recorded when the scheduled renewal date passes without an active renewal.
+- `subscription-renewal-automation` sends one idempotent reminder to the workspace owner approximately 14 days and 48 hours before renewal, then sends an expiry notice after the renewal date when access is locked.
+- The local migration is `20260925100000_add_subscription_renewal_lifecycle.sql`. Configure the `subscription_renewal_cron_secret` vault secret and the function secrets before enabling this automation outside local development.
+
 Related docs:
 
 - `docs/BRANCHING_STRATEGY.md`

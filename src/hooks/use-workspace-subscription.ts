@@ -14,7 +14,7 @@ export type WorkspaceSubscription = {
   nextRenewalAt: string | null;
   plan: "business" | "growth" | "starter";
   provider: string;
-  status: "active" | "cancelled" | "past_due" | "paused" | "trial";
+  status: "active" | "cancelled" | "expired" | "past_due" | "paused" | "trial";
   updatedAt: string;
 };
 
@@ -23,6 +23,7 @@ export type WorkspaceSubscriptionEntitlements = {
   canAccessPaidFeatures: boolean;
   isActive: boolean;
   isCancelled: boolean;
+  isExpired: boolean;
   isGracePeriod: boolean;
   isPaidPlan: boolean;
 };
@@ -62,12 +63,14 @@ export const getWorkspaceSubscriptionEntitlements = (subscription: WorkspaceSubs
   const isActive = Boolean(subscription && ["active", "trial"].includes(subscription.status));
   const isGracePeriod = Boolean(subscription && subscription.status === "past_due");
   const isCancelled = Boolean(subscription && subscription.status === "cancelled");
+  const isExpired = Boolean(subscription && subscription.status === "expired");
 
   return {
     canAccessPaidFeatures: isActive && isPaidPlan && !isCancelled,
     canAccessStarterFeatures: true,
     isActive,
     isCancelled,
+    isExpired,
     isGracePeriod,
     isPaidPlan,
   };

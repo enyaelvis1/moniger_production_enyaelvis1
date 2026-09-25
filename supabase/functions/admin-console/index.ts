@@ -742,8 +742,8 @@ const getDefaultSubscriptionConfig = (plan: "business" | "growth" | "starter") =
 
 const normalizeSubscriptionStatus = (
   value: string,
-): "active" | "cancelled" | "past_due" | "paused" | "trial" => {
-  if (value === "trial" || value === "past_due" || value === "paused" || value === "cancelled") {
+): "active" | "cancelled" | "expired" | "past_due" | "paused" | "trial" => {
+  if (value === "trial" || value === "past_due" || value === "paused" || value === "cancelled" || value === "expired") {
     return value;
   }
 
@@ -767,7 +767,7 @@ const getMonthlyRecurringValue = ({
 }: {
   amount: number;
   billingCycle: "annual" | "free" | "manual" | "monthly";
-  status: "active" | "cancelled" | "past_due" | "paused" | "trial";
+  status: "active" | "cancelled" | "expired" | "past_due" | "paused" | "trial";
 }) => {
   if (status === "cancelled" || billingCycle === "free") {
     return 0;
@@ -2078,6 +2078,7 @@ Deno.serve(async (request) => {
           cancel_at_period_end: cancelAtPeriodEnd,
           cancelled_at: cancelledAt,
           currency: asString(payload.currency) || defaults.currency,
+          expired_at: status === "expired" ? new Date().toISOString() : null,
           next_renewal_at: nextRenewalAt,
           notes: asNullableString(payload.notes),
           plan,
