@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 export type ManagedSubscriptionBillingCycle = "annual" | "free" | "manual" | "monthly";
 export type ManagedSubscriptionPlan = "business" | "growth" | "starter";
-export type LocalSubscriptionStatus = "active" | "cancelled" | "past_due" | "paused" | "trial";
+export type LocalSubscriptionStatus = "active" | "cancelled" | "expired" | "past_due" | "paused" | "trial";
 
 export const buildSubscriptionPaymentFailureNotification = (plan: ManagedSubscriptionPlan) => ({
   body: `The ${plan} workspace subscription renewal could not be collected. Paid-plan features are paused until billing is updated.`,
@@ -652,6 +652,7 @@ export const syncBusinessSubscriptionFromPaystack = async ({
     cancel_at_period_end: canonicalSummary.cancelAtPeriodEnd,
     cancelled_at: canonicalSummary.cancelledAt,
     currency: canonicalSummary.currency,
+    expired_at: null,
     last_payment_reference: reference ?? null,
     next_renewal_at: canonicalSummary.nextRenewalAt,
     plan,

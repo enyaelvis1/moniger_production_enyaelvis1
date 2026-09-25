@@ -47,7 +47,7 @@ const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  if (entitlements.isPaidPlan && entitlements.isActive) {
+  if (entitlements.isActive && (!entitlements.isPaidPlan || entitlements.canAccessPaidFeatures)) {
     return <>{children}</>;
   }
 
@@ -56,6 +56,7 @@ const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
       businessId={subscription?.businessId ?? null}
       currentPlan={subscription?.plan ?? null}
       isCancelled={entitlements.isCancelled || subscription?.status === "cancelled"}
+      isExpired={entitlements.isExpired || subscription?.status === "expired"}
       isGracePeriod={entitlements.isGracePeriod}
       reason={entitlements.isPaidPlan ? "inactive-plan" : "paid-plan-required"}
     />

@@ -17,6 +17,7 @@ type WorkspaceUpgradePromptProps = {
   businessId?: string | null;
   currentPlan?: WorkspaceSubscription["plan"] | null;
   isCancelled?: boolean;
+  isExpired?: boolean;
   isGracePeriod?: boolean;
   reason: "paid-plan-required" | "inactive-plan";
 };
@@ -31,6 +32,7 @@ const WorkspaceUpgradePrompt = ({
   businessId,
   currentPlan,
   isCancelled = false,
+  isExpired = false,
   isGracePeriod = false,
   reason,
 }: WorkspaceUpgradePromptProps) => {
@@ -52,6 +54,8 @@ const WorkspaceUpgradePrompt = ({
     reason === "inactive-plan"
       ? isCancelled
         ? "Your workspace subscription is cancelled"
+        : isExpired
+          ? "Your workspace subscription has expired"
         : "Your workspace subscription needs attention"
       : "Upgrade your workspace to continue";
 
@@ -59,6 +63,8 @@ const WorkspaceUpgradePrompt = ({
     reason === "inactive-plan"
       ? isCancelled
         ? "Renew or upgrade your workspace subscription to restore access to premium features."
+        : isExpired
+          ? "Your paid workspace access is paused because the renewal date passed. Renew your subscription to restore access."
         : "Update billing to keep premium features available for your workspace."
       : "This page is available on an active paid plan. Upgrade your workspace to unlock it.";
 
@@ -163,7 +169,7 @@ const WorkspaceUpgradePrompt = ({
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.07] p-4">
               <div className="flex items-center justify-between gap-3"><p className="text-xs uppercase tracking-[0.12em] text-white/55">Current plan</p><span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/75">{activePlan}</span></div>
               <p className="mt-3 text-2xl font-bold">{catalogForPlan(activePlan).priceLabel}</p>
-              <p className="mt-2 text-sm leading-6 text-white/65">{isCancelled ? "Cancelled — renew to restore access." : isGracePeriod ? "Past due — billing needs attention." : "Premium features are not included on this plan."}</p>
+              <p className="mt-2 text-sm leading-6 text-white/65">{isCancelled ? "Cancelled — renew to restore access." : isExpired ? "Expired — renew to restore access." : isGracePeriod ? "Past due — billing needs attention." : "Premium features are not included on this plan."}</p>
             </div>
             <div className="mt-5 space-y-3 text-sm text-white/70">
               <p className="flex gap-2"><Check className="h-4 w-4 shrink-0 text-[#71E0B0]" /> Secure recurring billing</p>

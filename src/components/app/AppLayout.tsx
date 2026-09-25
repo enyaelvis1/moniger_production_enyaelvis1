@@ -123,7 +123,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
               {!isSubscriptionLoading && subscription && entitlements.isPaidPlan && !entitlements.isActive ? (
                 <div
                   className={`mb-4 rounded-2xl border px-4 py-4 shadow-sm ${
-                    entitlements.isCancelled || subscription.status === "cancelled"
+                    entitlements.isCancelled || entitlements.isExpired || subscription.status === "cancelled" || subscription.status === "expired"
                       ? "border-[#FECACA] bg-[#FEF2F2] text-[#991B1B]"
                       : "border-[#FDE68A] bg-[#FFFBEB] text-[#92400E]"
                   }`}
@@ -131,13 +131,15 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="font-semibold">
-                        {entitlements.isCancelled || subscription.status === "cancelled"
+                        {entitlements.isCancelled || entitlements.isExpired || subscription.status === "cancelled" || subscription.status === "expired"
                           ? "Workspace subscription cancelled"
                           : "Workspace subscription needs attention"}
                       </p>
                       <p className="mt-1 text-sm leading-6 opacity-90">
                         {entitlements.isCancelled || subscription.status === "cancelled"
-                          ? "Your workspace is on a cancelled plan. Renew or upgrade to restore paid-plan features."
+                          ? entitlements.isExpired || subscription.status === "expired"
+                            ? "Your workspace subscription has expired. Renew or upgrade to restore paid-plan features."
+                            : "Your workspace is on a cancelled plan. Renew or upgrade to restore paid-plan features."
                           : "A subscription payment needs attention, so paid-plan features are paused until billing is updated. Review pricing to restore access."}
                       </p>
                     </div>

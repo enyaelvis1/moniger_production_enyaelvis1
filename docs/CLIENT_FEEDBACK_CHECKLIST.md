@@ -631,3 +631,24 @@ For every workspace, execute the applicable feature matrix and record Pass/Fail,
 4. Execute the cleanup only after the business IDs and counts are reviewed.
 5. Search for the three business names and confirm they no longer appear.
 6. Confirm unrelated production data and audit history remain intact.
+
+## 23) Paid subscription access and renewal reminders
+
+**Status: [ ] In progress — local implementation added; local migration and email-provider acceptance remain pending**
+
+- [x] Keep Starter workspaces available without paid checkout.
+- [x] Lock Growth and Business workspace operations until the subscription is active; retain Dashboard and Workspace Settings for renewal.
+- [x] Add an explicit `expired` subscription state after an unpaid renewal date passes.
+- [x] Add idempotent owner reminders approximately 14 days and 48 hours before renewal.
+- [x] Add an expiry email and audit-friendly delivery records.
+- [ ] Configure the production cron secret and Resend secrets.
+- [ ] Run local/provider email acceptance for reminder, retry, and expiry paths.
+- [ ] Apply the migration and deploy the function only after release approval.
+
+### Test 23
+
+1. Use a local paid test workspace with a renewal date inside the 14-day window; invoke the automation twice and confirm only one 14-day message is sent.
+2. Repeat inside the 48-hour window and confirm only one 48-hour message is sent.
+3. Set a paid subscription renewal date in the past; invoke the automation and confirm the subscription becomes `expired`, the expiry notice is recorded, and paid workspace routes show the renewal screen.
+4. Confirm Dashboard and Workspace Settings remain available so the owner can renew.
+5. Confirm a Starter workspace remains usable and receives no paid-renewal reminder.

@@ -40,7 +40,7 @@ This review was based on the current repo state, especially:
 - [x] Vendor bank data foundation exists in the schema and UI.
 - [x] Initial marketplace-routing schema foundation now exists for payout accounts and Paystack split configuration.
 - [x] Marketplace routing of customer payments directly to workspace subscriber bank accounts is now implemented in sandbox-tested form with Paystack subaccounts and split configuration.
-- [ ] Workspace subscription state is recorded and synced, but the app does not yet enforce paid-plan access gates in the workspace shell.
+- [x] Paid Growth and Business workspace operations are locked until the subscription is active; Dashboard and Settings remain available so owners can renew.
 - [ ] Live production rollout and full end-to-end verification are not fully closed in the repo docs yet.
 - [x] Paid-to-paid workspace subscription switching rules are now defined and implemented for Paystack-managed checkouts.
 - [ ] Translation follow-through and production observability rollout are still incomplete.
@@ -68,13 +68,14 @@ That changes the implementation priority:
 - [x] `subscription_checkout_sessions` exists for Paystack checkout reconciliation.
 - [x] Paid workspace plans initialize real Paystack checkout.
 - [x] `/pricing/confirmed` verifies the returned Paystack reference and syncs the canonical subscription record.
-- [ ] Most workspace routes still only require sign-in and MFA, but premium pages like `/reports` and `/audit-trail` now have subscription-aware entitlement gates.
+- [x] Paid workspace operations use a subscription-aware gate; inactive, cancelled, past-due, and expired Growth/Business workspaces are routed to renewal while Starter remains available.
 - [x] Public pricing cards now read from an admin-editable `billing_catalog` value published through a public site config endpoint.
 - [x] The workspace shell now shows a subscription status banner, and `/reports` plus `/audit-trail` now show an in-app workspace upgrade page with direct checkout and a highlighted current-plan summary when the plan is not active.
 - [x] Multi-workspace users can switch workspaces from the sidebar; the selected workspace is persisted per user and settings/subscription queries are scoped to the selected business.
 - [x] The workspace profile upgrade action now opens a plan comparison dialog first, so users can review the available plans before starting checkout.
 - [x] Self-service cancellation stops Paystack renewal, preserves access through the recorded renewal date, and records `cancel_at_period_end` with an audit event.
 - [x] Paystack `invoice.payment_failed` events set the workspace subscription to `past_due` and notify active workspace finance users with a Settings recovery link; hosted retry and email-delivery verification remain release gates.
+- [x] Added an hourly subscription-renewal automation path for 14-day and 48-hour reminders, idempotent delivery tracking, and expiry locking when an unpaid paid subscription passes its renewal date.
 
 ### Customer payment collection
 

@@ -386,7 +386,7 @@ export type AdminSubscriptionsResponse = {
     providerCustomerId: string | null;
     providerSubscriptionId: string | null;
     startedAt: string;
-    status: "active" | "cancelled" | "past_due" | "paused" | "trial";
+    status: "active" | "cancelled" | "expired" | "past_due" | "paused" | "trial";
     updatedAt: string | null;
   }>;
   total: number;

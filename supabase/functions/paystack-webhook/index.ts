@@ -371,6 +371,7 @@ const updateSubscriptionFromEventOverride = async ({
           cancelled_at: null,
           next_renewal_at: canonicalSummary.nextRenewalAt,
           plan,
+          expired_at: null,
           status: "active",
         }
         : {
