@@ -24,6 +24,7 @@ describe("workspace subscription entitlements", () => {
 
   it("does not grant paid access for pending or failed-like inactive states", () => {
     expect(getWorkspaceSubscriptionEntitlements(subscription("growth", "past_due")).canAccessPaidFeatures).toBe(false);
+    expect(getWorkspaceSubscriptionEntitlements(subscription("growth", "paused")).canAccessPaidFeatures).toBe(false);
     expect(getWorkspaceSubscriptionEntitlements(subscription("business", "cancelled")).canAccessPaidFeatures).toBe(false);
     expect(getWorkspaceSubscriptionEntitlements(subscription("business", "expired")).isExpired).toBe(true);
     expect(getWorkspaceSubscriptionEntitlements(subscription("business", "expired")).canAccessPaidFeatures).toBe(false);
