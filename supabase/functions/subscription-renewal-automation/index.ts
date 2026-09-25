@@ -7,7 +7,7 @@ type SubscriptionRow = {
   currency: string;
   next_renewal_at: string | null;
   plan: "business" | "growth" | "starter";
-  status: "active" | "past_due";
+  status: "active" | "past_due" | "trial";
 };
 
 type BusinessRow = { id: string; name: string; owner_user_id: string };
@@ -141,7 +141,7 @@ Deno.serve(async (request) => {
     .from("business_subscriptions")
     .select("amount, business_id, currency, next_renewal_at, plan, status")
     .in("plan", ["growth", "business"])
-    .in("status", ["active", "past_due"])
+    .in("status", ["active", "past_due", "trial"])
     .not("next_renewal_at", "is", null);
   if (subscriptionError) return json({ error: subscriptionError.message }, 500);
 
@@ -218,7 +218,7 @@ Deno.serve(async (request) => {
         .from("business_subscriptions")
         .update({ expired_at: now.toISOString(), status: "expired", updated_at: now.toISOString() })
         .eq("business_id", subscription.business_id)
-        .in("status", ["active", "past_due"])
+        .in("status", ["active", "past_due", "trial"])
         .lte("next_renewal_at", now.toISOString())
         .select("business_id");
       if (expiryError) {
