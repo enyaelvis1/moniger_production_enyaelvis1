@@ -32,7 +32,7 @@ import {
   clearEmailConfirmationReminder,
   hasEmailConfirmationReminderPending,
 } from "@/lib/email-confirmation-reminder";
-import { initializeWorkspaceSubscriptionCheckout, startGrowthTrial } from "@/lib/workspace-subscriptions";
+import { initializeWorkspaceSubscriptionCheckout } from "@/lib/workspace-subscriptions";
 import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
 import { SubscriptionRenewalBanner } from "@/components/app/SubscriptionRenewalBanner";
 
@@ -114,7 +114,6 @@ const Dashboard = () => {
   const [showEmailConfirmationReminder, setShowEmailConfirmationReminder] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [isStartingTrial, setIsStartingTrial] = useState(false);
   const { formatCurrency, t } = useLocalization();
   const settingsQuery = useSettingsData(user?.id);
   const businessId = settingsQuery.data?.business?.id;
@@ -177,18 +176,6 @@ const Dashboard = () => {
       setPaymentError(error instanceof Error ? error.message : "We could not start payment. Please try again.");
     } finally {
       setIsPaymentLoading(false);
-    }
-  };
-  const startTrial = async () => {
-    if (isStartingTrial || !businessId) return;
-    setIsStartingTrial(true);
-    try {
-      await startGrowthTrial({ businessId });
-      await workspaceSubscription.refetch();
-    } catch (error) {
-      setPaymentError(error instanceof Error ? error.message : "We could not start your trial. Please try again.");
-    } finally {
-      setIsStartingTrial(false);
     }
   };
 
@@ -262,7 +249,7 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      {workspaceSubscription.subscription ? <SubscriptionRenewalBanner isStartingTrial={isStartingTrial} onStartTrial={workspaceSubscription.subscription.plan === "starter" ? startTrial : undefined} subscription={workspaceSubscription.subscription} /> : null}
+      {workspaceSubscription.subscription ? <SubscriptionRenewalBanner subscription={workspaceSubscription.subscription} /> : null}
       {paymentError && !pendingSignupPlan ? (
         <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
           {paymentError}

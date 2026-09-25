@@ -5,7 +5,7 @@ import type {
   WorkspaceSubscriptionActionResult,
 } from "@/lib/subscriptions";
 
-type WorkspaceSubscriptionAction = "self.cancel" | "self.initialize-checkout" | "self.start-growth-trial" | "self.update" | "self.verify-checkout";
+type WorkspaceSubscriptionAction = "self.cancel" | "self.initialize-checkout" | "self.update" | "self.verify-checkout";
 type WorkspaceSubscriptionPublicAction = "public.confirmation-status";
 
 export type WorkspaceSubscriptionErrorCode =
@@ -187,11 +187,6 @@ export const updateWorkspaceSubscription = ({
 
 export const cancelWorkspaceSubscription = ({ businessId }: { businessId?: string }) =>
   invokeWorkspaceSubscriptions<WorkspaceSubscriptionActionResult>("self.cancel", {
-    businessId: businessId ?? null,
-  });
-
-export const startGrowthTrial = ({ businessId }: { businessId?: string } = {}) =>
-  invokeWorkspaceSubscriptions<WorkspaceSubscriptionActionResult>("self.start-growth-trial", {
     businessId: businessId ?? null,
   });
 

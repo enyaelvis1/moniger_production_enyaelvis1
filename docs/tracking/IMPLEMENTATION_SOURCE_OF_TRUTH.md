@@ -69,6 +69,7 @@ That changes the implementation priority:
 - [x] Paid workspace plans initialize real Paystack checkout.
 - [x] `/pricing/confirmed` verifies the returned Paystack reference and syncs the canonical subscription record.
 - [x] Paid workspace operations use a subscription-aware gate; inactive, cancelled, past-due, and expired Growth/Business workspaces are routed to renewal while Starter remains available.
+- [x] Paid workspace access now fails closed at both the client gate and database RLS boundary: Growth/Business rows require confirmed Paystack subscription/payment evidence, and paid plans do not have a trial state.
 - [x] Public pricing cards now read from an admin-editable `billing_catalog` value published through a public site config endpoint.
 - [x] The workspace shell now shows a subscription status banner, and `/reports` plus `/audit-trail` now show an in-app workspace upgrade page with direct checkout and a highlighted current-plan summary when the plan is not active.
 - [x] Multi-workspace users can switch workspaces from the sidebar; the selected workspace is persisted per user and settings/subscription queries are scoped to the selected business.
@@ -77,7 +78,7 @@ That changes the implementation priority:
 - [x] Paystack `invoice.payment_failed` events set the workspace subscription to `past_due` and notify active workspace finance users with a Settings recovery link; hosted retry and email-delivery verification remain release gates.
 - [x] Added an hourly subscription-renewal automation path for 14-day and 48-hour reminders, idempotent delivery tracking, and expiry locking when an unpaid paid subscription passes its renewal date.
 - [x] Added a workspace dashboard renewal countdown and Super Admin controls for the first-reminder and final-reminder timing; the default remains 14 days and 48 hours, and expiry enforcement remains server-side.
-- [x] Added a one-time, server-authorized Growth trial from the Starter dashboard; Super Admins can configure its duration in days or minutes for local testing, with a 14-day default. Trial access expires through the same renewal automation and cannot be restarted for the workspace.
+- [x] Growth and Business plans require paid Paystack checkout before workspace operations are enabled; unpaid paid-plan signups remain in the upgrade/payment flow.
 
 ### Customer payment collection
 

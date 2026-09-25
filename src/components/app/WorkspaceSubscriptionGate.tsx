@@ -1,10 +1,15 @@
 import { Loader2 } from "lucide-react";
 import { type ReactNode } from "react";
 import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
+import { useSupabaseSession } from "@/hooks/use-supabase-session";
 import WorkspaceUpgradePrompt from "@/components/app/WorkspaceUpgradePrompt";
 
 const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
   const { entitlements, isError, refetch, refetchWorkspace, subscription, subscriptionLoading, workspaceError, workspaceLoading } = useWorkspaceSubscription();
+  const { session } = useSupabaseSession();
+  const pendingSignupPlan = new URLSearchParams(window.location.search).get("signup_plan");
+  const metadataSignupPlan = session?.user.user_metadata?.signup_plan;
+  const hasPendingPaidSignup = [pendingSignupPlan, metadataSignupPlan].some((plan) => plan === "growth" || plan === "business") && !entitlements.hasConfirmedPaidSubscription;
 
   if (workspaceError || isError) {
     return (
@@ -47,7 +52,7 @@ const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  if (entitlements.isActive && (!entitlements.isPaidPlan || entitlements.canAccessPaidFeatures)) {
+  if (!hasPendingPaidSignup && entitlements.isActive && (!entitlements.isPaidPlan || entitlements.canAccessPaidFeatures)) {
     return <>{children}</>;
   }
 

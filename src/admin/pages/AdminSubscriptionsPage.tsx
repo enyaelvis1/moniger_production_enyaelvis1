@@ -68,7 +68,6 @@ type SubscriptionFormState = {
   provider: string;
   providerCustomerId: string;
   providerSubscriptionId: string;
-  resetTrialEligibility: boolean;
   startedAt: string;
   status: SubscriptionRow["status"];
 };
@@ -85,7 +84,6 @@ const toFormState = (row: SubscriptionRow): SubscriptionFormState => ({
   provider: row.provider,
   providerCustomerId: row.providerCustomerId ?? "",
   providerSubscriptionId: row.providerSubscriptionId ?? "",
-  resetTrialEligibility: false,
   startedAt: row.startedAt.slice(0, 10),
   status: row.status,
 });
@@ -228,7 +226,6 @@ const AdminSubscriptionsPage = () => {
         provider: formState.provider.trim() || "manual",
         providerCustomerId: formState.providerCustomerId.trim() || null,
         providerSubscriptionId: formState.providerSubscriptionId.trim() || null,
-        resetTrialEligibility: formState.resetTrialEligibility,
         startedAt: formState.startedAt || editingRow.startedAt.slice(0, 10),
         status: formState.status,
       });
@@ -506,7 +503,6 @@ const AdminSubscriptionsPage = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="trial">Trial</SelectItem>
                     <SelectItem value="past_due">Past due</SelectItem>
                     <SelectItem value="paused">Paused</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -606,22 +602,6 @@ const AdminSubscriptionsPage = () => {
                   Cancel at period end
                 </label>
               </div>
-
-              {formState.plan === "starter" ? (
-                <div className="sm:col-span-2">
-                  <label className="flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                    <input
-                      type="checkbox"
-                      checked={formState.resetTrialEligibility}
-                      onChange={(event) => setFormState((current) => current ? { ...current, resetTrialEligibility: event.target.checked } : current)}
-                    />
-                    <span>
-                      <span className="block font-medium">Reset Growth trial eligibility</span>
-                      <span className="mt-1 block text-xs text-amber-100/70">Testing-only action. This clears the one-time trial markers so this Starter workspace can start a new configured trial.</span>
-                    </span>
-                  </label>
-                </div>
-              ) : null}
 
               <div className="sm:col-span-2 space-y-2">
                 <label className="text-xs uppercase tracking-[0.08em] text-white/40">Internal notes</label>

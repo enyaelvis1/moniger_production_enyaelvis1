@@ -12,21 +12,9 @@ const getRemainingParts = (renewalAt: string, now: number) => {
   };
 };
 
-const getTrialDurationLabel = (subscription: WorkspaceSubscription) => {
-  if (!subscription.trialStartedAt || !subscription.trialEndsAt) return "Growth";
-  const durationMinutes = Math.max(1, Math.round((new Date(subscription.trialEndsAt).getTime() - new Date(subscription.trialStartedAt).getTime()) / (60 * 1000)));
-  return durationMinutes >= 1440
-    ? `${Math.round(durationMinutes / 1440)}-day Growth`
-    : `${durationMinutes}-minute Growth`;
-};
-
 export const SubscriptionRenewalBanner = ({
-  isStartingTrial = false,
-  onStartTrial,
   subscription,
 }: {
-  isStartingTrial?: boolean;
-  onStartTrial?: () => void;
   subscription: WorkspaceSubscription;
 }) => {
   const [now, setNow] = useState(() => Date.now());
@@ -48,9 +36,9 @@ export const SubscriptionRenewalBanner = ({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-semibold">Starter plan</p>
-            <p className="mt-1 text-sm leading-6 opacity-80">Start the configured Growth trial with paid workspace features, then choose whether to continue with a subscription.</p>
+            <p className="mt-1 text-sm leading-6 opacity-80">Upgrade to Growth or Business to unlock paid workspace operations. There is no trial for paid plans.</p>
           </div>
-          <button type="button" onClick={onStartTrial} disabled={!onStartTrial || isStartingTrial} className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#5B67F7] px-4 text-sm font-semibold text-white hover:bg-[#4A56E0] disabled:cursor-not-allowed disabled:opacity-60">{isStartingTrial ? "Starting trial…" : "Start Growth trial"}</button>
+          <Link to="/subscription" className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#5B67F7] px-4 text-sm font-semibold text-white hover:bg-[#4A56E0]">Upgrade plan</Link>
         </div>
       </section>
     );
@@ -66,7 +54,7 @@ export const SubscriptionRenewalBanner = ({
     );
   }
 
-  if (!["active", "trial"].includes(subscription.status)) {
+  if (subscription.status !== "active") {
     return null;
   }
 
@@ -90,7 +78,7 @@ export const SubscriptionRenewalBanner = ({
           {isDueToday ? <AlertCircle className="mt-0.5 shrink-0" size={20} /> : <CalendarClock className="mt-0.5 shrink-0" size={20} />}
           <div>
             <p className="font-semibold">
-              {subscription.status === "trial" ? `Your ${getTrialDurationLabel(subscription)} trial` : isDueToday ? "Your subscription renews today" : `Your ${subscription.plan} subscription renews soon`}
+              {isDueToday ? "Your subscription renews today" : `Your ${subscription.plan} subscription renews soon`}
             </p>
             <p className="mt-1 text-sm leading-6 opacity-90">
               {remaining ? `${remaining.days} day${remaining.days === 1 ? "" : "s"} and ${remaining.hours} hour${remaining.hours === 1 ? "" : "s"} remaining` : "Renewal date unavailable"} · {renewalDate}
