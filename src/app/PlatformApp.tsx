@@ -1,28 +1,29 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 import RouteLoadingScreen from "@/components/app/RouteLoadingScreen";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import WorkspaceSubscriptionGate from "@/components/app/WorkspaceSubscriptionGate";
 import AppProviders from "@/app/AppProviders";
+import { lazyWithReload } from "@/lib/lazy-with-reload";
 
-const LoginPage = lazy(() => import("../pages/Login.tsx"));
-const RegisterPage = lazy(() => import("../pages/Register.tsx"));
-const AcceptInvitePage = lazy(() => import("../pages/AcceptInvite.tsx"));
-const Dashboard = lazy(() => import("../pages/Dashboard.tsx"));
-const WalletPage = lazy(() => import("../pages/Wallet.tsx"));
-const WalletFundingConfirmedPage = lazy(() => import("../pages/WalletFundingConfirmed.tsx"));
-const MarketplaceRoutingPage = lazy(() => import("../pages/MarketplaceRouting.tsx"));
-const InvoicesPage = lazy(() => import("../pages/Invoices.tsx"));
-const BillsPage = lazy(() => import("../pages/Bills.tsx"));
-const VendorsPage = lazy(() => import("../pages/Vendors.tsx"));
-const CustomersPage = lazy(() => import("../pages/Customers.tsx"));
-const PaymentsPage = lazy(() => import("../pages/Payments.tsx"));
-const ReportsPage = lazy(() => import("../pages/Reports.tsx"));
-const AuditTrailPage = lazy(() => import("../pages/AuditTrail.tsx"));
-const SettingsPage = lazy(() => import("../pages/Settings.tsx"));
-const SubscriptionManagementPage = lazy(() => import("../pages/SubscriptionManagement.tsx"));
-const TeamPage = lazy(() => import("../pages/Team.tsx"));
-const NotFound = lazy(() => import("../pages/NotFound.tsx"));
+const LoginPage = lazyWithReload(() => import("../pages/Login.tsx"));
+const RegisterPage = lazyWithReload(() => import("../pages/Register.tsx"));
+const AcceptInvitePage = lazyWithReload(() => import("../pages/AcceptInvite.tsx"));
+const Dashboard = lazyWithReload(() => import("../pages/Dashboard.tsx"));
+const WalletPage = lazyWithReload(() => import("../pages/Wallet.tsx"));
+const WalletFundingConfirmedPage = lazyWithReload(() => import("../pages/WalletFundingConfirmed.tsx"));
+const MarketplaceRoutingPage = lazyWithReload(() => import("../pages/MarketplaceRouting.tsx"));
+const InvoicesPage = lazyWithReload(() => import("../pages/Invoices.tsx"));
+const BillsPage = lazyWithReload(() => import("../pages/Bills.tsx"));
+const VendorsPage = lazyWithReload(() => import("../pages/Vendors.tsx"));
+const CustomersPage = lazyWithReload(() => import("../pages/Customers.tsx"));
+const PaymentsPage = lazyWithReload(() => import("../pages/Payments.tsx"));
+const ReportsPage = lazyWithReload(() => import("../pages/Reports.tsx"));
+const AuditTrailPage = lazyWithReload(() => import("../pages/AuditTrail.tsx"));
+const SettingsPage = lazyWithReload(() => import("../pages/Settings.tsx"));
+const SubscriptionManagementPage = lazyWithReload(() => import("../pages/SubscriptionManagement.tsx"));
+const TeamPage = lazyWithReload(() => import("../pages/Team.tsx"));
+const NotFound = lazyWithReload(() => import("../pages/NotFound.tsx"));
 
 const PlatformApp = () => (
   <AppProviders>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Database, Save, ShieldCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Database, RefreshCw, Save, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +14,8 @@ import {
   type SubscriptionPlan,
 } from "@/lib/subscriptions";
 import { useAdminAccess } from "@/admin/components/AdminRoute";
+import { clearAppCache } from "@/lib/app-cache";
+import { appQueryClient } from "@/lib/query-client";
 import {
   invokeAdminConsole,
   useAdminConsoleQuery,
@@ -112,6 +114,7 @@ const AdminSettingsPage = () => {
   const [testDataReason, setTestDataReason] = useState("");
   const [testDataPreview, setTestDataPreview] = useState<{ confirmationCount?: number; blocked?: { payments?: Array<{ id: string; reason: string }>; payouts: Array<{ id: string; status: string }> }; deletable?: { payments: number; payouts: number; receivables?: number }; other?: { announcements: number; bills: number; businesses: number; checkoutSessions: number; content: number; customers: number; invoices: number; signupAlerts: number; users: number; vendors: number; blocked: number } } | null>(null);
   const [isCleaningTestData, setIsCleaningTestData] = useState(false);
+  const [isClearingAppCache, setIsClearingAppCache] = useState(false);
   const [revokingAdminUserId, setRevokingAdminUserId] = useState<string | null>(null);
   const testDataDeletionCount = testDataPreview?.confirmationCount ?? 0;
   const parsedSessionTimeoutInput = Number(sessionTimeoutInput);
@@ -173,6 +176,22 @@ const AdminSettingsPage = () => {
 
   const refreshSettings = async () => {
     await settingsQuery.refetch();
+  };
+
+  const clearCurrentBrowserAppCache = async () => {
+    setIsClearingAppCache(true);
+
+    try {
+      await clearAppCache(appQueryClient);
+      window.location.reload();
+    } catch (error) {
+      setIsClearingAppCache(false);
+      toast({
+        title: "Unable to clear app cache",
+        description: error instanceof Error ? error.message : "Please refresh the browser and try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const revokeAdminAccess = async (adminUser: AdminSettingsResponse["adminUsers"][number]) => {
@@ -344,6 +363,31 @@ const AdminSettingsPage = () => {
                 <p>Set the timeout to `1` minute, then leave the admin app untouched.</p>
                 <p>Confirm the warning appears shortly before logout and the app redirects back to `/login` when the idle period completes.</p>
                 <p>Click “Stay signed in” during the warning state and confirm the admin session remains active.</p>
+              </div>
+            </AdminSectionCard>
+
+            <AdminSectionCard title="Deployment cache recovery">
+              <div className="space-y-3">
+                <div>
+                  <p className="font-medium text-[#F1F5F9]">Refresh this browser&apos;s Moniger app cache</p>
+                  <p className="mt-1 text-sm text-white/55">
+                    Use this after a deployment if this admin session shows an old page or a missing module error.
+                    It clears in-memory app data and browser Cache Storage, then reloads the latest app shell.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2 border-white/15 bg-[#0F1621] text-white hover:bg-white/10 hover:text-white"
+                  disabled={isClearingAppCache}
+                  onClick={() => void clearCurrentBrowserAppCache()}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isClearingAppCache ? "animate-spin" : ""}`} />
+                  {isClearingAppCache ? "Refreshing app…" : "Clear app cache and reload"}
+                </Button>
+                <p className="text-xs text-white/40">
+                  This affects only the browser you are using. Deployment cache headers and automatic chunk retry protect other users.
+                </p>
               </div>
             </AdminSectionCard>
           </div>

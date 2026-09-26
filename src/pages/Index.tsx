@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode, useState, useEffect } from "react";
+import { Suspense, type ReactNode, useState, useEffect } from "react";
 import { ChevronUp } from "lucide-react";
 import DeferredLandingSection from "@/components/landing/DeferredLandingSection";
 import Footer from "@/components/landing/Footer";
@@ -6,11 +6,12 @@ import HeroSection from "@/components/landing/HeroSection";
 import Navbar from "@/components/landing/Navbar";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { SkipToMainContent } from "@/components/ui/accessibility";
+import { lazyWithReload } from "@/lib/lazy-with-reload";
 
-const StatsProofSection = lazy(() => import("@/components/landing/StatsProofSection"));
-const FeaturesSection = lazy(() => import("@/components/landing/FeaturesSection"));
-const TestimonialsSection = lazy(() => import("@/components/landing/TestimonialsSection"));
-const PricingSection = lazy(() => import("@/components/landing/PricingSection"));
+const StatsProofSection = lazyWithReload(() => import("@/components/landing/StatsProofSection"));
+const FeaturesSection = lazyWithReload(() => import("@/components/landing/FeaturesSection"));
+const TestimonialsSection = lazyWithReload(() => import("@/components/landing/TestimonialsSection"));
+const PricingSection = lazyWithReload(() => import("@/components/landing/PricingSection"));
 
 const sectionSkeletonClassName =
   "mx-auto w-full max-w-[1160px] rounded-[24px] border border-[#E8E4DF] bg-white/70 shadow-[0_2px_24px_rgba(0,0,0,0.04)]";
