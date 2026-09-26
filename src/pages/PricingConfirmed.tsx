@@ -153,6 +153,14 @@ const PricingConfirmedPage = () => {
     return () => { active = false; };
   }, [navigate, queryClient, result, session]);
 
+  useEffect(() => {
+    if (session || !result || result.kind !== "public_status" || result.confirmation.status !== "completed") {
+      return;
+    }
+
+    navigate("/dashboard", { replace: true });
+  }, [navigate, result, session]);
+
   const verifiedSubscription =
     result && (result.kind === "verified" || result.kind === "activated") ? result.subscription : null;
   const publicConfirmation = result?.kind === "public_status" ? result.confirmation : null;

@@ -277,5 +277,6 @@ Live cutover checklist after Paystack approval:
 - [x] Paid Growth and Business signup now initializes the Paystack checkout immediately after account creation, even while the signup email remains unconfirmed.
 - [x] The public checkout session is tied server-side to the newly created user-owned workspace and cannot activate access from the browser alone.
 - [x] Paystack confirmation and webhook reconciliation remain the source of truth for paid workspace activation.
-- [x] The confirmation email redirects to `/dashboard?email_confirmed=1` after verification; operational dashboard access remains protected until the paid subscription is active.
-- [ ] Confirm the final production signup behavior with one disposable Starter account and one disposable paid-plan account, including payment before email confirmation and dashboard access after confirmation.
+- [x] Paid signup returns an authenticated session so the completed Paystack checkout redirects directly to `/dashboard`; the dashboard remains protected until the paid subscription is active.
+- [x] Email confirmation is non-blocking for signup so payment and dashboard onboarding are not interrupted by the provider confirmation page.
+- [ ] Confirm the final production signup behavior with one disposable Starter account and one disposable paid-plan account, including payment and direct dashboard landing.
