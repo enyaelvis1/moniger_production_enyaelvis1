@@ -1960,7 +1960,7 @@ const InvoicesPage = () => {
                         {formStep !== "details" ? (
                           <Button
                             variant={formStep === "details" ? "default" : "outline"}
-                            className="rounded-xl px-4"
+                            className="rounded-xl border-white/40 bg-transparent px-4 text-white hover:bg-white/10 hover:text-white disabled:border-white/15 disabled:bg-white/5 disabled:text-white/45"
                             onClick={() => goToInvoiceStep(formStep === "review" ? "items" : "details")}
                             disabled={isMutating}
                           >
@@ -1993,13 +1993,13 @@ const InvoicesPage = () => {
                           <>
                             <Button
                               variant="outline"
-                              className="flex-1 rounded-lg btn-press"
+                              className="flex-1 rounded-lg border-white/40 bg-transparent text-white btn-press hover:bg-white/10 hover:text-white disabled:border-white/15 disabled:bg-white/5 disabled:text-white/45"
                               onClick={closeDrawer}
                             >
                               Close
                             </Button>
                             <Button
-                              className="flex-1 rounded-lg btn-press"
+                              className="flex-1 rounded-lg bg-[#5B67F7] text-white btn-press hover:bg-[#4653D8] disabled:bg-[#5B67F7]/50 disabled:text-white/70"
                               onClick={() => {
                                 if (activeInvoice) {
                                   openEditDrawer(activeInvoice);
@@ -2014,7 +2014,7 @@ const InvoicesPage = () => {
                           <>
                             <Button
                               variant="outline"
-                              className="flex-1 rounded-lg btn-press"
+                              className="flex-1 rounded-lg border-white/40 bg-transparent text-white btn-press hover:bg-white/10 hover:text-white disabled:border-white/15 disabled:bg-white/5 disabled:text-white/45"
                               onClick={() =>
                                 void handleSaveInvoice(activeInvoice?.status === "sent" ? "sent" : "draft", {
                                   record_delivery_attempt: false,
@@ -2026,7 +2026,7 @@ const InvoicesPage = () => {
                               Save Changes
                             </Button>
                             <Button
-                              className="flex-1 rounded-lg btn-press"
+                              className="flex-1 rounded-lg bg-[#5B67F7] text-white btn-press hover:bg-[#4653D8] disabled:bg-[#5B67F7]/50 disabled:text-white/70"
                               onClick={openDeliveryDialogForForm}
                               disabled={isMutating}
                             >
@@ -2037,7 +2037,7 @@ const InvoicesPage = () => {
                           <>
                             <Button
                               variant="outline"
-                              className="flex-1 rounded-lg btn-press"
+                              className="flex-1 rounded-lg border-white/40 bg-transparent text-white btn-press hover:bg-white/10 hover:text-white disabled:border-white/15 disabled:bg-white/5 disabled:text-white/45"
                               onClick={() => void handleSaveInvoice("draft")}
                               disabled={isMutating}
                             >
@@ -2045,7 +2045,7 @@ const InvoicesPage = () => {
                               Save Draft
                             </Button>
                             <Button
-                              className="flex-1 rounded-lg btn-press"
+                              className="flex-1 rounded-lg bg-[#5B67F7] text-white btn-press hover:bg-[#4653D8] disabled:bg-[#5B67F7]/50 disabled:text-white/70"
                               onClick={openDeliveryDialogForForm}
                               disabled={isMutating}
                             >
