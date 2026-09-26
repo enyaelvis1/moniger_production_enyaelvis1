@@ -11,7 +11,7 @@ verify_enabled = true
 [auth.email]
 max_frequency = "1m0s"
 
-enable_confirmations = true
+enable_confirmations = false
 
 [auth.email.template.confirmation]
 subject = "Welcome to Moniger — confirm your email"
