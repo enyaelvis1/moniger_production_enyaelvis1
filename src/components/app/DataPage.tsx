@@ -23,6 +23,8 @@ interface DataPageProps<T> {
   title: string;
   actionLabel: string;
   onAction: () => void;
+  actionDisabled?: boolean;
+  actionTitle?: string;
   tabs: FilterTab[];
   activeTab: string;
   onTabChange: (value: string) => void;
@@ -51,6 +53,8 @@ function DataPage<T extends { id?: string }>({
   title,
   actionLabel,
   onAction,
+  actionDisabled = false,
+  actionTitle,
   tabs,
   activeTab,
   onTabChange,
@@ -148,7 +152,7 @@ function DataPage<T extends { id?: string }>({
           ) : (
             <>
               {toolbarSlot}
-              <Button onClick={onAction} className="btn-press w-full rounded-lg sm:w-auto">
+              <Button onClick={onAction} disabled={actionDisabled} title={actionTitle} className="btn-press w-full rounded-lg sm:w-auto">
                 {actionLabel}
               </Button>
             </>
