@@ -261,6 +261,14 @@ Live cutover checklist after Paystack approval:
 2. Close production rollout details for marketplace routing, especially live secrets, webhook visibility, and deployment settings.
 3. Resolve paid-plan switching rules before additional billing complexity is added.
 
+### 2026-09-26 — Starter feature access
+
+- [x] Starter workspaces retain access to Dashboard, Customers, Invoices, and Payments for basic payment tracking.
+- [x] Starter navigation visibly locks Bills, Vendors, Reports, Team, Audit Trail, Funding, and Marketplace Routing.
+- [x] Direct navigation to a locked Starter route renders the in-dashboard upgrade screen instead of the feature page.
+- [x] Added `has_workspace_feature_access` and aligned RLS for vendors, bills, team mutations, audit logs, and marketplace routing; membership reads remain available so Starter workspace resolution continues to work.
+- [ ] Growth and Business remain the paid tiers for the locked workspace areas; billing and live-money rollout status remains governed by the existing subscription source-of-truth entries.
+
 ### 2026-09-23 — Client feedback hardening in local validation
 
 - [x] Added shared Vendor and Business phone validation that rejects alphabetic and unsupported characters in the browser and database trigger paths.

@@ -13,6 +13,7 @@ import {
   Wallet,
   ArrowRightLeft,
   LogOut,
+  LockKeyhole,
 } from "lucide-react";
 import { useRef, type KeyboardEvent, type MutableRefObject } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -21,6 +22,7 @@ import { useLocalization } from "@/hooks/use-localization";
 import { useSettingsData } from "@/hooks/use-settings-data";
 import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
 import { useWorkspaceSelection } from "@/contexts/WorkspaceSelectionContext";
+import { isWorkspaceFeatureAvailable, type WorkspaceFeature } from "@/lib/workspace-feature-access";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sidebar,
@@ -80,19 +82,19 @@ export function AppSidebar() {
         ? "border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-200"
         : "border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200";
   const mainNav = [
-    { title: t("navigation.dashboard"), url: "/dashboard", icon: LayoutDashboard, requiresActiveSubscription: false },
-    { title: t("navigation.invoices"), url: "/invoices", icon: FileText, requiresActiveSubscription: true },
-    { title: t("navigation.bills"), url: "/bills", icon: Receipt, requiresActiveSubscription: true },
-    { title: t("navigation.vendors"), url: "/vendors", icon: Building2, requiresActiveSubscription: true },
-    { title: t("navigation.customers"), url: "/customers", icon: Users, requiresActiveSubscription: true },
-    { title: t("navigation.payments"), url: "/payments", icon: CreditCard, requiresActiveSubscription: true },
-    { title: t("navigation.reports"), url: "/reports", icon: BarChart2, requiresActiveSubscription: true },
-    { title: t("navigation.team"), url: "/team", icon: UserRound, requiresActiveSubscription: true },
-    { title: t("navigation.auditTrail"), url: "/audit-trail", icon: ShieldCheck, requiresActiveSubscription: true },
+    { title: t("navigation.dashboard"), url: "/dashboard", icon: LayoutDashboard, feature: "dashboard" as WorkspaceFeature, requiresActiveSubscription: false },
+    { title: t("navigation.invoices"), url: "/invoices", icon: FileText, feature: "invoices" as WorkspaceFeature, requiresActiveSubscription: false },
+    { title: t("navigation.bills"), url: "/bills", icon: Receipt, feature: "bills" as WorkspaceFeature, requiresActiveSubscription: true },
+    { title: t("navigation.vendors"), url: "/vendors", icon: Building2, feature: "vendors" as WorkspaceFeature, requiresActiveSubscription: true },
+    { title: t("navigation.customers"), url: "/customers", icon: Users, feature: "customers" as WorkspaceFeature, requiresActiveSubscription: false },
+    { title: t("navigation.payments"), url: "/payments", icon: CreditCard, feature: "payments" as WorkspaceFeature, requiresActiveSubscription: false },
+    { title: t("navigation.reports"), url: "/reports", icon: BarChart2, feature: "reports" as WorkspaceFeature, requiresActiveSubscription: true },
+    { title: t("navigation.team"), url: "/team", icon: UserRound, feature: "team" as WorkspaceFeature, requiresActiveSubscription: true },
+    { title: t("navigation.auditTrail"), url: "/audit-trail", icon: ShieldCheck, feature: "auditTrail" as WorkspaceFeature, requiresActiveSubscription: true },
   ];
   const financeNav = [
-    { title: "Funding", url: "/wallet", icon: Wallet, requiresActiveSubscription: true },
-    { title: "Marketplace Routing", url: "/marketplace-routing", icon: ArrowRightLeft, requiresActiveSubscription: true },
+    { title: "Funding", url: "/wallet", icon: Wallet, feature: "funding" as WorkspaceFeature, requiresActiveSubscription: true },
+    { title: "Marketplace Routing", url: "/marketplace-routing", icon: ArrowRightLeft, feature: "marketplaceRouting" as WorkspaceFeature, requiresActiveSubscription: true },
   ];
   const navRefs = useRef<Array<HTMLAnchorElement | null>>([]);
   const financeRefs = useRef<Array<HTMLAnchorElement | null>>([]);
@@ -212,7 +214,9 @@ export function AppSidebar() {
               <SidebarMenu>
               {mainNav.map((item, index) => {
                 const active = item.url === "/team" ? isTeamView : location.pathname === item.url;
-                const disabled = isWorkspaceLocked && item.requiresActiveSubscription;
+                const starterFeatureLocked = subscription?.plan === "starter" && !isWorkspaceFeatureAvailable(subscription.plan, item.feature);
+                const disabled = starterFeatureLocked || (isWorkspaceLocked && item.requiresActiveSubscription);
+                const disabledTitle = starterFeatureLocked ? "Upgrade to Growth or Business to unlock this workspace tab" : "Complete subscription payment to unlock this workspace tab";
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
@@ -222,7 +226,7 @@ export function AppSidebar() {
                         }}
                         to={item.url}
                         className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                          active
+                          active && !disabled
                             ? "bg-[#5B67F7] text-white shadow-[0_4px_12px_rgba(91,103,247,0.25)]"
                             : disabled
                               ? "cursor-not-allowed text-muted-foreground/45 opacity-50"
@@ -232,14 +236,15 @@ export function AppSidebar() {
                         aria-current={active ? "page" : undefined}
                         aria-disabled={disabled ? "true" : undefined}
                         tabIndex={disabled ? -1 : undefined}
-                        title={disabled ? "Complete subscription payment to unlock this workspace tab" : undefined}
+                        title={disabled ? disabledTitle : undefined}
                         onClick={(event) => {
                           if (disabled) event.preventDefault();
                         }}
                         onKeyDown={(event) => handleArrowNavigation(event, index, navRefs)}
                       >
                         <item.icon size={18} className="shrink-0" aria-hidden="true" />
-                        {!collapsed && <span>{item.title}</span>}
+                        {!collapsed && <span className="flex-1">{item.title}</span>}
+                        {disabled ? <LockKeyhole size={13} className="shrink-0" aria-hidden="true" /> : null}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -261,7 +266,9 @@ export function AppSidebar() {
               <SidebarMenu>
                 {financeNav.map((item, index) => {
                   const active = location.pathname === item.url;
-                  const disabled = isWorkspaceLocked && item.requiresActiveSubscription;
+                  const starterFeatureLocked = subscription?.plan === "starter" && !isWorkspaceFeatureAvailable(subscription.plan, item.feature);
+                  const disabled = starterFeatureLocked || (isWorkspaceLocked && item.requiresActiveSubscription);
+                  const disabledTitle = starterFeatureLocked ? "Upgrade to Growth or Business to unlock this workspace tab" : "Complete subscription payment to unlock this workspace tab";
 
                   return (
                     <SidebarMenuItem key={item.title}>
@@ -272,7 +279,7 @@ export function AppSidebar() {
                           }}
                           to={item.url}
                           className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                            active
+                            active && !disabled
                               ? "bg-[#5B67F7] text-white shadow-[0_4px_12px_rgba(91,103,247,0.25)]"
                               : disabled
                                 ? "cursor-not-allowed text-muted-foreground/45 opacity-50"
@@ -282,14 +289,15 @@ export function AppSidebar() {
                           aria-current={active ? "page" : undefined}
                           aria-disabled={disabled ? "true" : undefined}
                           tabIndex={disabled ? -1 : undefined}
-                          title={disabled ? "Complete subscription payment to unlock this workspace tab" : undefined}
+                          title={disabled ? disabledTitle : undefined}
                           onClick={(event) => {
                             if (disabled) event.preventDefault();
                           }}
                           onKeyDown={(event) => handleArrowNavigation(event, index, financeRefs)}
                         >
                           <item.icon size={18} className="shrink-0" aria-hidden="true" />
-                          {!collapsed && <span>{item.title}</span>}
+                          {!collapsed && <span className="flex-1">{item.title}</span>}
+                          {disabled ? <LockKeyhole size={13} className="shrink-0" aria-hidden="true" /> : null}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

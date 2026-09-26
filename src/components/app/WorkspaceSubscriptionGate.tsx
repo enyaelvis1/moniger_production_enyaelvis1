@@ -3,8 +3,13 @@ import { type ReactNode } from "react";
 import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
 import { useSupabaseSession } from "@/hooks/use-supabase-session";
 import WorkspaceUpgradePrompt from "@/components/app/WorkspaceUpgradePrompt";
+import {
+  getWorkspaceFeatureLabel,
+  isWorkspaceFeatureAvailable,
+  type WorkspaceFeature,
+} from "@/lib/workspace-feature-access";
 
-const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
+const WorkspaceSubscriptionGate = ({ children, feature }: { children: ReactNode; feature?: WorkspaceFeature }) => {
   const { entitlements, isError, refetch, refetchWorkspace, subscription, subscriptionLoading, workspaceError, workspaceLoading } = useWorkspaceSubscription();
   const { session } = useSupabaseSession();
   const pendingSignupPlan = new URLSearchParams(window.location.search).get("signup_plan");
@@ -48,6 +53,17 @@ const WorkspaceSubscriptionGate = ({ children }: { children: ReactNode }) => {
         businessId={null}
         currentPlan={null}
         reason="paid-plan-required"
+      />
+    );
+  }
+
+  if (feature && subscription.plan === "starter" && !isWorkspaceFeatureAvailable(subscription.plan, feature)) {
+    return (
+      <WorkspaceUpgradePrompt
+        businessId={subscription.businessId}
+        currentPlan={subscription.plan}
+        featureLabel={getWorkspaceFeatureLabel(feature)}
+        reason="starter-feature-locked"
       />
     );
   }
