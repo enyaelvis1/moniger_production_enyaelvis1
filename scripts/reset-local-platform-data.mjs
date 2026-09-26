@@ -11,6 +11,8 @@ const confirmationPhrase = "DELETE ALL LINKED DATA";
 
 const prompt = createInterface({ input, output });
 
+//  npm run reset:linked-data
+
 try {
   console.warn("WARNING: This will permanently delete all data in the LINKED Supabase project.");
   console.warn(`Project ref: ${projectRef}`);
