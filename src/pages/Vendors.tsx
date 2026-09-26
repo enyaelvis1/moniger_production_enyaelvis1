@@ -997,12 +997,14 @@ const VendorsPage = () => {
               onSearchChange={setSearch}
               searchPlaceholder="Vendor name, email, or contact"
               toolbarSlot={
-                <AdvancedFilter
-                  definitions={advancedFilterDefinitions}
-                  state={advancedFilters}
-                  onChange={setAdvancedFilters}
-                  storageKey="vendors"
-                />
+                starterVendorLimit ? null : (
+                  <AdvancedFilter
+                    definitions={advancedFilterDefinitions}
+                    state={advancedFilters}
+                    onChange={setAdvancedFilters}
+                    storageKey="vendors"
+                  />
+                )
               }
               emptyTitle="No vendors found"
               emptyDescription="Add your first vendor to manage payables."
