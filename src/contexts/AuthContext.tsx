@@ -30,6 +30,7 @@ export interface AuthContextType {
   mfaLoading: boolean;
   nextAal: AuthenticatorAssuranceLevel;
   refreshMfaState: () => Promise<void>;
+  resendEmailConfirmation: () => Promise<void>;
   session: Session | null;
   signIn: (email: string, password: string) => Promise<AuthSignInResult>;
   signUp: (data: {
@@ -307,6 +308,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   };
 
+  const resendEmailConfirmation = async () => {
+    if (!user?.email) {
+      throw new Error("We could not find an email address for this account.");
+    }
+
+    const plan = user.user_metadata?.signup_plan as SubscriptionPlan | undefined;
+    const emailRedirectTo = getEmailConfirmationRedirect({
+      origin: window.location.origin,
+      plan: plan === "growth" || plan === "business" ? plan : "starter",
+      redirectTo: import.meta.env.VITE_SUPABASE_EMAIL_REDIRECT_TO?.trim() || `${window.location.origin}/dashboard`,
+    });
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: user.email,
+      options: { emailRedirectTo },
+    });
+
+    if (error) {
+      throw error;
+    }
+  };
+
   const signOut = async (scope: AuthSignOutScope = "local") => {
     trackAnalyticsEvent("sign_out", { scope });
     const { error } = await supabase.auth.signOut({ scope });
@@ -345,6 +368,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         mfaLoading,
         nextAal: mfaState.nextLevel,
         refreshMfaState,
+        resendEmailConfirmation,
         session,
         signIn,
         signOut,
