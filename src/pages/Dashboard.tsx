@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  AlertTriangle,
   Building2,
   CheckCircle,
   Clock,
