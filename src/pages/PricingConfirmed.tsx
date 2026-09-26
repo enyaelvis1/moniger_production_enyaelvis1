@@ -57,6 +57,7 @@ const PricingConfirmedPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [verificationAttempt, setVerificationAttempt] = useState(0);
   const [canRetryVerification, setCanRetryVerification] = useState(false);
+  const [publicRedirectRemaining, setPublicRedirectRemaining] = useState(6);
 
   const reference = useMemo(
     () => searchParams.get("reference")?.trim() || searchParams.get("trxref")?.trim() || "",
@@ -65,6 +66,10 @@ const PricingConfirmedPage = () => {
   const loginPath = useMemo(
     () => `/login?next=${encodeURIComponent(`${location.pathname}${location.search}`)}`,
     [location.pathname, location.search],
+  );
+  const dashboardLoginPath = useMemo(
+    () => `/login?next=${encodeURIComponent("/dashboard")}`,
+    [],
   );
 
   useEffect(() => {
@@ -154,12 +159,23 @@ const PricingConfirmedPage = () => {
   }, [navigate, queryClient, result, session]);
 
   useEffect(() => {
-    if (session || !result || result.kind !== "public_status" || result.confirmation.status !== "completed") {
+    if (session || result?.kind !== "public_status" || result.confirmation.status !== "completed") {
       return;
     }
 
-    navigate("/dashboard", { replace: true });
-  }, [navigate, result, session]);
+    const startedAt = Date.now();
+    const intervalId = window.setInterval(() => {
+      setPublicRedirectRemaining(Math.max(1, 6 - Math.floor((Date.now() - startedAt) / 1000)));
+    }, 250);
+    const timeoutId = window.setTimeout(() => {
+      navigate(dashboardLoginPath, { replace: true });
+    }, 6000);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [dashboardLoginPath, navigate, result, session]);
 
   const verifiedSubscription =
     result && (result.kind === "verified" || result.kind === "activated") ? result.subscription : null;
@@ -276,10 +292,13 @@ const PricingConfirmedPage = () => {
                 <div className="flex items-start gap-4 rounded-[20px] border border-[#D1FAE5] bg-[#ECFDF5] px-5 py-5">
                   <CheckCircle2 size={26} className="mt-0.5 shrink-0 text-[#15803D]" />
                   <div>
-                    <p className="text-lg font-semibold text-[#14532D]">Checkout received</p>
+                    <p className="text-xl font-bold text-[#14532D]">Payment successful</p>
                     <p className="mt-2 text-sm leading-[1.8] text-[#166534]">
-                      Your Paystack checkout for the {publicConfirmation.plan} plan was recorded. Check your inbox and
-                      confirm your email to finish activating access to the workspace dashboard.
+                      Your Paystack payment for the {publicConfirmation.plan} plan was received. We&apos;re redirecting you
+                      to sign in, while your confirmation email activates the workspace dashboard securely.
+                    </p>
+                    <p className="mt-3 text-sm font-semibold text-[#166534]">
+                      Redirecting in {publicRedirectRemaining} seconds…
                     </p>
                   </div>
                 </div>
@@ -301,7 +320,7 @@ const PricingConfirmedPage = () => {
 
                 <div className="flex flex-wrap gap-3">
                   <Button asChild>
-                    <Link to={loginPath}>Sign in after email confirmation</Link>
+                    <Link to={dashboardLoginPath}>Continue to dashboard</Link>
                   </Button>
                   <Button asChild variant="outline">
                     <Link to="/pricing">Back to pricing</Link>

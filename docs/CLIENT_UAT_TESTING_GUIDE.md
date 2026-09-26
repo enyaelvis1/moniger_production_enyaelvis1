@@ -351,7 +351,9 @@ Test steps:
 
 Expected result:
 
-- The page shows a safe confirmation state only.
+- A completed paid checkout shows a prominent payment-success state.
+- The page automatically sends the user to sign in and provides a manual `Continue to dashboard` fallback.
+- The confirmation email remains the activation step for the workspace dashboard.
 - It does not expose private workspace details such as business name or internal identifiers.
 
 ### 5.3 Public payment confirmation route
