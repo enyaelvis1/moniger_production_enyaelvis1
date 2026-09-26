@@ -31,18 +31,18 @@ const PlatformApp = () => (
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/accept-invite" element={<AcceptInvitePage />} />
-        <Route path="/dashboard" element={<ProtectedRoute><WorkspaceSubscriptionGate><Dashboard /></WorkspaceSubscriptionGate></ProtectedRoute>} />
-        <Route path="/wallet" element={<ProtectedRoute><WorkspaceSubscriptionGate><WalletPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><WorkspaceSubscriptionGate feature="dashboard"><Dashboard /></WorkspaceSubscriptionGate></ProtectedRoute>} />
+        <Route path="/wallet" element={<ProtectedRoute><WorkspaceSubscriptionGate feature="funding"><WalletPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
         <Route path="/wallet/confirmed" element={<ProtectedRoute><WalletFundingConfirmedPage /></ProtectedRoute>} />
-        <Route path="/marketplace-routing" element={<ProtectedRoute><WorkspaceSubscriptionGate><MarketplaceRoutingPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
-        <Route path="/invoices" element={<ProtectedRoute><WorkspaceSubscriptionGate><InvoicesPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
-        <Route path="/bills" element={<ProtectedRoute><WorkspaceSubscriptionGate><BillsPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
-        <Route path="/vendors" element={<ProtectedRoute><WorkspaceSubscriptionGate><VendorsPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
-        <Route path="/customers" element={<ProtectedRoute><WorkspaceSubscriptionGate><CustomersPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
-        <Route path="/payments" element={<ProtectedRoute><WorkspaceSubscriptionGate><PaymentsPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
-        <Route path="/reports" element={<ProtectedRoute><WorkspaceSubscriptionGate><ReportsPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
-        <Route path="/team" element={<ProtectedRoute><WorkspaceSubscriptionGate><TeamPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
-        <Route path="/audit-trail" element={<ProtectedRoute><WorkspaceSubscriptionGate><AuditTrailPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
+        <Route path="/marketplace-routing" element={<ProtectedRoute><WorkspaceSubscriptionGate feature="marketplaceRouting"><MarketplaceRoutingPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
+        <Route path="/invoices" element={<ProtectedRoute><WorkspaceSubscriptionGate feature="invoices"><InvoicesPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
+        <Route path="/bills" element={<ProtectedRoute><WorkspaceSubscriptionGate feature="bills"><BillsPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
+        <Route path="/vendors" element={<ProtectedRoute><WorkspaceSubscriptionGate feature="vendors"><VendorsPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
+        <Route path="/customers" element={<ProtectedRoute><WorkspaceSubscriptionGate feature="customers"><CustomersPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
+        <Route path="/payments" element={<ProtectedRoute><WorkspaceSubscriptionGate feature="payments"><PaymentsPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute><WorkspaceSubscriptionGate feature="reports"><ReportsPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
+        <Route path="/team" element={<ProtectedRoute><WorkspaceSubscriptionGate feature="team"><TeamPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
+        <Route path="/audit-trail" element={<ProtectedRoute><WorkspaceSubscriptionGate feature="auditTrail"><AuditTrailPage /></WorkspaceSubscriptionGate></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/subscription" element={<ProtectedRoute><SubscriptionManagementPage /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
