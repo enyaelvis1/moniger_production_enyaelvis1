@@ -174,7 +174,7 @@ const PricingSection = () => {
                     type="button"
                     onClick={() => handleGetStarted(plan.plan, plan.name)}
                     disabled={isLoading || subscribingTo === plan.name}
-                    className={cn(buttonClass("primary"), "mt-7 flex w-full")}
+                    className={cn(buttonClass("primary"), "mt-7 flex w-full border-[#5B67F7] bg-[#5B67F7] text-white shadow-[0_10px_24px_rgba(91,103,247,0.24)] hover:border-[#4653D8] hover:bg-[#4653D8]")}
                   >
                     {subscribingTo === plan.name && isLoading
                       ? "Processing..."
@@ -202,9 +202,9 @@ const PricingSection = () => {
                 key={plan.name}
                 variants={fadeUp}
                 custom={i}
-                className="relative rounded-[16px] border border-[#E8E4DF] border-t-[3px] border-t-[#0D1B2A] bg-white p-8"
+                className="relative flex h-full flex-col rounded-[16px] border border-[#E8E4DF] border-t-[3px] border-t-[#0D1B2A] bg-white p-8"
               >
-                <div>
+                <div className="flex h-full flex-col">
                   <p className="text-[20px] font-semibold text-[#0D1B2A]">{plan.name}</p>
                   <p className="mt-4 text-[52px] font-black leading-none tracking-[-0.02em] text-[#0D1B2A] md:text-[56px]">{catalogEntry.priceLabel}</p>
                   <p className="mt-3 text-[16px] leading-[1.7] text-[#4A5568]">{catalogEntry.description}</p>
@@ -221,7 +221,7 @@ const PricingSection = () => {
                     type="button"
                     onClick={() => handleGetStarted(plan.plan, plan.name)}
                     disabled={isLoading || subscribingTo === plan.name}
-                    className={cn(buttonClass("primary"), "mt-8 flex w-full")}
+                    className={cn(buttonClass("primary"), "mt-auto flex w-full border-[#5B67F7] bg-[#5B67F7] text-white shadow-[0_10px_24px_rgba(91,103,247,0.24)] hover:border-[#4653D8] hover:bg-[#4653D8]")}
                   >
                     {subscribingTo === plan.name && isLoading
                       ? "Processing..."
