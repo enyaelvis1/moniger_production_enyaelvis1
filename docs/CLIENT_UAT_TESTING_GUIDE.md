@@ -401,6 +401,22 @@ Expected result:
 - The related Paystack split configuration is created or updated.
 - If payout details changed earlier, the admin sync clears the `Needs re-sync` state.
 
+### 5.6 Starter feature limits
+
+Test steps:
+
+1. Sign in to a Starter workspace.
+2. Confirm Dashboard, Customers, Invoices, and Payments are available.
+3. Confirm Bills, Vendors, Reports, Team, Audit Trail, Funding, and Marketplace Routing are visible but dimmed with a lock icon.
+4. Open a locked route directly, for example `/vendors`.
+
+Expected result:
+
+- The locked navigation item cannot be opened from the sidebar.
+- Direct navigation shows the in-dashboard Growth/Business upgrade screen.
+- The underlying database does not return Starter data for the locked feature tables.
+- After upgrading to an active Growth or Business subscription, the locked areas become available.
+
 ## 6. What Is Not Ready For Final Client Sign-Off Yet
 
 Please do **not** use the following as final go-live checks yet:

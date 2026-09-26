@@ -19,7 +19,8 @@ type WorkspaceUpgradePromptProps = {
   isCancelled?: boolean;
   isExpired?: boolean;
   isGracePeriod?: boolean;
-  reason: "paid-plan-required" | "inactive-plan" | "manage-subscription";
+  reason: "paid-plan-required" | "inactive-plan" | "starter-feature-locked" | "manage-subscription";
+  featureLabel?: string;
 };
 
 const upgradeBullets = [
@@ -35,6 +36,7 @@ const WorkspaceUpgradePrompt = ({
   isExpired = false,
   isGracePeriod = false,
   reason,
+  featureLabel,
 }: WorkspaceUpgradePromptProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -53,6 +55,8 @@ const WorkspaceUpgradePrompt = ({
   const heading =
     reason === "manage-subscription"
       ? "Manage your workspace subscription"
+      : reason === "starter-feature-locked"
+      ? `${featureLabel ?? "This feature"} is available on Growth and Business`
       : reason === "inactive-plan"
       ? isCancelled
         ? "Your workspace subscription is cancelled"
@@ -64,6 +68,8 @@ const WorkspaceUpgradePrompt = ({
   const body =
     reason === "manage-subscription"
       ? "Review your current plan and upgrade securely with recurring Paystack billing."
+      : reason === "starter-feature-locked"
+      ? "Your Starter plan includes the core dashboard, customers, invoices, and payment tracking. Upgrade to unlock this workspace area."
       : reason === "inactive-plan"
       ? isCancelled
         ? "Renew or upgrade your workspace subscription to restore access to premium features."
