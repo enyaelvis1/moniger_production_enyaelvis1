@@ -2,6 +2,7 @@ import React, { type ReactNode } from "react";
 import { AlertCircle, RefreshCw } from "lucide-react";
 
 import type { AppError, ErrorProviderProps } from "@/lib/error-handling";
+import { clearBrowserAppCaches, isChunkLoadError } from "@/lib/app-cache";
 import { ErrorContext, useError, useErrorState } from "@/lib/error-handling";
 
 interface ErrorBoundaryProps {
@@ -60,6 +61,17 @@ function DefaultErrorFallback({
   error: Error;
   reset: () => void;
 }) {
+  const deploymentError = isChunkLoadError(error);
+
+  const recover = () => {
+    if (!deploymentError) {
+      reset();
+      return;
+    }
+
+    void clearBrowserAppCaches().finally(() => window.location.reload());
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="max-w-md w-full bg-card rounded-lg shadow-lg p-6 border border-border">
@@ -67,19 +79,21 @@ function DefaultErrorFallback({
           <AlertCircle className="h-6 w-6 text-destructive flex-shrink-0 mt-1" />
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-foreground mb-2">
-              Something went wrong
+              {deploymentError ? "Moniger was updated" : "Something went wrong"}
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              {import.meta.env.DEV
+              {deploymentError
+                ? "This browser loaded an older app version. Refresh to load the latest deployment."
+                : import.meta.env.DEV
                 ? error.message
                 : "We're sorry, but something unexpected happened. Please try again."}
             </p>
             <button
-              onClick={reset}
+              onClick={recover}
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               <RefreshCw size={16} />
-              Try again
+              {deploymentError ? "Refresh application" : "Try again"}
             </button>
           </div>
         </div>

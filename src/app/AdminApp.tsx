@@ -1,29 +1,30 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import RouteLoadingScreen from "@/components/app/RouteLoadingScreen";
 import AppProviders from "@/app/AppProviders";
 import AdminRoute from "@/admin/components/AdminRoute";
 import AdminLayout from "@/admin/components/AdminLayout";
+import { lazyWithReload } from "@/lib/lazy-with-reload";
 
-const AdminDashboardPage = lazy(() => import("@/admin/pages/AdminDashboardPage"));
-const AdminPlatformMetricsPage = lazy(() => import("@/admin/pages/AdminPlatformMetricsPage"));
-const AdminBusinessesPage = lazy(() => import("@/admin/pages/AdminBusinessesPage"));
-const AdminVendorsPage = lazy(() => import("@/admin/pages/AdminVendorsPage"));
-const AdminBusinessInvoicesPage = lazy(() => import("@/admin/pages/AdminBusinessInvoicesPage"));
-const AdminBanksPage = lazy(() => import("@/admin/pages/AdminBanksPage"));
-const AdminCategoriesPage = lazy(() => import("@/admin/pages/AdminCategoriesPage"));
-const AdminUsersPage = lazy(() => import("@/admin/pages/AdminUsersPage"));
-const AdminSubscriptionsPage = lazy(() => import("@/admin/pages/AdminSubscriptionsPage"));
-const AdminPaymentsPage = lazy(() => import("@/admin/pages/AdminPaymentsPage"));
-const AdminReceivablesPage = lazy(() => import("@/admin/pages/AdminReceivablesPage"));
-const AdminPayoutsPage = lazy(() => import("@/admin/pages/AdminPayoutsPage"));
-const AdminAnnouncementsPage = lazy(() => import("@/admin/pages/AdminAnnouncementsPage"));
-const AdminContentPage = lazy(() => import("@/admin/pages/AdminContentPage"));
-const AdminSignupAlertsPage = lazy(() => import("@/admin/pages/AdminSignupAlertsPage"));
-const AdminSupportPage = lazy(() => import("@/admin/pages/AdminSupportPage"));
-const AdminAuditPage = lazy(() => import("@/admin/pages/AdminAuditPage"));
-const AdminHealthPage = lazy(() => import("@/admin/pages/AdminHealthPage"));
-const AdminSettingsPage = lazy(() => import("@/admin/pages/AdminSettingsPage"));
+const AdminDashboardPage = lazyWithReload(() => import("@/admin/pages/AdminDashboardPage"));
+const AdminPlatformMetricsPage = lazyWithReload(() => import("@/admin/pages/AdminPlatformMetricsPage"));
+const AdminBusinessesPage = lazyWithReload(() => import("@/admin/pages/AdminBusinessesPage"));
+const AdminVendorsPage = lazyWithReload(() => import("@/admin/pages/AdminVendorsPage"));
+const AdminBusinessInvoicesPage = lazyWithReload(() => import("@/admin/pages/AdminBusinessInvoicesPage"));
+const AdminBanksPage = lazyWithReload(() => import("@/admin/pages/AdminBanksPage"));
+const AdminCategoriesPage = lazyWithReload(() => import("@/admin/pages/AdminCategoriesPage"));
+const AdminUsersPage = lazyWithReload(() => import("@/admin/pages/AdminUsersPage"));
+const AdminSubscriptionsPage = lazyWithReload(() => import("@/admin/pages/AdminSubscriptionsPage"));
+const AdminPaymentsPage = lazyWithReload(() => import("@/admin/pages/AdminPaymentsPage"));
+const AdminReceivablesPage = lazyWithReload(() => import("@/admin/pages/AdminReceivablesPage"));
+const AdminPayoutsPage = lazyWithReload(() => import("@/admin/pages/AdminPayoutsPage"));
+const AdminAnnouncementsPage = lazyWithReload(() => import("@/admin/pages/AdminAnnouncementsPage"));
+const AdminContentPage = lazyWithReload(() => import("@/admin/pages/AdminContentPage"));
+const AdminSignupAlertsPage = lazyWithReload(() => import("@/admin/pages/AdminSignupAlertsPage"));
+const AdminSupportPage = lazyWithReload(() => import("@/admin/pages/AdminSupportPage"));
+const AdminAuditPage = lazyWithReload(() => import("@/admin/pages/AdminAuditPage"));
+const AdminHealthPage = lazyWithReload(() => import("@/admin/pages/AdminHealthPage"));
+const AdminSettingsPage = lazyWithReload(() => import("@/admin/pages/AdminSettingsPage"));
 
 const AdminApp = () => (
   <AppProviders>
