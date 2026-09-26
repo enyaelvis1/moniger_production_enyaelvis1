@@ -74,8 +74,8 @@ describe("PricingConfirmedPage", () => {
     });
 
     expect(verifyWorkspaceSubscriptionCheckoutMock).not.toHaveBeenCalled();
-    expect(await screen.findByText(/payment successful/i)).toBeInTheDocument();
-    expect(screen.getByText(/your paystack payment for the growth plan was received/i)).toBeInTheDocument();
+    expect(await screen.findByText(/payment was successful/i)).toBeInTheDocument();
+    expect(screen.getByText(/your paystack payment was received/i)).toBeInTheDocument();
     expect(screen.queryByText(/Acme Workspace/i)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /continue to dashboard/i })).toBeInTheDocument();
   });

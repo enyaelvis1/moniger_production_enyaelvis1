@@ -181,6 +181,51 @@ const PricingConfirmedPage = () => {
     result && (result.kind === "verified" || result.kind === "activated") ? result.subscription : null;
   const publicConfirmation = result?.kind === "public_status" ? result.confirmation : null;
 
+  if (!isLoading && !errorMessage && !session && publicConfirmation?.status === "completed") {
+    return (
+      <main className="min-h-screen bg-[#F4F6FF] px-4 py-10 text-[#10203F] sm:px-6 lg:px-8">
+        <section className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-3xl items-center justify-center">
+          <div className="w-full rounded-[32px] border border-[#DCE2F2] bg-white p-6 shadow-[0_24px_80px_rgba(16,32,63,0.12)] sm:p-10">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#DCFCE7] text-[#15803D]">
+              <CheckCircle2 size={34} aria-hidden="true" />
+            </div>
+            <div className="mt-6 text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#5B67F7]">Payment confirmed</p>
+              <h1 className="mt-3 text-3xl font-black tracking-[-0.04em] text-[#10203F] sm:text-5xl">
+                Your {publicConfirmation.plan} plan payment was successful
+              </h1>
+              <p className="mx-auto mt-5 max-w-xl text-base leading-8 text-[#5F6A88]">
+                Your Paystack payment was received. Confirm your email from the message in your inbox to activate your
+                workspace dashboard securely.
+              </p>
+            </div>
+
+            <div className="mt-8 rounded-[22px] border border-[#D1FAE5] bg-[#ECFDF5] px-5 py-5 text-center text-[#14532D]">
+              <p className="text-lg font-bold">Redirecting you to sign in</p>
+              <p className="mt-2 text-sm leading-6 text-[#166534]">
+                After confirming your email, sign in to continue to your dashboard.
+              </p>
+              <p className="mt-3 text-sm font-semibold text-[#166534]">Redirecting in {publicRedirectRemaining} seconds…</p>
+            </div>
+
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Button asChild>
+                <Link to={dashboardLoginPath}>Continue to dashboard</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/">Back to home</Link>
+              </Button>
+            </div>
+
+            <p className="mt-6 text-center text-xs leading-5 text-[#66718E]">
+              Reference: <span className="font-medium text-[#10203F]">{publicConfirmation.reference}</span>
+            </p>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <PublicPageShell
       eyebrow="Billing"
