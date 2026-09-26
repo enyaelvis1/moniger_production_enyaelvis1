@@ -649,12 +649,14 @@ const CustomersPage = () => {
             onSearchChange={setSearch}
             searchPlaceholder="Customer name, business name, email, or phone"
             toolbarSlot={
-              <AdvancedFilter
-                definitions={advancedFilterDefinitions}
-                state={advancedFilters}
-                onChange={setAdvancedFilters}
-                storageKey="customers"
-              />
+              starterCustomerLimit ? null : (
+                <AdvancedFilter
+                  definitions={advancedFilterDefinitions}
+                  state={advancedFilters}
+                  onChange={setAdvancedFilters}
+                  storageKey="customers"
+                />
+              )
             }
             emptyTitle="No customers found"
             emptyDescription="Add your first customer to start invoicing."
