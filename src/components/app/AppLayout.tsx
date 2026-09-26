@@ -11,6 +11,7 @@ import { LayoutDashboard, FileText, Building2, CreditCard, MoreHorizontal, Plus 
 import { showDemoToast } from "@/lib/demo-toast";
 import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
 import { useNetworkStatus } from "@/hooks/use-network-status";
+import { useAuth } from "@/contexts/AuthContext";
 
 const pageTitleKeys: Record<string, string> = {
   "/dashboard": "pages.dashboard",
@@ -62,10 +63,13 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useLocalization();
+  const { resendEmailConfirmation, user } = useAuth();
   const { entitlements, isLoading: isSubscriptionLoading, subscription } = useWorkspaceSubscription();
   const { isOnline } = useNetworkStatus();
   const pageTitle = t(getPageTitleKey(location.pathname, location.search));
   const [fabOpen, setFabOpen] = useState(false);
+  const [isResendingConfirmation, setIsResendingConfirmation] = useState(false);
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
   const quickActionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
@@ -116,6 +120,38 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
                       className="inline-flex h-10 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-100"
                     >
                       Retry
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              {user && !user.email_confirmed_at ? (
+                <div className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-4 text-amber-950 shadow-sm dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100" role="alert">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-semibold">Confirm your email to fully activate Moniger</p>
+                      <p className="mt-1 text-sm leading-6 text-amber-900/80 dark:text-amber-100/80">
+                        Check your inbox and use the confirmation link. Until then, workspace operations remain restricted.
+                      </p>
+                      {confirmationMessage ? <p className="mt-2 text-sm font-medium">{confirmationMessage}</p> : null}
+                    </div>
+                    <button
+                      type="button"
+                      className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-amber-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-100 dark:text-amber-950 dark:hover:bg-white"
+                      disabled={isResendingConfirmation}
+                      onClick={async () => {
+                        setIsResendingConfirmation(true);
+                        setConfirmationMessage(null);
+                        try {
+                          await resendEmailConfirmation();
+                          setConfirmationMessage("Confirmation email sent. Check your inbox or spam folder.");
+                        } catch (error) {
+                          setConfirmationMessage(error instanceof Error ? error.message : "We could not resend the confirmation email.");
+                        } finally {
+                          setIsResendingConfirmation(false);
+                        }
+                      }}
+                    >
+                      {isResendingConfirmation ? "Sending…" : "Resend confirmation email"}
                     </button>
                   </div>
                 </div>

@@ -20,7 +20,6 @@ import {
   type SubscriptionPlan,
 } from "@/lib/subscriptions";
 import { getRegistrationDestination } from "@/lib/subscription-registration";
-import { markEmailConfirmationReminderPending } from "@/lib/email-confirmation-reminder";
 import {
   initializeSignupSubscriptionCheckout,
   initializeWorkspaceSubscriptionCheckout,
@@ -535,8 +534,6 @@ const RegisterPage = () => {
         businessName: normalizedBusinessName,
         plan: selectedPlan,
       });
-
-      markEmailConfirmationReminderPending(result.userId);
 
       if (isPaidPlanSelection) {
         let checkoutError: unknown = null;

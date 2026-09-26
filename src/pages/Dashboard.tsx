@@ -1,5 +1,4 @@
 import {
-  AlertTriangle,
   ArrowRight,
   Building2,
   CheckCircle,
@@ -28,10 +27,6 @@ import { useOperationsData, type ActivityModule } from "@/hooks/use-operations-d
 import { useSettingsData, useWorkspaceWalletData } from "@/hooks/use-settings-data";
 import { getFriendlyErrorMessage } from "@/lib/error-handling";
 import { getDefaultSubscriptionBillingCycle, isSubscriptionPlan, type SubscriptionPlan } from "@/lib/subscriptions";
-import {
-  clearEmailConfirmationReminder,
-  hasEmailConfirmationReminderPending,
-} from "@/lib/email-confirmation-reminder";
 import { initializeWorkspaceSubscriptionCheckout } from "@/lib/workspace-subscriptions";
 import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
 import { SubscriptionRenewalBanner } from "@/components/app/SubscriptionRenewalBanner";
@@ -111,7 +106,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const [showEmailConfirmationReminder, setShowEmailConfirmationReminder] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const { formatCurrency, t } = useLocalization();
@@ -141,20 +135,6 @@ const Dashboard = () => {
   const showPendingSignupPayment = Boolean(
     pendingSignupPlan && !workspaceSubscription.entitlements.hasConfirmedPaidSubscription,
   );
-  useEffect(() => {
-    if (!user?.id) {
-      setShowEmailConfirmationReminder(false);
-      return;
-    }
-
-    if (emailConfirmed) {
-      clearEmailConfirmationReminder(user.id);
-      setShowEmailConfirmationReminder(false);
-      return;
-    }
-
-    setShowEmailConfirmationReminder(hasEmailConfirmationReminderPending(user.id));
-  }, [emailConfirmed, user?.id]);
   const startPendingSignupPayment = async () => {
     if (!pendingSignupPlan || isPaymentLoading) {
       return;
@@ -256,27 +236,6 @@ const Dashboard = () => {
       {paymentError && !pendingSignupPlan ? (
         <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
           {paymentError}
-        </div>
-      ) : null}
-      {showEmailConfirmationReminder ? (
-        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-950 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300" aria-hidden="true" />
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold">Please confirm your email</p>
-            <p className="mt-1 text-sm leading-6 text-amber-900/80 dark:text-amber-100/80">
-              Confirm your email to keep your Moniger account secure. You can continue using your dashboard for now.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              clearEmailConfirmationReminder(user?.id);
-              setShowEmailConfirmationReminder(false);
-            }}
-            className="shrink-0 rounded-full border border-amber-300 bg-white/70 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-white dark:border-amber-400/40 dark:bg-transparent dark:text-amber-100"
-          >
-            Dismiss
-          </button>
         </div>
       ) : null}
       {isSettingsLoading || isOperationsLoading ? (

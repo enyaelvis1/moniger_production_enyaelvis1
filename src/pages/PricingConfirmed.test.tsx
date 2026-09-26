@@ -74,10 +74,10 @@ describe("PricingConfirmedPage", () => {
     });
 
     expect(verifyWorkspaceSubscriptionCheckoutMock).not.toHaveBeenCalled();
-    expect(await screen.findByText(/checkout received/i)).toBeInTheDocument();
-    expect(screen.getByText(/your paystack checkout for the growth plan was recorded/i)).toBeInTheDocument();
+    expect(await screen.findByText(/payment successful/i)).toBeInTheDocument();
+    expect(screen.getByText(/your paystack payment for the growth plan was received/i)).toBeInTheDocument();
     expect(screen.queryByText(/Acme Workspace/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /sign in to continue/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /continue to dashboard/i })).toBeInTheDocument();
   });
 
   it("uses the signed-in verification flow and shows workspace details only for authenticated users", async () => {

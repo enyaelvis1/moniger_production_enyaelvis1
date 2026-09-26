@@ -274,9 +274,10 @@ Live cutover checklist after Paystack approval:
 
 ### 2026-09-24 — Signup confirmation and payment continuation
 
-- [x] Paid Growth and Business signup now initializes the Paystack checkout immediately after account creation, even while the signup email remains unconfirmed.
+- [x] Paid Growth and Business signup now initializes the Paystack checkout immediately after account creation while the signup email confirmation remains pending.
 - [x] The public checkout session is tied server-side to the newly created user-owned workspace and cannot activate access from the browser alone.
 - [x] Paystack confirmation and webhook reconciliation remain the source of truth for paid workspace activation.
-- [x] Paid signup returns an authenticated session so the completed Paystack checkout redirects directly to `/dashboard`; the dashboard remains protected until the paid subscription is active.
-- [x] Email confirmation is non-blocking for signup so payment and dashboard onboarding are not interrupted by the provider confirmation page.
+- [x] Native Supabase email confirmation is enabled for new accounts; the confirmation link returns to `/dashboard` and the dashboard shows the confirmed state.
+- [x] Signed-out paid checkout confirmation now shows a prominent payment-success state, an automatic sign-in/dashboard fallback, and a manual dashboard link.
+- [x] Authenticated legacy sessions without a confirmed email show a resend-confirmation action and remain restricted from full workspace activation.
 - [ ] Confirm the final production signup behavior with one disposable Starter account and one disposable paid-plan account, including payment and direct dashboard landing.
