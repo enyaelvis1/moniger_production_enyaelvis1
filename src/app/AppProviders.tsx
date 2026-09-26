@@ -1,5 +1,5 @@
 import { PropsWithChildren } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import {
   ErrorBoundary,
   ErrorList,
@@ -13,14 +13,10 @@ import { LocalizationProvider } from "@/contexts/LocalizationContext";
 import { SessionTimeoutProvider } from "@/contexts/SessionTimeoutContext";
 import { WorkspaceSelectionProvider } from "@/contexts/WorkspaceSelectionContext";
 import { captureMonitoringException } from "@/lib/monitoring";
-import { defaultQueryClientOptions } from "@/lib/query";
-
-const queryClient = new QueryClient({
-  defaultOptions: defaultQueryClientOptions,
-});
+import { appQueryClient } from "@/lib/query-client";
 
 const AppProviders = ({ children }: PropsWithChildren) => (
-  <QueryClientProvider client={queryClient}>
+  <QueryClientProvider client={appQueryClient}>
     <TooltipProvider>
       <SessionTimeoutProvider>
         <AuthProvider>
