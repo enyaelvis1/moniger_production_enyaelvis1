@@ -176,6 +176,15 @@ const PricingConfirmedPage = () => {
         { label: "Destination", value: "Workspace billing" },
       ]}
       cta={{ label: "Back to pricing", to: "/pricing" }}
+      accent={(
+        <div className="rounded-[30px] border border-[#DCE2F2] bg-[#10203F] p-6 text-white shadow-[0_28px_80px_rgba(16,32,63,0.18)]">
+          <CheckCircle2 size={28} className="text-[#86EFAC]" aria-hidden="true" />
+          <p className="mt-5 text-xl font-bold">Secure checkout complete</p>
+          <p className="mt-2 text-sm leading-[1.7] text-white/70">
+            Your payment is being reconciled before your workspace dashboard is unlocked.
+          </p>
+        </div>
+      )}
     >
       <section className="mx-auto max-w-3xl rounded-[28px] border border-[#DCE2F2] bg-white p-8 shadow-[0_18px_50px_rgba(16,32,63,0.06)]">
         {isLoading ? (
