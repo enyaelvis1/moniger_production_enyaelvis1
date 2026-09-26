@@ -39,7 +39,7 @@ describe("shared form validation", () => {
       }),
     ).toEqual({
       accountNumber: "Account number must be 10-12 digits",
-      phone: "Please enter a valid phone number",
+      phone: "Enter an 11-digit Nigerian number, such as 0801 234 5678 or +234 801 234 5678",
     });
 
     expect(
