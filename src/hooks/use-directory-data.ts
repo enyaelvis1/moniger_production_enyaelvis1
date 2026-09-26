@@ -258,6 +258,33 @@ const insertCustomer = async (businessId: string, userId: string, values: Custom
   });
 };
 
+const insertCustomers = async (businessId: string, userId: string, values: CustomerInput[]) => {
+  const rows = values.map((value) => ({
+    billing_address: buildBillingAddress(value.street_address, value.city_state) ?? value.billing_address ?? null,
+    business_name: value.business_name ?? null,
+    business_id: businessId,
+    city_state: value.city_state ?? null,
+    created_by: userId,
+    email: value.email ?? null,
+    name: value.name,
+    notes: value.notes ?? null,
+    phone: value.phone ?? null,
+    street_address: value.street_address ?? null,
+  }));
+  const { data, error } = await supabase.from("customers").insert(rows).select("id");
+  if (error) throw error;
+
+  await logAuditEventSafe({
+    action: "customer.created",
+    actorUserId: userId,
+    businessId,
+    detail: { description: `${values.length} customers imported`, count: values.length },
+    entityType: "customer",
+    summary: `${values.length} customers imported`,
+  });
+  return data;
+};
+
 const updateCustomer = async (businessId: string, customerId: string, userId: string, values: CustomerInput) => {
   const billingAddress = buildBillingAddress(values.street_address, values.city_state);
   const { error } = await supabase
@@ -352,6 +379,34 @@ const insertVendor = async (businessId: string, userId: string, values: VendorIn
     entityType: "vendor",
     summary: `Vendor ${values.business_name} added`,
   });
+};
+
+const insertVendors = async (businessId: string, userId: string, values: VendorInput[]) => {
+  const rows = values.map((value) => ({
+    account_name: value.account_name ?? null,
+    account_number: value.account_number ?? null,
+    bank_name: value.bank_name ?? null,
+    bank_id: value.bank_id ?? null,
+    business_id: businessId,
+    business_name: value.business_name,
+    contact_name: value.contact_name ?? null,
+    created_by: userId,
+    email: value.email ?? null,
+    notes: value.notes ?? null,
+    phone: value.phone ?? null,
+  }));
+  const { data, error } = await supabase.from("vendors").insert(rows).select("id");
+  if (error) throw error;
+
+  await logAuditEventSafe({
+    action: "vendor.created",
+    actorUserId: userId,
+    businessId,
+    detail: { description: `${values.length} vendors imported`, count: values.length },
+    entityType: "vendor",
+    summary: `${values.length} vendors imported`,
+  });
+  return data;
 };
 
 const updateVendor = async (businessId: string, userId: string, vendorId: string, values: VendorInput) => {
@@ -472,6 +527,15 @@ export const useCustomerMutations = (businessId?: string, userId?: string) => {
       },
       onSuccess: invalidate,
     }),
+    importCustomers: useMutation({
+      mutationFn: (values: CustomerInput[]) => {
+        if (!businessId || !userId) {
+          throw new Error("A business workspace is required before you can import customers.");
+        }
+        return insertCustomers(businessId, userId, values);
+      },
+      onSuccess: invalidate,
+    }),
     deleteCustomer: useMutation({
       mutationFn: ({ customerId, customerName }: { customerId: string; customerName?: string }) => {
         if (!businessId || !userId) {
@@ -517,6 +581,15 @@ export const useVendorMutations = (businessId?: string, userId?: string) => {
         }
 
         return insertVendor(businessId, userId, values);
+      },
+      onSuccess: invalidate,
+    }),
+    importVendors: useMutation({
+      mutationFn: (values: VendorInput[]) => {
+        if (!businessId || !userId) {
+          throw new Error("A business workspace is required before you can import vendors.");
+        }
+        return insertVendors(businessId, userId, values);
       },
       onSuccess: invalidate,
     }),

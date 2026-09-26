@@ -6,6 +6,25 @@ const supportedPhoneCharacters = /^[+\d\s().-]+$/;
 
 export const filterPhoneInput = (value: string) => value.replace(/[^+\d\s().-]/g, "");
 
+/** Keep interactive input within the Nigerian phone-number shape. */
+export const limitPhoneInput = (value: string) => {
+  const filteredValue = filterPhoneInput(value);
+  const compactValue = stripPhoneFormatting(filteredValue);
+  const digitLimit = compactValue.startsWith("+234") || compactValue.startsWith("234") ? 13 : 11;
+  let digitCount = 0;
+
+  return filteredValue
+    .split("")
+    .filter((character) => {
+      if (!/\d/.test(character)) {
+        return true;
+      }
+      digitCount += 1;
+      return digitCount <= digitLimit;
+    })
+    .join("");
+};
+
 const stripPhoneFormatting = (value: string) => value.replace(/[\s().-]/g, "");
 
 export const normalizePhoneNumber = (value: string | null | undefined): string | null => {
@@ -30,7 +49,7 @@ export const normalizePhoneNumber = (value: string | null | undefined): string |
 
   if (compactValue.startsWith("+")) {
     const digits = compactValue.slice(1);
-    return digits ? `+${digits}` : null;
+    return digits.startsWith(NIGERIA_COUNTRY_CODE) && digits.length === 13 ? `+${digits}` : null;
   }
 
   const digits = compactValue;
@@ -39,17 +58,16 @@ export const normalizePhoneNumber = (value: string | null | undefined): string |
   }
 
   if (digits.startsWith("0")) {
-    return `+${NIGERIA_COUNTRY_CODE}${digits.slice(1)}`;
+    return digits.length === 11 ? `+${NIGERIA_COUNTRY_CODE}${digits.slice(1)}` : null;
   }
 
   if (digits.startsWith(NIGERIA_COUNTRY_CODE)) {
-    return `+${digits}`;
+    return digits.length === 13 ? `+${digits}` : null;
   }
 
-  return `+${digits}`;
+  return null;
 };
 
 export const isValidPhoneNumber = (value: string): boolean => {
-  const normalizedPhone = normalizePhoneNumber(value);
-  return normalizedPhone ? /^\+[1-9]\d{7,14}$/.test(normalizedPhone) : false;
+  return normalizePhoneNumber(value) !== null;
 };
