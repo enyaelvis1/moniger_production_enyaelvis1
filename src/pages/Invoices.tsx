@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, Copy, ExternalLink, Eye, Loader2, MessageCircle, MoreHorizontal, Pencil, Plus, Send, Trash2 } from "lucide-react";
-import { format } from "date-fns";
+import { ArrowLeft, ArrowRight, CheckCircle2, Copy, ExternalLink, Eye, Loader2, MessageCircle, MoreHorizontal, Pencil, Plus, Send, Trash2, UserPlus } from "lucide-react";
+import { addDays, format } from "date-fns";
 import AppLayout from "@/components/app/AppLayout";
 import DataPage from "@/components/app/DataPage";
 import OperationStatusNotice, { type OperationStatusState } from "@/components/app/OperationStatusNotice";
@@ -42,6 +42,8 @@ import {
   type AdvancedFilterState,
 } from "@/lib/advanced-filters";
 import { createFormValidator, getFriendlyErrorMessage, ValidationRules } from "@/lib/error-handling";
+import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
+import { Link, useNavigate } from "react-router-dom";
 
 type SheetMode = "create" | "edit" | "view";
 type InvoiceFormStep = "details" | "items" | "review";
@@ -54,7 +56,7 @@ type InvoiceFormState = {
   notes: string;
   taxPercent: number;
 };
-type InvoiceFormErrors = Partial<Record<"customerId" | "issueDate" | "lineItems", string>>;
+type InvoiceFormErrors = Partial<Record<"customerId" | "dueDate" | "issueDate" | "lineItems", string>>;
 
 type DeliveryDialogSource = "create" | "edit" | "table";
 type DeliveryDialogContext = {
@@ -100,7 +102,7 @@ const emptyDeliveryForm = (): InvoiceDeliveryFormState => ({
 
 const createInvoiceForm = (invoiceNumber: string): InvoiceFormState => ({
   customerId: "",
-  dueDate: "",
+  dueDate: format(addDays(new Date(), 14), "yyyy-MM-dd"),
   invoiceNumber,
   issueDate: format(new Date(), "yyyy-MM-dd"),
   lineItems: [emptyLineItem()],
@@ -110,6 +112,7 @@ const createInvoiceForm = (invoiceNumber: string): InvoiceFormState => ({
 
 const invoiceFormValidator = createFormValidator({
   customerId: [ValidationRules.required()],
+  dueDate: [ValidationRules.required("Choose a due date or use the default 14-day term.")],
   issueDate: [ValidationRules.required()],
 });
 const inputErrorClassName = "border-destructive focus-visible:ring-destructive";
@@ -301,8 +304,10 @@ const generateNextDocumentNumber = (existingNumbers: string[], prefix: string, p
 const InvoicesPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { formatCurrency, formatDateTime, language, t } = useLocalization();
   const settingsQuery = useSettingsData(user?.id);
+  const { subscription } = useWorkspaceSubscription();
   const businessId = settingsQuery.data?.business?.id;
   const businessName = settingsQuery.data?.business?.name ?? "Moniger Workspace";
   const customersQuery = useCustomersDirectory(businessId);
@@ -332,6 +337,13 @@ const InvoicesPage = () => {
 
   const invoices = useMemo(() => invoicesQuery.data ?? [], [invoicesQuery.data]);
   const customers = useMemo(() => customersQuery.data ?? [], [customersQuery.data]);
+  const isStarterPlan = subscription?.plan === "starter";
+  const starterInvoiceCount = useMemo(() => {
+    if (!isStarterPlan) return 0;
+    const startOfMonth = format(new Date(), "yyyy-MM-01");
+    return invoices.filter((invoice) => invoice.issueDate >= startOfMonth && invoice.status !== "cancelled").length;
+  }, [format, invoices, isStarterPlan]);
+  const starterInvoiceLimitReached = isStarterPlan && starterInvoiceCount >= 10;
   const customerById = useMemo(() => new Map(customers.map((customer) => [customer.id, customer])), [customers]);
   const activeInvoice = useMemo(
     () => invoices.find((invoice) => invoice.id === activeInvoiceId) ?? null,
@@ -460,6 +472,10 @@ const InvoicesPage = () => {
   const isReadOnly = sheetMode === "view";
 
   const openCreateDrawer = () => {
+    if (starterInvoiceLimitReached) {
+      navigate("/subscription");
+      return;
+    }
     setSheetMode("create");
     setFormStep("details");
     setActiveInvoiceId(null);
@@ -608,6 +624,7 @@ const InvoicesPage = () => {
   const validateForm = (): InvoiceFormErrors => {
     const errors = invoiceFormValidator({
       customerId: form.customerId,
+      dueDate: form.dueDate,
       issueDate: form.issueDate,
     }) as InvoiceFormErrors;
 
@@ -626,6 +643,7 @@ const InvoicesPage = () => {
     if (step === "details") {
       return {
         customerId: validationErrors.customerId,
+        dueDate: validationErrors.dueDate,
         issueDate: validationErrors.issueDate,
       };
     }
@@ -941,7 +959,7 @@ const InvoicesPage = () => {
   const currentInvoiceStepMessage =
     (hasTriedInvoiceStepAdvance ? Object.values(currentInvoiceStepErrors).find((value): value is string => Boolean(value)) : undefined) ??
     (formStep === "details"
-      ? "Set the customer and timing first so the invoice has a valid starting point."
+      ? "Choose a customer and due date first. The invoice number and issue date are generated for you."
       : formStep === "items"
         ? "Add at least one billable line item before moving to review."
         : "Everything looks ready. Review the totals and send when you are confident.");
@@ -1121,6 +1139,15 @@ const InvoicesPage = () => {
   };
 
   const handleDownloadInvoicePdf = async (invoice: InvoiceRecord) => {
+    if (isStarterPlan) {
+      toast({
+        title: "PDF export is a paid-plan feature",
+        description: "Upgrade to Growth or Business to download invoice PDFs.",
+      });
+      navigate("/subscription");
+      return;
+    }
+
     const invoiceTotals = calculateTotals(invoice.lineItems, invoice.taxPercent);
 
     setPageActionStatus({
@@ -1363,11 +1390,11 @@ const InvoicesPage = () => {
               <DropdownMenuItem onClick={() => void handleOpenPaymentLink(row)} disabled={!canShareInvoicePaymentLink(row)}>
                 Open Payment Page
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => void handleDownloadInvoicePdf(row)}
-              >
-                Download PDF
-              </DropdownMenuItem>
+              {!isStarterPlan ? (
+                <DropdownMenuItem onClick={() => void handleDownloadInvoicePdf(row)}>
+                  Download PDF
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 onClick={() => void handleStatusChange(row, "paid")}
                 disabled={row.status === "paid" || row.status === "cancelled"}
@@ -1430,10 +1457,22 @@ const InvoicesPage = () => {
           />
         ) : null}
 
+        {isStarterPlan ? (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                Starter includes up to 10 invoices per calendar month ({Math.min(starterInvoiceCount, 10)}/10 used).
+                Advanced filters and PDF exports are available on paid plans.
+              </p>
+              <Link to="/subscription" className="shrink-0 font-semibold text-primary hover:underline">View plans</Link>
+            </div>
+          </div>
+        ) : null}
+
         <div className="space-y-6">
           {drawerOpen ? (
             <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6 xl:p-8">
-              <div className="sticky top-0 z-20 -mx-5 border-b border-border bg-card/95 px-5 pb-5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-card/90 sm:-mx-6 sm:px-6 xl:static xl:mx-0 xl:bg-transparent xl:px-0 xl:pt-0 xl:backdrop-blur-0">
+              <div className="sticky top-0 z-20 -mx-5 border-b border-border bg-card/95 px-5 pb-5 pt-4 backdrop-blur supports-[backdrop-filter]:bg-card/90 sm:-mx-6 sm:px-6 xl:mx-0 xl:bg-card/95 xl:px-0 xl:pt-0 xl:backdrop-blur-0">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-secondary">Invoice workspace</p>
@@ -1539,15 +1578,37 @@ const InvoicesPage = () => {
                     );
                   })}
                 </div>
+                {formStep !== "review" ? (
+                  <Button
+                    type="button"
+                    onClick={() => goToInvoiceStep(formStep === "details" ? "items" : "review")}
+                    disabled={isMutating}
+                    className="shrink-0 rounded-xl px-4"
+                  >
+                    {formStep === "details" ? "Next: Items" : "Next: Review"}
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                ) : null}
                 </div>
               </div>
 
               <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-                <div className="space-y-6">
+                <div className="space-y-6 pb-28">
                   {formStep === "details" ? (
                     <div className="grid gap-4 lg:grid-cols-2">
                       <div className="space-y-2 lg:col-span-2">
-                        <Label htmlFor="invoice-customer">Customer</Label>
+                        <div className="flex items-center justify-between gap-3">
+                          <Label htmlFor="invoice-customer">Customer</Label>
+                          {!isReadOnly ? (
+                            <Link
+                              to="/customers"
+                              className="inline-flex items-center gap-1.5 rounded-lg border-2 border-primary bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary shadow-sm transition-colors hover:bg-primary hover:text-primary-foreground"
+                            >
+                              <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                              Create customer
+                            </Link>
+                          ) : null}
+                        </div>
                         <Select
                           value={form.customerId}
                           onValueChange={(value) => {
@@ -1582,7 +1643,7 @@ const InvoicesPage = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="invoice-number">Invoice #</Label>
+                        <Label htmlFor="invoice-number">Invoice # <span className="font-normal text-muted-foreground">(automatic)</span></Label>
                         <Input id="invoice-number" value={form.invoiceNumber} disabled className="rounded-lg bg-muted" />
                       </div>
 
@@ -1611,15 +1672,19 @@ const InvoicesPage = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="invoice-due-date">Due Date</Label>
+                        <Label htmlFor="invoice-due-date">Due Date <span className="text-destructive">*</span></Label>
                         <Input
                           id="invoice-due-date"
                           type="date"
                           value={form.dueDate}
-                          onChange={(event) => setForm((currentForm) => ({ ...currentForm, dueDate: event.target.value }))}
-                          className="rounded-lg"
+                          onChange={(event) => {
+                            clearFormError("dueDate");
+                            setForm((currentForm) => ({ ...currentForm, dueDate: event.target.value }));
+                          }}
+                          className={`rounded-lg ${formErrors.dueDate ? inputErrorClassName : ""}`}
                           disabled={isReadOnly}
                         />
+                        {formErrors.dueDate ? <p className={inlineErrorClassName} role="alert">{formErrors.dueDate}</p> : null}
                       </div>
 
                       <div className="space-y-2 lg:col-span-2">
@@ -1873,7 +1938,7 @@ const InvoicesPage = () => {
                     </div>
                   ) : null}
 
-                  <div className="flex flex-col gap-4 border-t border-border pt-5">
+                  <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col gap-3 border-t-2 border-[#5B67F7] bg-[#10203F] px-4 py-3 text-white shadow-[0_-10px_30px_rgba(16,32,63,0.25)] md:left-[var(--sidebar-width)] md:px-6 xl:px-8">
                     <div className="xl:hidden">
                       <p className="text-sm font-semibold text-foreground">
                         Step {invoiceStepMeta[formStep].index}: {invoiceStepMeta[formStep].title}
@@ -1884,17 +1949,17 @@ const InvoicesPage = () => {
                       className={`rounded-xl border px-4 py-3 text-sm ${
                         hasTriedInvoiceStepAdvance && Object.values(currentInvoiceStepErrors).some(Boolean)
                           ? "border-destructive/20 bg-destructive/5 text-destructive"
-                          : "border-border bg-muted/20 text-muted-foreground"
+                          : "border-white/20 bg-white/10 text-white/90"
                       }`}
                       role="status"
                     >
                       {currentInvoiceStepMessage}
                     </div>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex gap-3">
                         {formStep !== "details" ? (
                           <Button
-                            variant="outline"
+                            variant={formStep === "details" ? "default" : "outline"}
                             className="rounded-xl px-4"
                             onClick={() => goToInvoiceStep(formStep === "review" ? "items" : "details")}
                             disabled={isMutating}
@@ -1903,21 +1968,23 @@ const InvoicesPage = () => {
                             Back
                           </Button>
                         ) : null}
+                      </div>
+                      <div className="flex items-center justify-end gap-3">
+                        <Button variant="ghost" className="rounded-lg text-white hover:bg-white/10 hover:text-white" onClick={closeDrawer} disabled={isMutating}>
+                          {isReadOnly ? "Close" : "Cancel"}
+                        </Button>
                         {formStep !== "review" ? (
                           <Button
-                            variant="outline"
-                            className="rounded-xl px-4"
+                            variant="default"
+                            className="h-11 rounded-xl bg-[#5B67F7] px-5 font-bold text-white shadow-lg shadow-[#5B67F7]/30 hover:bg-[#4653D8]"
                             onClick={() => goToInvoiceStep(formStep === "details" ? "items" : "review")}
                             disabled={isMutating}
                           >
-                            {formStep === "details" ? "Continue to Items" : "Continue to Review"}
+                            {formStep === "details" ? "Next: Items" : "Next: Review"}
                             <ArrowRight className="h-4 w-4" />
                           </Button>
                         ) : null}
                       </div>
-                      <Button variant="ghost" className="rounded-lg" onClick={closeDrawer} disabled={isMutating}>
-                        {isReadOnly ? "Close" : "Cancel"}
-                      </Button>
                     </div>
 
                     {formStep === "review" ? (
@@ -2024,8 +2091,9 @@ const InvoicesPage = () => {
 
           <DataPage
             title="Invoices"
-            actionLabel={drawerOpen ? "Close Form" : "+ New Invoice"}
+            actionLabel={drawerOpen ? "Close Form" : starterInvoiceLimitReached ? "Upgrade to create invoices" : "+ New Invoice"}
             onAction={drawerOpen ? closeDrawer : openCreateDrawer}
+            actionTitle={starterInvoiceLimitReached ? "Starter allows up to 10 invoices per calendar month" : undefined}
             tabs={tabs}
             activeTab={tab}
             onTabChange={setTab}
@@ -2034,14 +2102,7 @@ const InvoicesPage = () => {
             searchValue={search}
             onSearchChange={setSearch}
             searchPlaceholder="Invoice number or customer"
-            toolbarSlot={
-              <AdvancedFilter
-                definitions={advancedFilterDefinitions}
-                state={advancedFilters}
-                onChange={setAdvancedFilters}
-                storageKey="invoices"
-              />
-            }
+            toolbarSlot={isStarterPlan ? null : <AdvancedFilter definitions={advancedFilterDefinitions} state={advancedFilters} onChange={setAdvancedFilters} storageKey="invoices" />}
             emptyTitle="No invoices found"
             emptyDescription="Create your first invoice to get started."
             onRowClick={openViewDrawer}
