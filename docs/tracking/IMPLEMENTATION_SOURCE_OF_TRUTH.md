@@ -269,6 +269,13 @@ Live cutover checklist after Paystack approval:
 - [x] Added `has_workspace_feature_access` and aligned RLS for vendors, bills, team mutations, audit logs, and marketplace routing; membership reads remain available so Starter workspace resolution continues to work.
 - [ ] Growth and Business remain the paid tiers for the locked workspace areas; billing and live-money rollout status remains governed by the existing subscription source-of-truth entries.
 
+### 2026-09-26 — Invoice creation clarity and Starter limits
+
+- [x] Invoice creation now explains the three-step flow as Customer & dates, Items & totals, and Review & send.
+- [x] New invoices receive a default 14-day due date, while the customer and due date are clearly required before continuing.
+- [x] Starter workspaces show monthly invoice usage and are limited to 10 non-cancelled invoices per calendar month by a database trigger.
+- [x] Starter workspaces do not see advanced invoice filters or PDF export actions; these remain available to paid plans.
+
 ### 2026-09-23 — Client feedback hardening in local validation
 
 - [x] Added shared Vendor and Business phone validation that rejects alphabetic and unsupported characters in the browser and database trigger paths.

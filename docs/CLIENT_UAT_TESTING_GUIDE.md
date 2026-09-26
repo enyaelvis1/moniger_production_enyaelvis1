@@ -417,6 +417,24 @@ Expected result:
 - The underlying database does not return Starter data for the locked feature tables.
 - After upgrading to an active Growth or Business subscription, the locked areas become available.
 
+### 5.7 Invoice creation and Starter invoice limits
+
+Test steps:
+
+1. Open `Invoices -> New Invoice` as a Starter user.
+2. Confirm the wizard identifies the three steps and explains that the invoice number is automatic.
+3. Confirm the due date defaults to 14 days from today.
+4. Try to continue without a customer or due date and confirm the inline guidance explains what is missing.
+5. Confirm `Advanced Filters` and `Download PDF` are not shown for Starter.
+6. Create invoices until the Starter monthly limit is reached.
+
+Expected result:
+
+- The first step clearly identifies the customer and due date requirements.
+- The invoice wizard prevents moving forward until required details are present.
+- Starter displays monthly usage and sends the user to subscription management after 10 invoices.
+- The database also rejects an 11th Starter invoice for the same calendar month.
+
 ## 6. What Is Not Ready For Final Client Sign-Off Yet
 
 Please do **not** use the following as final go-live checks yet:
