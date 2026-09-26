@@ -18,6 +18,7 @@ const starterFeatures: ReadonlySet<WorkspaceFeature> = new Set([
   "invoices",
   "customers",
   "payments",
+  "vendors",
 ]);
 
 export const isWorkspaceFeatureAvailable = (
