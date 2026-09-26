@@ -79,7 +79,7 @@ import {
   formatNumberValue,
 } from "@/lib/localization";
 import { defaultNotificationPreferences } from "@/lib/notifications";
-import { filterPhoneInput, normalizePhoneNumber, phonePlaceholder } from "@/lib/phone";
+import { limitPhoneInput, normalizePhoneNumber, phonePlaceholder } from "@/lib/phone";
 import { defaultPrivacyPreferences, type PrivacyPreferenceState } from "@/lib/privacy";
 import { createFormValidator, getFriendlyErrorMessage, ValidationRules } from "@/lib/error-handling";
 import { type AppMfaFactor, type AuthenticatorAssuranceLevel, validateTotpCode } from "@/lib/mfa";
@@ -2764,16 +2764,19 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
                       error: profileErrors.phone,
                       id: "settings-phone",
                     })}
+                    type="tel"
+                    inputMode="tel"
+                    pattern="[+0-9 ()\\-]+"
                     value={profile.phone}
                     onChange={(event) => {
                       clearProfileError("phone");
-                      setProfile((current) => ({ ...current, phone: event.target.value }));
+                      setProfile((current) => ({ ...current, phone: limitPhoneInput(event.target.value) }));
                     }}
                     disabled={isInitialLoading || updateProfileMutation.isPending || isProfileImageUploading}
                     placeholder={phonePlaceholder}
                     className={profileErrors.phone ? inputErrorClassName : ""}
                   />
-                  <p className="text-xs text-muted-foreground">Use international format, for example {phonePlaceholder}.</p>
+                  <p className="text-xs text-muted-foreground">Enter 11 local digits (0801 234 5678) or the equivalent international format ({phonePlaceholder}).</p>
                   {profileErrors.phone ? (
                     <p id="settings-phone-error" className={inlineErrorClassName} role="alert">
                       {profileErrors.phone}
@@ -3820,13 +3823,13 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
                     value={business.phone}
                     onChange={(event) => {
                       clearBusinessError("phone");
-                      setBusiness((current) => ({ ...current, phone: filterPhoneInput(event.target.value) }));
+                      setBusiness((current) => ({ ...current, phone: limitPhoneInput(event.target.value) }));
                     }}
                     placeholder={phonePlaceholder}
                     className={businessErrors.phone ? inputErrorClassName : ""}
                     disabled={isInitialLoading || updateBusinessMutation.isPending || !settings?.business}
                   />
-                  <p className="text-xs text-muted-foreground">Use digits and an optional leading +, for example {phonePlaceholder}.</p>
+                  <p className="text-xs text-muted-foreground">Enter 11 local digits (0801 234 5678) or the equivalent international format ({phonePlaceholder}).</p>
                   {businessErrors.phone ? (
                     <p id="settings-business-phone-error" className={inlineErrorClassName} role="alert">
                       {businessErrors.phone}

@@ -388,7 +388,7 @@ export const ValidationRules = {
 
   phone: (): ValidationRule<string> => ({
     validate: (value) => isValidPhoneNumber(value),
-    message: "Please enter a valid phone number",
+    message: "Enter an 11-digit Nigerian number, such as 0801 234 5678 or +234 801 234 5678",
   }),
 
   optional: <T,>(rule: ValidationRule<T>): ValidationRule<T | "" | null | undefined> => ({

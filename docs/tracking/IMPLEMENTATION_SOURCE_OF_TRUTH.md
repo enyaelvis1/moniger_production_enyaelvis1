@@ -74,6 +74,8 @@ That changes the implementation priority:
 - [x] Public pricing cards now read from an admin-editable `billing_catalog` value published through a public site config endpoint.
 - [x] The workspace shell now shows a subscription status banner, and `/reports` plus `/audit-trail` now show an in-app workspace upgrade page with direct checkout and a highlighted current-plan summary when the plan is not active.
 - [x] Deployment resilience now uses a non-cacheable HTML app shell, immutable hashed assets, guarded lazy-chunk retry, and an admin action to clear the current browser's app cache without touching authentication or platform data.
+- [x] Growth and Business workspaces can import/export customer and vendor CSV files using the documented templates; Starter workspaces retain their three-record limits and do not receive spreadsheet tools.
+- [x] Customer and vendor forms validate phone digit counts explicitly, offer Nigerian state suggestions, and keep primary save actions visible while scrolling.
 - [x] Multi-workspace users can switch workspaces from the sidebar; the selected workspace is persisted per user and settings/subscription queries are scoped to the selected business.
 - [x] The workspace profile upgrade action now opens a plan comparison dialog first, so users can review the available plans before starting checkout.
 - [x] Self-service cancellation stops Paystack renewal, preserves access through the recorded renewal date, and records `cancel_at_period_end` with an audit event.

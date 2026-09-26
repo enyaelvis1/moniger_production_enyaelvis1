@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, Eye, Loader2, Pencil, Trash2 } from "lucide-react";
 import AppLayout from "@/components/app/AppLayout";
 import DataPage from "@/components/app/DataPage";
+import { DirectorySpreadsheetTools } from "@/components/app/DirectorySpreadsheetTools";
 import StatusBadge from "@/components/app/StatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettingsData } from "@/hooks/use-settings-data";
@@ -25,7 +26,8 @@ import {
   type AdvancedFilterState,
 } from "@/lib/advanced-filters";
 import { createFormValidator, getFriendlyErrorMessage, ValidationRules } from "@/lib/error-handling";
-import { filterPhoneInput, normalizePhoneNumber, phonePlaceholder } from "@/lib/phone";
+import { isValidPhoneNumber, limitPhoneInput, normalizePhoneNumber, phonePlaceholder } from "@/lib/phone";
+import { importTemplates } from "@/lib/import-templates";
 
 const billStatusVariant = (status: VendorDirectoryItem["bills"][number]["status"]) => {
   const variants = {
@@ -95,6 +97,19 @@ const vendorFormValidator = createFormValidator({
 });
 const inputErrorClassName = "border-destructive focus-visible:ring-destructive";
 const inlineErrorClassName = "text-sm font-medium text-destructive";
+const vendorImportTemplate = importTemplates.find((template) => template.key === "vendors")!;
+const vendorSpreadsheetColumns = vendorImportTemplate.headers.map((header) => ({
+  header,
+  value: (row: VendorDirectoryItem) => ({
+    account_name: row.accountName,
+    account_number: row.accountNumber,
+    bank_name: row.bankName,
+    business_name: row.businessName,
+    contact_name: row.contactName,
+    email: row.email,
+    phone: row.phone,
+  }[header as keyof VendorDirectoryItem]),
+}));
 const vendorStepOrder: VendorFormStep[] = ["business", "payout"];
 const vendorStepMeta: Record<VendorFormStep, { description: string; index: number; title: string }> = {
   business: {
@@ -118,7 +133,7 @@ const VendorsPage = () => {
   const vendorsQuery = useVendorsDirectory(businessId);
   const banksQuery = useBanksList();
   const [bankFilter, setBankFilter] = useState("");
-  const { createVendor, deleteVendor, updateVendor } = useVendorMutations(businessId, user?.id);
+  const { createVendor, deleteVendor, importVendors, updateVendor } = useVendorMutations(businessId, user?.id);
 
   const [search, setSearch] = useSearchParamState();
   const [tab, setTab] = useState("All");
@@ -444,6 +459,29 @@ const VendorsPage = () => {
     }
   };
 
+  const handleImportVendors = async (rows: Array<Record<string, string>>) => {
+    const invalidPhoneRow = rows.findIndex((row) => row.phone && !isValidPhoneNumber(row.phone));
+    if (invalidPhoneRow >= 0) {
+      throw new Error(`Row ${invalidPhoneRow + 2}: phone must be an 11-digit Nigerian number, such as 0801 234 5678.`);
+    }
+
+    const invalidAccountRow = rows.findIndex((row) => row.account_number && !/^\d{10,12}$/.test(row.account_number.replace(/\s/g, "")));
+    if (invalidAccountRow >= 0) {
+      throw new Error(`Row ${invalidAccountRow + 2}: account number must contain 10-12 digits.`);
+    }
+
+    await importVendors.mutateAsync(rows.map((row) => ({
+      account_name: normalizeOptionalText(row.account_name),
+      account_number: normalizeOptionalText(row.account_number?.replace(/\s/g, "")),
+      bank_name: normalizeOptionalText(row.bank_name),
+      business_name: normalizeRequiredText(row.business_name),
+      contact_name: normalizeOptionalText(row.contact_name),
+      email: normalizeOptionalText(row.email),
+      phone: normalizePhoneNumber(row.phone),
+    })));
+    toast({ title: "Vendors imported", description: `${rows.length} vendor${rows.length === 1 ? "" : "s"} added.` });
+  };
+
   const handleDeleteVendor = async (vendor: VendorDirectoryItem) => {
     const confirmed = window.confirm(`Delete ${vendor.businessName}? This cannot be undone.`);
 
@@ -559,6 +597,15 @@ const VendorsPage = () => {
             {vendorLimitReached ? " Upgrade your plan to add more vendors." : ""}
           </div>
         ) : null}
+
+        <DirectorySpreadsheetTools
+          columns={vendorSpreadsheetColumns}
+          importTemplate={vendorImportTemplate}
+          paidAccess={workspaceSubscription.entitlements.canAccessPaidFeatures}
+          rows={allVendors}
+          title="Vendor CSV import / export"
+          onImport={handleImportVendors}
+        />
 
         {detailVendor ? (
           <div className="space-y-6">
@@ -787,12 +834,12 @@ const VendorsPage = () => {
                             value={form.phone}
                             onChange={(event) => {
                               clearFormError("phone");
-                              setForm((current) => ({ ...current, phone: filterPhoneInput(event.target.value) }));
+                              setForm((current) => ({ ...current, phone: limitPhoneInput(event.target.value) }));
                             }}
                             className={`rounded-lg ${formErrors.phone ? inputErrorClassName : ""}`}
                             placeholder={phonePlaceholder}
                           />
-                          <p className="text-xs text-muted-foreground">Use international format, for example {phonePlaceholder}.</p>
+                          <p className="text-xs text-muted-foreground">Enter 11 local digits (0801 234 5678) or the equivalent international format ({phonePlaceholder}).</p>
                           {formErrors.phone ? (
                             <p id="vendor-phone-error" className={inlineErrorClassName} role="alert">
                               {formErrors.phone}
@@ -908,7 +955,7 @@ const VendorsPage = () => {
                       </div>
                     )}
 
-                    <div className="flex flex-col gap-4 border-t border-border pt-5">
+                    <div className="sticky bottom-0 z-20 flex flex-col gap-4 border-t border-border bg-card/95 pt-5 backdrop-blur">
                       <div className="xl:hidden">
                         <p className="text-sm font-semibold text-foreground">
                           Step {vendorStepMeta[formStep].index}: {vendorStepMeta[formStep].title}

@@ -478,4 +478,15 @@ The current release is ready for structured client UAT around:
 - subscription and payment confirmation UX
 - payout-routing role separation
 
+### Directory spreadsheet and form checks
+
+1. On an active Growth or Business workspace, open **Customers** and **Vendors**. Confirm **Download template**, **Download records**, and **Upload CSV** are visible.
+2. Download each template and confirm the headers match [CLIENT_DIRECTORY_SPREADSHEET_FORMAT.md](./CLIENT_DIRECTORY_SPREADSHEET_FORMAT.md).
+3. Upload a valid CSV, review the preview, and import it. Confirm the new records appear after the import completes.
+4. Upload a file with a phone number shorter than 8 digits, longer than 15 digits, or containing invalid characters. Confirm the preview blocks import and identifies the row.
+5. On Starter, confirm the spreadsheet tools show the Growth/Business upgrade message and do not provide upload or export actions.
+6. Open **Add Customer**, enter a long form, scroll inside the form, and confirm the **Add Customer** / **Save Changes** button remains visible at the bottom.
+7. Enter a phone number with letters or an invalid digit count. Confirm invalid characters are filtered and the validation message explains the accepted digit range.
+8. Use the City / State field and confirm Nigerian state suggestions appear while typing.
+
 For billing and real-money verification, wait for the Paystack live approval step before treating those flows as final production sign-off.

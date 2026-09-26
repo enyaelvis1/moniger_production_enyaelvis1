@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Loader2, Pencil, Trash2 } from "lucide-react";
 import AppLayout from "@/components/app/AppLayout";
 import DataPage from "@/components/app/DataPage";
+import { DirectorySpreadsheetTools } from "@/components/app/DirectorySpreadsheetTools";
 import StatusBadge from "@/components/app/StatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomersDirectory, useCustomerMutations, type CustomerDirectoryItem } from "@/hooks/use-directory-data";
@@ -25,7 +26,9 @@ import {
   type AdvancedFilterState,
 } from "@/lib/advanced-filters";
 import { createFormValidator, getFriendlyErrorMessage, ValidationRules } from "@/lib/error-handling";
-import { normalizePhoneNumber, phonePlaceholder } from "@/lib/phone";
+import { isValidPhoneNumber, limitPhoneInput, normalizePhoneNumber, phonePlaceholder } from "@/lib/phone";
+import { importTemplates } from "@/lib/import-templates";
+import { nigeriaStates } from "@/lib/nigeria";
 
 const invoiceStatusVariant = (status: CustomerDirectoryItem["invoices"][number]["status"]) => {
   const variants = {
@@ -100,6 +103,19 @@ const customerFormValidator = createFormValidator({
 });
 const inputErrorClassName = "border-destructive focus-visible:ring-destructive";
 const inlineErrorClassName = "text-sm font-medium text-destructive";
+const customerImportTemplate = importTemplates.find((template) => template.key === "customers")!;
+const customerSpreadsheetColumns = customerImportTemplate.headers.map((header) => ({
+  header,
+  value: (row: CustomerDirectoryItem) => ({
+    business_name: row.businessName,
+    city_state: row.cityState,
+    email: row.email,
+    name: row.name,
+    notes: row.notes,
+    phone: row.phone,
+    street_address: row.streetAddress,
+  }[header as keyof CustomerDirectoryItem]),
+}));
 
 const CustomersPage = () => {
   const { toast } = useToast();
@@ -108,7 +124,7 @@ const CustomersPage = () => {
   const workspaceSubscription = useWorkspaceSubscription();
   const businessId = settingsQuery.data?.business?.id;
   const customersQuery = useCustomersDirectory(businessId);
-  const { createCustomer, deleteCustomer, updateCustomer } = useCustomerMutations(businessId, user?.id);
+  const { createCustomer, deleteCustomer, importCustomers, updateCustomer } = useCustomerMutations(businessId, user?.id);
 
   const [search, setSearch] = useSearchParamState();
   const [tab, setTab] = useState("All");
@@ -422,6 +438,24 @@ const CustomersPage = () => {
     }
   };
 
+  const handleImportCustomers = async (rows: Array<Record<string, string>>) => {
+    const invalidPhoneRow = rows.findIndex((row) => row.phone && !isValidPhoneNumber(row.phone));
+    if (invalidPhoneRow >= 0) {
+      throw new Error(`Row ${invalidPhoneRow + 2}: phone must be an 11-digit Nigerian number, such as 0801 234 5678.`);
+    }
+
+    await importCustomers.mutateAsync(rows.map((row) => ({
+      business_name: normalizeOptionalText(row.business_name),
+      city_state: normalizeOptionalText(row.city_state),
+      email: normalizeOptionalText(row.email),
+      name: normalizeRequiredText(row.name),
+      notes: normalizeOptionalText(row.notes),
+      phone: normalizePhoneNumber(row.phone),
+      street_address: normalizeOptionalText(row.street_address),
+    })));
+    toast({ title: "Customers imported", description: `${rows.length} customer${rows.length === 1 ? "" : "s"} added.` });
+  };
+
   const handleDeleteCustomer = async (customer: CustomerDirectoryItem) => {
     const confirmed = window.confirm(`Delete ${customer.name}? This cannot be undone.`);
 
@@ -543,6 +577,15 @@ const CustomersPage = () => {
             {customerLimitReached ? " Upgrade your plan to add more customers." : ""}
           </div>
         ) : null}
+
+        <DirectorySpreadsheetTools
+          columns={customerSpreadsheetColumns}
+          importTemplate={customerImportTemplate}
+          paidAccess={workspaceSubscription.entitlements.canAccessPaidFeatures}
+          rows={allCustomers}
+          title="Customer CSV import / export"
+          onImport={handleImportCustomers}
+        />
 
         {detailCustomer ? (
           <div className="space-y-6">
@@ -667,14 +710,14 @@ const CustomersPage = () => {
       </div>
 
       <Dialog open={modalOpen} onOpenChange={(open) => (open ? setModalOpen(true) : closeModal())}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden p-0">
           <DialogHeader>
             <DialogTitle>{editingCustomerId ? "Edit Customer" : "Add Customer"}</DialogTitle>
             <DialogDescription>
               Capture the customer details used for invoices, billing, and contact history.
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-2 space-y-4">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-6 pt-2">
             <div className="space-y-2">
               <Label htmlFor="customer-name">Customer Name</Label>
               <Input
@@ -736,15 +779,17 @@ const CustomersPage = () => {
                 })}
                 id="customer-phone"
                 type="tel"
+                inputMode="tel"
+                pattern="[+0-9 ()\\-]+"
                 value={form.phone}
                 onChange={(event) => {
                   clearFormError("phone");
-                  setForm((current) => ({ ...current, phone: event.target.value }));
+                  setForm((current) => ({ ...current, phone: limitPhoneInput(event.target.value) }));
                 }}
                 className={`rounded-lg ${formErrors.phone ? inputErrorClassName : ""}`}
                 placeholder={phonePlaceholder}
               />
-              <p className="text-xs text-muted-foreground">Use international format, for example {phonePlaceholder}.</p>
+              <p className="text-xs text-muted-foreground">Enter 11 local digits (0801 234 5678) or the equivalent international format ({phonePlaceholder}).</p>
               {formErrors.phone ? (
                 <p id="customer-phone-error" className={inlineErrorClassName} role="alert">
                   {formErrors.phone}
@@ -765,11 +810,16 @@ const CustomersPage = () => {
               <Label htmlFor="customer-city-state">City / State</Label>
               <Input
                 id="customer-city-state"
+                list="nigeria-states"
                 value={form.cityState}
                 onChange={(event) => setForm((current) => ({ ...current, cityState: event.target.value }))}
                 className="rounded-lg"
                 placeholder="Lagos, LA"
               />
+              <datalist id="nigeria-states">
+                {nigeriaStates.map((state) => <option key={state} value={state} />)}
+              </datalist>
+              <p className="text-xs text-muted-foreground">Start typing to choose a Nigerian state, or enter a city and state.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="customer-notes">Notes</Label>
@@ -780,6 +830,8 @@ const CustomersPage = () => {
                 className="rounded-lg"
               />
             </div>
+          </div>
+          <div className="sticky bottom-0 border-t border-border bg-background/95 px-6 py-4 backdrop-blur">
             <Button className="w-full rounded-lg btn-press" onClick={() => void handleSaveCustomer()} disabled={isMutating}>
               {isMutating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {editingCustomerId ? "Save Changes" : "Add Customer"}
