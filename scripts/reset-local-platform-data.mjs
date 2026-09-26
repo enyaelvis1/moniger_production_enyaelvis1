@@ -1,17 +1,24 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
-const confirmationPhrase = "DELETE ALL LOCAL DATA";
+const configContents = readFileSync("supabase/config.toml", "utf8");
+const projectRef = configContents.match(/^project_id\s*=\s*"([^"]+)"/m)?.[1] ?? "unknown";
+const envContents = readFileSync(".env", "utf8");
+const projectUrl = envContents.match(/^VITE_SUPABASE_URL="([^"]+)"/m)?.[1] ?? "configured linked project";
+const confirmationPhrase = "DELETE ALL LINKED DATA";
 
 const prompt = createInterface({ input, output });
 
 try {
-  console.warn("WARNING: This will permanently delete all data in the LOCAL Supabase database.");
-  console.warn("It will reset the local database and reapply migrations. It does not target the linked production project.");
+  console.warn("WARNING: This will permanently delete all data in the LINKED Supabase project.");
+  console.warn(`Project ref: ${projectRef}`);
+  console.warn(`Project URL: ${projectUrl}`);
+  console.warn("The linked database will be reset and recreated from the repository migrations. This is irreversible.");
   console.warn("");
 
-  const answer = (await prompt.question("Do you really want to delete all local platform data? Type yes to continue: "))
+  const answer = (await prompt.question("Do you really want to delete all linked platform data? Type yes to continue: "))
     .trim()
     .toLowerCase();
 
@@ -25,11 +32,18 @@ try {
       console.log("Cancelled. The confirmation phrase did not match. No data was deleted.");
       process.exitCode = 0;
     } else {
-      console.log("Resetting the local Supabase database...");
-      execFileSync("supabase", ["db", "reset", "--local", "--yes"], {
-        stdio: "inherit",
-      });
-      console.log("Local platform data was deleted and the local schema was recreated from migrations.");
+      const projectConfirmation = (await prompt.question(`Type the linked project ref (${projectRef}) to continue: `)).trim();
+
+      if (projectConfirmation !== projectRef) {
+        console.log("Cancelled. The project ref did not match. No data was deleted.");
+        process.exitCode = 0;
+      } else {
+        console.log("Resetting the linked Supabase database...");
+        execFileSync("supabase", ["db", "reset", "--linked", "--no-seed", "--yes"], {
+          stdio: "inherit",
+        });
+        console.log("Linked platform data was deleted and the linked schema was recreated from migrations.");
+      }
     }
   }
 } catch (error) {

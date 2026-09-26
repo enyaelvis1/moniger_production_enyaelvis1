@@ -2,15 +2,15 @@
 
 Use this runbook only for records created in an explicitly labelled QA or sandbox environment. The cleanup action is destructive, super-admin-only, and must never be used as a general financial-record deletion tool.
 
-## Local full reset
+## Linked-project full reset
 
 For local testing only, run:
 
 ```bash
-npm run reset:local-data
+npm run reset:linked-data
 ```
 
-The script resets the local Supabase database and reapplies the repository migrations. It requires answering `yes` to the prompt and typing the exact phrase `DELETE ALL LOCAL DATA`. It does not target the linked production project. Use the guarded Admin → Settings → Danger Zone cleanup for marked test records in a shared or hosted environment.
+The script resets the currently linked Supabase project and reapplies the repository migrations with seed data disabled. It displays the project ref and URL, then requires answering `yes`, typing `DELETE ALL LINKED DATA`, and entering the exact linked project ref. This is an irreversible hosted-database wipe; verify the displayed project before continuing. Use the guarded Admin → Settings → Danger Zone cleanup for marked test records when a full reset is not intended.
 
 ## Qualification rules
 
