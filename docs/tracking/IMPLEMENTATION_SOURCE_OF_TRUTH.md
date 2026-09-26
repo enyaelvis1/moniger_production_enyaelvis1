@@ -70,6 +70,7 @@ That changes the implementation priority:
 - [x] `/pricing/confirmed` verifies the returned Paystack reference and syncs the canonical subscription record.
 - [x] Paid workspace operations use a subscription-aware gate; inactive, cancelled, past-due, and expired Growth/Business workspaces are routed to renewal while Starter remains available.
 - [x] Paid workspace access now fails closed at both the client gate and database RLS boundary: Growth/Business rows require confirmed Paystack subscription/payment evidence, and paid plans do not have a trial state.
+- [x] Starter workspaces can add up to three customers and three vendors; the limit is enforced in the UI and by database triggers.
 - [x] Public pricing cards now read from an admin-editable `billing_catalog` value published through a public site config endpoint.
 - [x] The workspace shell now shows a subscription status banner, and `/reports` plus `/audit-trail` now show an in-app workspace upgrade page with direct checkout and a highlighted current-plan summary when the plan is not active.
 - [x] Multi-workspace users can switch workspaces from the sidebar; the selected workspace is persisted per user and settings/subscription queries are scoped to the selected business.

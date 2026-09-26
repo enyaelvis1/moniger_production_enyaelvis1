@@ -6,6 +6,7 @@ import StatusBadge from "@/components/app/StatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomersDirectory, useCustomerMutations, type CustomerDirectoryItem } from "@/hooks/use-directory-data";
 import { useSettingsData } from "@/hooks/use-settings-data";
+import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
 import { useToast } from "@/hooks/use-toast";
 import { useSearchParamState } from "@/hooks/use-search-param";
 import { Button } from "@/components/ui/button";
@@ -104,6 +105,7 @@ const CustomersPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const settingsQuery = useSettingsData(user?.id);
+  const workspaceSubscription = useWorkspaceSubscription();
   const businessId = settingsQuery.data?.business?.id;
   const customersQuery = useCustomersDirectory(businessId);
   const { createCustomer, deleteCustomer, updateCustomer } = useCustomerMutations(businessId, user?.id);
@@ -301,6 +303,8 @@ const CustomersPage = () => {
   const isSettingsLoading = settingsQuery.isLoading && !settingsQuery.data;
   const isCustomersLoading = customersQuery.isLoading && !customersQuery.data;
   const isMutating = createCustomer.isPending || deleteCustomer.isPending || updateCustomer.isPending;
+  const starterCustomerLimit = workspaceSubscription.subscription?.plan === "starter";
+  const customerLimitReached = starterCustomerLimit && allCustomers.length >= 3;
 
   const openCreateModal = () => {
     setEditingCustomerId(null);
@@ -533,6 +537,13 @@ const CustomersPage = () => {
           </div>
         ) : null}
 
+        {starterCustomerLimit ? (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
+            Starter includes up to 3 customers. {allCustomers.length}/3 used.
+            {customerLimitReached ? " Upgrade your plan to add more customers." : ""}
+          </div>
+        ) : null}
+
         {detailCustomer ? (
           <div className="space-y-6">
             <Button variant="ghost" onClick={() => setDetailCustomerId(null)} className="mb-2">
@@ -627,6 +638,8 @@ const CustomersPage = () => {
             title="Customers"
             actionLabel="+ Add Customer"
             onAction={openCreateModal}
+            actionDisabled={customerLimitReached}
+            actionTitle={customerLimitReached ? "Starter allows up to 3 customers. Upgrade to add more." : undefined}
             tabs={tabs}
             activeTab={tab}
             onTabChange={setTab}
