@@ -5,6 +5,7 @@ import DataPage from "@/components/app/DataPage";
 import StatusBadge from "@/components/app/StatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettingsData } from "@/hooks/use-settings-data";
+import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
 import { useToast } from "@/hooks/use-toast";
 import { useVendorMutations, useVendorsDirectory, useBanksList, type VendorDirectoryItem } from "@/hooks/use-directory-data";
 import { useSearchParamState } from "@/hooks/use-search-param";
@@ -112,6 +113,7 @@ const VendorsPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const settingsQuery = useSettingsData(user?.id);
+  const workspaceSubscription = useWorkspaceSubscription();
   const businessId = settingsQuery.data?.business?.id;
   const vendorsQuery = useVendorsDirectory(businessId);
   const banksQuery = useBanksList();
@@ -257,6 +259,8 @@ const VendorsPage = () => {
   const isSettingsLoading = settingsQuery.isLoading && !settingsQuery.data;
   const isVendorsLoading = vendorsQuery.isLoading && !vendorsQuery.data;
   const isMutating = createVendor.isPending || deleteVendor.isPending || updateVendor.isPending;
+  const starterVendorLimit = workspaceSubscription.subscription?.plan === "starter";
+  const vendorLimitReached = starterVendorLimit && allVendors.length >= 3;
 
   const openCreateModal = () => {
     setEditingVendorId(null);
@@ -546,6 +550,13 @@ const VendorsPage = () => {
         {!businessId && !isSettingsLoading ? (
           <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
             Your workspace is still being prepared. Vendors will appear here once the business record is available.
+          </div>
+        ) : null}
+
+        {starterVendorLimit ? (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
+            Starter includes up to 3 vendors. {allVendors.length}/3 used.
+            {vendorLimitReached ? " Upgrade your plan to add more vendors." : ""}
           </div>
         ) : null}
 
@@ -975,6 +986,8 @@ const VendorsPage = () => {
               title="Vendors"
               actionLabel={modalOpen ? "Close Form" : "+ Add Vendor"}
               onAction={modalOpen ? closeModal : openCreateModal}
+              actionDisabled={!modalOpen && vendorLimitReached}
+              actionTitle={!modalOpen && vendorLimitReached ? "Starter allows up to 3 vendors. Upgrade to add more." : undefined}
               tabs={tabs}
               activeTab={tab}
               onTabChange={setTab}
