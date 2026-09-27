@@ -137,10 +137,10 @@ const PricingSection = () => {
           className="mx-auto max-w-[680px] text-center"
         >
           <motion.h2 variants={fadeUp} custom={0} className="text-[32px] font-extrabold leading-[1.08] tracking-[-0.02em] text-[#0D1B2A] sm:text-[40px] md:text-[48px]">
-            Simple pricing. Start free.
+            Start free, then scale with the tools your team needs.
           </motion.h2>
           <motion.p variants={fadeUp} custom={1} className="mt-4 text-[16px] leading-[1.7] text-[#4A5568] md:text-[18px]">
-            Starter activates immediately. Paid plans now redirect through secure Paystack billing.
+            Starter includes core invoicing and payment tracking with practical limits. Growth and Business unlock the wider finance workspace through secure Paystack recurring billing—there is no paid-plan trial.
           </motion.p>
         </motion.div>
 

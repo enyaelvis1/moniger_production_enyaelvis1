@@ -56,7 +56,7 @@ describe("RegisterPage plan summary", () => {
   });
 
   it.each([
-    ["/register", "Starter", "Free trial"],
+    ["/register", "Starter", "Free plan"],
     ["/register?next=%2Fpricing%3Fsubscribe%3Dgrowth", "Growth", "NGN 29,000/mo"],
     ["/register?subscribe=business", "Business", "NGN 89,000/mo"],
   ])("shows the selected %s plan and price", (path, plan, price) => {
