@@ -11,6 +11,20 @@ import {
 } from "@/lib/subscriptions";
 
 describe("subscription helpers", () => {
+  it("describes the actual plan entitlements in the public catalog", () => {
+    expect(subscriptionCatalog.starter.features).toEqual([
+      "Up to 10 invoices/month",
+      "Up to 3 customers",
+      "Up to 3 vendors",
+      "Basic payment tracking",
+      "Email support",
+    ]);
+    expect(subscriptionCatalog.growth.features).toContain("Bills and vendor workflows");
+    expect(subscriptionCatalog.growth.features).toContain("CSV import/export");
+    expect(subscriptionCatalog.business.features).toContain("Everything in Growth");
+    expect(subscriptionCatalog.business.features).toContain("Unlimited team members");
+  });
+
   it("returns the expected default billing cycle for each plan", () => {
     expect(getDefaultSubscriptionBillingCycle("starter")).toBe("free");
     expect(getDefaultSubscriptionBillingCycle("growth")).toBe("monthly");

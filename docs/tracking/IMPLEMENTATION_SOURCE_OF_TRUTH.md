@@ -82,6 +82,7 @@ That changes the implementation priority:
 - [x] Paystack `invoice.payment_failed` events set the workspace subscription to `past_due` and notify active workspace finance users with a Settings recovery link; hosted retry and email-delivery verification remain release gates.
 - [x] Added an hourly subscription-renewal automation path for 14-day and 48-hour reminders, idempotent delivery tracking, and expiry locking when an unpaid paid subscription passes its renewal date.
 - [x] Added a workspace dashboard renewal countdown and Super Admin controls for the first-reminder and final-reminder timing; the default remains 14 days and 48 hours, and expiry enforcement remains server-side.
+- [x] Paid Growth and Business checkout enables Paystack recurring billing automatically; workspace Settings now states the renewal state, and only Super Admins can re-enable a disabled subscription from the admin console.
 - [x] Growth and Business plans require paid Paystack checkout before workspace operations are enabled; unpaid paid-plan signups remain in the upgrade/payment flow.
 
 ### Customer payment collection
