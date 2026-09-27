@@ -218,7 +218,7 @@ const PricingPage = () => {
     <PublicPageShell
       eyebrow="Pricing"
       title="Straightforward pricing for teams growing into better finance operations."
-      description="Start free, get your workflows in shape, and move into a real recurring workspace subscription when your team is ready."
+      description="Start with the free Starter plan, or choose Growth or Business for full finance operations. Paid plans require a successful Paystack checkout and have no trial period."
       contentClassName="max-w-[1420px]"
       highlights={[
         { label: "Starter setup", value: "<2 min" },
@@ -242,7 +242,7 @@ const PricingPage = () => {
           </div>
           <div className="mt-4 rounded-[22px] bg-[#D7E3FF] px-5 py-4 text-[#10203F]">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#4154D8]">Subscription flow</p>
-            <p className="mt-1 text-sm font-medium">Starter activates immediately. Growth and Business redirect to secure Paystack billing.</p>
+            <p className="mt-1 text-sm font-medium">Starter activates immediately. Growth and Business use Paystack recurring billing and renew automatically until you cancel.</p>
           </div>
         </div>
       )}
@@ -304,6 +304,9 @@ const PricingPage = () => {
               >
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-[24px] font-black tracking-[-0.03em] text-[#10203F]">{planEntry.name}</h3>
+                  <span className="rounded-full bg-[#EEF2FF] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[#4154D8]">
+                    {planEntry.plan === "starter" ? "Free plan" : "Recurring billing"}
+                  </span>
                 </div>
                 <div className="mt-4 min-h-[152px]">
                   <p className="text-[42px] font-black tracking-[-0.04em] text-[#10203F] sm:text-[46px]">

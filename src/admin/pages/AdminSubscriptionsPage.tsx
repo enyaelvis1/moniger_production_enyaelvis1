@@ -21,6 +21,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAdminAccess } from "@/admin/components/AdminRoute";
 import { createExportFileName, downloadCsvFile } from "@/lib/export";
 import {
   AdminBadge,
@@ -49,6 +50,7 @@ const planTone = {
 const statusTone = {
   active: "success",
   cancelled: "danger",
+  expired: "danger",
   past_due: "warning",
   paused: "warning",
   trial: "info",
@@ -98,6 +100,7 @@ const billingCycleLabel = {
 } as const;
 
 const AdminSubscriptionsPage = () => {
+  const adminAccess = useAdminAccess();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
@@ -326,6 +329,7 @@ const AdminSubscriptionsPage = () => {
             <SelectItem value="past_due">Past due</SelectItem>
             <SelectItem value="paused">Paused</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectItem value="expired">Expired</SelectItem>
           </SelectContent>
         </Select>
         <Select value={plan} onValueChange={setPlan}>
@@ -505,12 +509,16 @@ const AdminSubscriptionsPage = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="active" disabled={adminAccess.role !== "super_admin" && formState.status !== "active"}>Active</SelectItem>
                     <SelectItem value="past_due">Past due</SelectItem>
                     <SelectItem value="paused">Paused</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
                   </SelectContent>
                 </Select>
+                {adminAccess.role !== "super_admin" && formState.status !== "active" ? (
+                  <p className="text-xs text-amber-200/70">Only a Super Admin can re-enable a disabled subscription.</p>
+                ) : null}
               </div>
 
               <div className="space-y-2">

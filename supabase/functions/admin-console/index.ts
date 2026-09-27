@@ -2068,6 +2068,17 @@ Deno.serve(async (request) => {
         const nextRenewalAt = asNullableString(payload.nextRenewalAt);
         const cancelAtPeriodEnd = Boolean(payload.cancelAtPeriodEnd);
         const resetTrialEligibility = Boolean(payload.resetTrialEligibility);
+        const { data: currentSubscription, error: currentSubscriptionError } = await adminClient
+          .from("business_subscriptions")
+          .select("status")
+          .eq("business_id", businessId)
+          .maybeSingle<{ status: string | null }>();
+        if (currentSubscriptionError) {
+          throw currentSubscriptionError;
+        }
+        if (status === "active" && currentSubscription?.status && currentSubscription.status !== "active" && adminAccess.role !== "super_admin") {
+          return json({ error: "Only Super Admins can re-enable a disabled workspace subscription." }, 403);
+        }
         if (resetTrialEligibility && adminAccess.role !== "super_admin") {
           return json({ error: "Only Super Admins can reset trial eligibility." }, 403);
         }

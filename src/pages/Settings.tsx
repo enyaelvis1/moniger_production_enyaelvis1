@@ -2500,6 +2500,11 @@ const SettingsPage = ({ standaloneTab }: SettingsPageProps = {}) => {
                         </span>
                       </div>
                     ) : null}
+                    {workspaceSubscriptionQuery.subscription?.plan !== "starter" ? (
+                      <p className="mt-2 text-xs font-medium text-foreground">
+                        Automatic renewal: {workspaceSubscriptionQuery.subscription?.cancelAtPeriodEnd ? "Off — renewal was cancelled" : "On through Paystack recurring billing"}.
+                      </p>
+                    ) : null}
                   </div>
                   <Badge
                     className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${

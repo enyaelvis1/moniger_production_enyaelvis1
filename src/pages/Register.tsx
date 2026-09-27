@@ -177,7 +177,7 @@ const registrationPlanOptions: Array<{
   eyebrow: string;
   paymentLabel: string;
 }> = [
-  { plan: "starter", eyebrow: "Start free", paymentLabel: "Free trial" },
+  { plan: "starter", eyebrow: "Start free", paymentLabel: "Free plan" },
   { plan: "growth", eyebrow: "For growing teams", paymentLabel: "Pay with Paystack" },
   { plan: "business", eyebrow: "For finance operations", paymentLabel: "Pay with Paystack" },
 ];
@@ -627,7 +627,7 @@ const RegisterPage = () => {
               <p className="mt-1 text-[15px] font-semibold text-[#15203B]">{selectedPlanLabel}</p>
             </div>
             <p className="text-right text-[14px] font-medium text-[#4A56E0]">
-              {selectedPlan === "starter" ? "Free trial" : selectedPlanDetails.priceLabel}
+              {selectedPlan === "starter" ? "Free plan" : selectedPlanDetails.priceLabel}
             </p>
           </div>
         </div>
@@ -747,7 +747,7 @@ const RegisterPage = () => {
             <fieldset className="space-y-3">
               <legend className="text-[14px] font-semibold text-[#15203B]">Choose your workspace plan</legend>
               <p className="text-[13px] leading-6 text-[#677391]">
-                Start free, or choose a paid plan and complete secure Paystack checkout after creating your account.
+                Start with Starter for free, or choose Growth or Business and complete secure Paystack recurring checkout after creating your account. Paid plans do not include a trial.
               </p>
               <div className="space-y-2 md:hidden">
                 {registrationPlanOptions.map(({ eyebrow, paymentLabel, plan }) => {
