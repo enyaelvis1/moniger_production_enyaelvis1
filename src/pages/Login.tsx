@@ -16,13 +16,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/hooks/use-localization";
 import { normalizeRecoveryCode, validateRecoveryCode } from "@/lib/mfa-recovery";
 import { validateTotpCode } from "@/lib/mfa";
+import { getSafeInternalPath } from "@/lib/safe-navigation";
 
 const getSafeNextPath = (candidatePath: string | null) => {
-  if (!candidatePath || candidatePath === "/login" || candidatePath.startsWith("/login?")) {
-    return "/dashboard";
-  }
-
-  return candidatePath.startsWith("/") ? candidatePath : "/dashboard";
+  const safePath = getSafeInternalPath(candidatePath);
+  return safePath === "/login" || safePath.startsWith("/login?") ? "/dashboard" : safePath;
 };
 
 const LoginPage = () => {

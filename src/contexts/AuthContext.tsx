@@ -288,23 +288,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
     if (error) throw error;
 
-    const userId = signUpData.user?.id ?? null;
-    if (userId && supabase.functions?.invoke) {
-      try {
-        await supabase.functions.invoke("signup-alert", {
-          body: {
-            plan,
-            userId,
-          },
-        });
-      } catch (alertError) {
-        console.warn("Signup alert delivery failed", alertError);
-      }
-    }
-
     return {
       needsEmailConfirmation: !signUpData.session,
-      userId,
+      userId: signUpData.user?.id ?? null,
     };
   };
 

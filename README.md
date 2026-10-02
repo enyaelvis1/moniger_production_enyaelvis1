@@ -101,9 +101,10 @@ For isolated local development and payment callbacks, follow [docs/LOCAL_ENVIRON
 - `CONTACT_RECIPIENT_EMAILS` — comma-separated recipients for Contact Us messages; defaults to `admin@moniger.net,foxyrule@gmail.com` when omitted. `CONTACT_RECIPIENT_EMAIL` remains supported for backward compatibility.
 - `SIGNUP_ALERT_RECIPIENTS` — comma-separated signup-alert recipients; defaults to `foxyrule@gmail.com,admin@moniger.net`.
 - `APP_ENVIRONMENT` — environment label included in signup alerts, for example `production`, `staging`, or `qa`.
+- `SIGNUP_ALERT_INTERNAL_SECRET` — server-only random secret required by the internal signup-alert worker. Never expose it to the browser or frontend `.env` files.
 - QA accounts created with `ALLOW_TEST_DATA=true APP_ENVIRONMENT=qa npm run create:test-user` or `ALLOW_TEST_DATA=true APP_ENVIRONMENT=qa npm run create:admin-test-users` receive explicit test metadata and appear under the Admin Users test-user filter. These scripts refuse to run without both an explicit opt-in and a non-production environment label.
 
-These are Supabase Edge Function secrets, not frontend `.env` values. They must be configured alongside the existing `RESEND_API_KEY` and `EMAIL_FROM_ADDRESS` secrets before deploying `contact-message` and `signup-alert`.
+These are Supabase Edge Function secrets, not frontend `.env` values. They must be configured alongside the existing `RESEND_API_KEY` and `EMAIL_FROM_ADDRESS` secrets before deploying `contact-message` and `signup-alert`. The signup-alert endpoint is intentionally not callable from the browser; it is invoked by the `auth.users` database trigger using the matching Supabase Vault secret named `signup_alert_internal_secret`.
 
 ## Paystack Webhook
 

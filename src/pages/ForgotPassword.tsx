@@ -10,6 +10,7 @@ import AuthShell, {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
+import { getSafeInternalPath } from "@/lib/safe-navigation";
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message.trim()) {
@@ -50,7 +51,7 @@ const normalizeOrigin = () => {
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const next = searchParams.get("next")?.trim() || "";
+  const next = getSafeInternalPath(searchParams.get("next"), "");
   const loginPath = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
   const confirmedPath = next ? `/forgot-password/confirmed?next=${encodeURIComponent(next)}` : "/forgot-password/confirmed";
 

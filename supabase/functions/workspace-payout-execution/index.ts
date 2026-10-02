@@ -138,6 +138,12 @@ const asNullableString = (value: unknown) => {
   return normalizedValue || null;
 };
 
+const assertPayoutBelongsToBusiness = (payout: PayoutRow, businessId: string) => {
+  if (payout.business_id !== businessId) {
+    throw new Error("The payout does not belong to the requested workspace.");
+  }
+};
+
 const toKobo = (amount: number) => Math.round(amount * 100);
 
 const sendPaystackRequest = async <TPayload>(
@@ -412,14 +418,17 @@ const assertPayoutWithinLimits = async ({
 const loadBill = async ({
   adminClient,
   billId,
+  businessId,
 }: {
   adminClient: ReturnType<typeof createClient>;
   billId: string;
+  businessId: string;
 }): Promise<BillRow | null> => {
   const response = await adminClient
     .from("bills")
     .select("id, vendor_id, bill_number, bill_date, due_date, status, total_amount, amount_paid, currency")
     .eq("id", billId)
+    .eq("business_id", businessId)
     .maybeSingle();
 
   if (response.error) {
@@ -431,15 +440,18 @@ const loadBill = async ({
 
 const loadVendor = async ({
   adminClient,
+  businessId,
   vendorId,
 }: {
   adminClient: ReturnType<typeof createClient>;
+  businessId: string;
   vendorId: string;
 }): Promise<VendorRow | null> => {
   const response = await adminClient
     .from("vendors")
     .select("id, business_name, account_name, account_number, bank_id")
     .eq("id", vendorId)
+    .eq("business_id", businessId)
     .maybeSingle();
 
   if (response.error) {
@@ -492,9 +504,11 @@ const loadWallet = async ({
 const loadPayout = async ({
   adminClient,
   payoutId,
+  businessId,
 }: {
   adminClient: ReturnType<typeof createClient>;
   payoutId: string;
+  businessId: string;
 }): Promise<PayoutRow | null> => {
   const response = await adminClient
     .from("workspace_payouts")
@@ -502,6 +516,7 @@ const loadPayout = async ({
       "id, business_id, bill_id, wallet_id, amount, status, provider_reference, provider_recipient_code, provider_transfer_code, provider_metadata, scheduled_for, retry_count, last_attempt_at, next_retry_at",
     )
     .eq("id", payoutId)
+    .eq("business_id", businessId)
     .maybeSingle();
 
   if (response.error) {
@@ -740,7 +755,7 @@ const handleRequestPayout = async ({
     business,
   });
 
-  const vendor = await loadVendor({ adminClient, vendorId: bill.vendor_id });
+  const vendor = await loadVendor({ adminClient, businessId: business.id, vendorId: bill.vendor_id });
   if (!vendor) {
     return json({ error: "We could not find the vendor for this payout." }, 404);
   }
@@ -868,6 +883,7 @@ const handleRequestPayout = async ({
     const payoutReservation = reservedPayout;
     const payout = await loadPayout({
       adminClient,
+      businessId: business.id,
       payoutId: payoutReservationId,
     });
 
@@ -1094,12 +1110,12 @@ const handleApprovePayout = async ({
     return json({ error: "This payout is not waiting for approval." }, 400);
   }
 
-  const bill = payout.bill_id ? await loadBill({ adminClient, billId: payout.bill_id }) : null;
+  const bill = payout.bill_id ? await loadBill({ adminClient, billId: payout.bill_id, businessId: business.id }) : null;
   if (!bill) {
     return json({ error: "We could not find the bill for this payout." }, 404);
   }
 
-  const vendor = await loadVendor({ adminClient, vendorId: bill.vendor_id });
+  const vendor = await loadVendor({ adminClient, businessId: business.id, vendorId: bill.vendor_id });
   const bank = vendor?.bank_id ? await loadBank({ adminClient, bankId: vendor.bank_id }) : null;
   const wallet = await loadWallet({ adminClient, businessId: payout.business_id });
 
@@ -1214,7 +1230,7 @@ const handleSchedulePayout = async ({
     business,
   });
 
-  const vendor = await loadVendor({ adminClient, vendorId: bill.vendor_id });
+  const vendor = await loadVendor({ adminClient, businessId: business.id, vendorId: bill.vendor_id });
   if (!vendor) {
     return json({ error: "We could not find the vendor for this payout." }, 404);
   }
@@ -1498,7 +1514,7 @@ const handleProcessDuePayouts = async ({
         continue;
       }
 
-      const bill = payout.bill_id ? await loadBill({ adminClient, billId: payout.bill_id }) : null;
+      const bill = payout.bill_id ? await loadBill({ adminClient, billId: payout.bill_id, businessId: payout.business_id }) : null;
       if (!bill) {
         const { error: releaseError } = await adminClient.rpc("release_workspace_payout_reservation", {
           p_business_id: payout.business_id,
@@ -1541,7 +1557,7 @@ const handleProcessDuePayouts = async ({
         continue;
       }
 
-      const vendor = await loadVendor({ adminClient, vendorId: bill.vendor_id });
+      const vendor = await loadVendor({ adminClient, businessId: payout.business_id, vendorId: bill.vendor_id });
       const bank = vendor?.bank_id ? await loadBank({ adminClient, bankId: vendor.bank_id }) : null;
       const wallet = await loadWallet({ adminClient, businessId: payout.business_id });
 
@@ -1629,7 +1645,7 @@ const handleProcessDuePayouts = async ({
         continue;
       }
 
-      const fullPayout = await loadPayout({ adminClient, payoutId: payout.id });
+      const fullPayout = await loadPayout({ adminClient, businessId: payout.business_id, payoutId: payout.id });
       if (!fullPayout) {
         throw new Error("The scheduled payout could not be loaded for execution.");
       }
@@ -1862,7 +1878,7 @@ Deno.serve(async (request) => {
 
   try {
     if (payload.action === "self.request-payout") {
-      const bill = await loadBill({ adminClient, billId: payload.billId.trim() });
+      const bill = await loadBill({ adminClient, billId: payload.billId.trim(), businessId: business.id });
       if (!bill || bill.total_amount <= 0) {
         return json({ error: "We could not find a bill ready for payout." }, 404);
       }
@@ -1878,7 +1894,7 @@ Deno.serve(async (request) => {
     }
 
     if (payload.action === "self.schedule-payout") {
-      const bill = await loadBill({ adminClient, billId: payload.billId.trim() });
+      const bill = await loadBill({ adminClient, billId: payload.billId.trim(), businessId: business.id });
       if (!bill || bill.total_amount <= 0) {
         return json({ error: "We could not find a bill ready for scheduling." }, 404);
       }
@@ -1908,10 +1924,11 @@ Deno.serve(async (request) => {
     }
 
     if (payload.action === "self.cancel-scheduled-payout") {
-      const payout = await loadPayout({ adminClient, payoutId: payload.payoutId.trim() });
+      const payout = await loadPayout({ adminClient, businessId: business.id, payoutId: payload.payoutId.trim() });
       if (!payout) {
         return json({ error: "We could not find that payout request." }, 404);
       }
+      assertPayoutBelongsToBusiness(payout, business.id);
 
       return await handleCancelScheduledPayout({
         adminClient,
@@ -1922,10 +1939,11 @@ Deno.serve(async (request) => {
     }
 
     if (payload.action === "self.reschedule-scheduled-payout") {
-      const payout = await loadPayout({ adminClient, payoutId: payload.payoutId.trim() });
+      const payout = await loadPayout({ adminClient, businessId: business.id, payoutId: payload.payoutId.trim() });
       if (!payout) {
         return json({ error: "We could not find that payout request." }, 404);
       }
+      assertPayoutBelongsToBusiness(payout, business.id);
 
       const scheduledFor = asNullableString((payload as Extract<PayoutRequest, { action: "self.reschedule-scheduled-payout" }>).scheduledFor);
       if (!scheduledFor) {
@@ -1941,10 +1959,11 @@ Deno.serve(async (request) => {
     }
 
     if (payload.action === "self.approve-payout") {
-      const payout = await loadPayout({ adminClient, payoutId: payload.payoutId.trim() });
+      const payout = await loadPayout({ adminClient, businessId: business.id, payoutId: payload.payoutId.trim() });
       if (!payout) {
         return json({ error: "We could not find that payout request." }, 404);
       }
+      assertPayoutBelongsToBusiness(payout, business.id);
 
       return await handleApprovePayout({
         adminClient,
@@ -1955,10 +1974,11 @@ Deno.serve(async (request) => {
       });
     }
 
-    const payout = await loadPayout({ adminClient, payoutId: payload.payoutId.trim() });
+    const payout = await loadPayout({ adminClient, businessId: business.id, payoutId: payload.payoutId.trim() });
     if (!payout) {
       return json({ error: "We could not find that payout request." }, 404);
     }
+    assertPayoutBelongsToBusiness(payout, business.id);
 
     return await handleReleasePayout({
       adminClient,

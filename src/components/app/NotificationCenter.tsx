@@ -8,6 +8,7 @@ import { useLocalization } from "@/hooks/use-localization";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotificationMutations, useNotificationsData, type NotificationItem } from "@/hooks/use-notifications-data";
+import { getSafeInternalPath } from "@/lib/safe-navigation";
 
 const NotificationCenter = ({ businessId, userId }: { businessId?: string; userId?: string }) => {
   const navigate = useNavigate();
@@ -51,7 +52,8 @@ const NotificationCenter = ({ businessId, userId }: { businessId?: string; userI
     }
 
     if (notification.link) {
-      navigate(notification.link);
+      const safeLink = getSafeInternalPath(notification.link, "");
+      if (safeLink) navigate(safeLink);
     }
   };
 
