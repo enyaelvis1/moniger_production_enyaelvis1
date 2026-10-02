@@ -8,7 +8,7 @@ import {
 } from "../_shared/localization.ts";
 import { renderBrandedEmail } from "../_shared/branded-email.ts";
 
-type DeliveryAction = "digest-preview" | "invoice-delivery" | "team-invite";
+type DeliveryAction = "digest-preview" | "invoice-delivery" | "bill-delivery" | "team-invite";
 
 type TeamInviteRequest = {
   action: "team-invite";
@@ -31,8 +31,14 @@ type InvoiceDeliveryRequest = {
   message?: string | null;
   subject: string;
 };
+type BillDeliveryRequest = {
+  action: "bill-delivery";
+  businessId: string;
+  billId: string;
+  email: string;
+};
 
-type DeliveryRequest = DigestPreviewRequest | InvoiceDeliveryRequest | TeamInviteRequest;
+type DeliveryRequest = DigestPreviewRequest | InvoiceDeliveryRequest | BillDeliveryRequest | TeamInviteRequest;
 
 type NotificationRow = {
   body: string;
@@ -48,6 +54,8 @@ type InvoiceRow = {
   id: string;
   invoice_number: string;
   issue_date: string;
+  payment_link_enabled: boolean;
+  payment_public_token: string;
   sent_at: string | null;
   status: string;
   total_amount: number | string;
@@ -57,6 +65,22 @@ type CustomerRow = {
   email: string | null;
   name: string | null;
 };
+type BillEmailRow = {
+  bill_date: string;
+  bill_number: string;
+  category: string | null;
+  currency: string;
+  due_date: string | null;
+  id: string;
+  notes: string | null;
+  status: string;
+  subtotal: number | string;
+  tax_total: number | string;
+  total_amount: number | string;
+  vendor_id: string;
+};
+type VendorEmailRow = { business_name: string; email: string | null };
+type BillItemEmailRow = { description: string; quantity: number | string; unit_price: number | string };
 
 type BusinessRow = {
   default_language: string | null;
@@ -160,6 +184,8 @@ const buildInvoiceEmail = ({
   language,
   locale,
   message,
+  paymentUrl,
+  paymentStatus,
   recipientEmail,
   subject,
   totalAmount,
@@ -174,12 +200,13 @@ const buildInvoiceEmail = ({
   language: string | null | undefined;
   locale: string | null | undefined;
   message: string;
+  paymentUrl: string;
+  paymentStatus: string;
   recipientEmail: string;
   subject: string;
   totalAmount: string;
   workspaceSlug?: string | null;
 }) => {
-  const invoicesUrl = `${appBaseUrl}/invoices`;
   const formattedIssueDate = formatTemplateDate(issueDate, locale);
   const formattedDueDate = dueDate ? formatTemplateDate(dueDate, locale) : null;
   const workspaceLine = workspaceSlug ? `Workspace: ${workspaceSlug}` : businessName;
@@ -195,16 +222,24 @@ const buildInvoiceEmail = ({
   const totalLabel = translateTemplate(language, "email.invoice.total");
   const issuedLabel = translateTemplate(language, "email.invoice.issued");
   const dueLabel = translateTemplate(language, "email.invoice.due");
-  const openAppLabel = translateTemplate(language, "email.invoice.openApp");
+  const payInvoiceLabel = translateTemplate(language, "email.invoice.payInvoice");
+  const paymentInstructions = translateTemplate(language, "email.invoice.paymentInstructions");
+  const paymentSafetyNote = translateTemplate(language, "email.invoice.paymentSafetyNote");
+  const customerLabel = translateTemplate(language, "email.invoice.customer");
+  const paymentStatusLabel = translateTemplate(language, "email.invoice.paymentStatus");
   const bodyHtml = `
     <p>${escapeHtml(greeting)}</p>
     <p>${escapeMultilineHtml(sanitizedMessage)}</p>
     <div style="margin: 18px 0; padding: 16px; border: 1px solid #DCE2F2; border-radius: 16px; background: #F8F9FD;">
+      <p style="margin: 0 0 8px;"><strong>${escapeHtml(customerLabel)}:</strong> ${escapeHtml(customerName)}</p>
       <p style="margin: 0 0 8px;"><strong>${escapeHtml(invoiceLabel)}:</strong> ${escapeHtml(invoiceNumber)}</p>
       <p style="margin: 0 0 8px;"><strong>${escapeHtml(totalLabel)}:</strong> ${escapeHtml(totalAmount)}</p>
       ${formattedIssueDate ? `<p style="margin: 0 0 8px;"><strong>${escapeHtml(issuedLabel)}:</strong> ${escapeHtml(formattedIssueDate)}</p>` : ""}
-      ${formattedDueDate ? `<p style="margin: 0;"><strong>${escapeHtml(dueLabel)}:</strong> ${escapeHtml(formattedDueDate)}</p>` : ""}
+      ${formattedDueDate ? `<p style="margin: 0 0 8px;"><strong>${escapeHtml(dueLabel)}:</strong> ${escapeHtml(formattedDueDate)}</p>` : ""}
+      <p style="margin: 0;"><strong>${escapeHtml(paymentStatusLabel)}:</strong> ${escapeHtml(paymentStatus)}</p>
     </div>
+    <p>${escapeHtml(paymentInstructions)}</p>
+    <p style="font-size: 13px; color: #5B6478;">${escapeHtml(paymentSafetyNote)}</p>
   `;
 
   const email = renderBrandedEmail({
@@ -212,7 +247,7 @@ const buildInvoiceEmail = ({
     preheader: `${invoiceLabel} ${invoiceNumber} · ${totalAmount}`,
     heading,
     bodyHtml,
-    cta: { href: invoicesUrl, label: openAppLabel },
+    cta: { href: paymentUrl, label: payInvoiceLabel },
     footerText: workspaceLine,
     logoUrl: `${appBaseUrl}/logo.png`,
     logoAlt: "Moniger",
@@ -223,12 +258,17 @@ const buildInvoiceEmail = ({
     "",
     sanitizedMessage,
     "",
+    `${customerLabel}: ${customerName}`,
     `${invoiceLabel}: ${invoiceNumber}`,
     `${totalLabel}: ${totalAmount}`,
     ...(formattedIssueDate ? [`${issuedLabel}: ${formattedIssueDate}`] : []),
     ...(formattedDueDate ? [`${dueLabel}: ${formattedDueDate}`] : []),
+    `${paymentStatusLabel}: ${paymentStatus}`,
     "",
-    `${openAppLabel}: ${invoicesUrl}`,
+    paymentInstructions,
+    paymentSafetyNote,
+    "",
+    `${payInvoiceLabel}: ${paymentUrl}`,
     workspaceLine,
   ].join("\n");
 
@@ -302,6 +342,34 @@ const buildInviteEmail = ({
     primaryUrl,
   ].join("\n");
 
+  return { ...email, text };
+};
+
+const buildBillEmail = ({
+  appBaseUrl,
+  attachmentCount,
+  bill,
+  businessName,
+  items,
+  recipientName,
+  vendorName,
+}: {
+  appBaseUrl: string;
+  attachmentCount: number;
+  bill: BillEmailRow;
+  businessName: string;
+  items: BillItemEmailRow[];
+  recipientName: string;
+  vendorName: string;
+}) => {
+  const subject = `Bill ${bill.bill_number} from ${businessName}`;
+  const itemRows = items.length
+    ? items.map((item) => `<tr><td style="padding:8px;border-bottom:1px solid #e2e8f0">${escapeHtml(item.description)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right">${Number(item.quantity)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right">${formatTemplateCurrency(Number(item.unit_price), bill.currency, "en-NG")}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right">${formatTemplateCurrency(Number(item.quantity) * Number(item.unit_price), bill.currency, "en-NG")}</td></tr>`).join("")
+    : `<tr><td colspan="4" style="padding:8px;color:#64748b">No line-item breakdown was recorded.</td></tr>`;
+  const attachmentText = attachmentCount > 0 ? `${attachmentCount} private attachment${attachmentCount === 1 ? "" : "s"} is available in Moniger.` : "No attachment was included with this bill.";
+  const bodyHtml = `<p>Hello ${escapeHtml(recipientName)},</p><p>A bill has been recorded for ${escapeHtml(vendorName)} in ${escapeHtml(businessName)}.</p><div style="margin:18px 0;padding:16px;border:1px solid #dce2f2;border-radius:16px;background:#f8f9fd"><p><strong>Bill:</strong> ${escapeHtml(bill.bill_number)}</p><p><strong>Bill date:</strong> ${escapeHtml(bill.bill_date)}</p>${bill.due_date ? `<p><strong>Due date:</strong> ${escapeHtml(bill.due_date)}</p>` : ""}<p><strong>Status:</strong> ${escapeHtml(bill.status)}</p></div><h3>Breakdown</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px">Description</th><th style="text-align:right;padding:8px">Qty</th><th style="text-align:right;padding:8px">Unit price</th><th style="text-align:right;padding:8px">Line total</th></tr></thead><tbody>${itemRows}</tbody></table><p style="text-align:right"><strong>Subtotal:</strong> ${formatTemplateCurrency(Number(bill.subtotal), bill.currency, "en-NG")}<br /><strong>Tax / charges:</strong> ${formatTemplateCurrency(Number(bill.tax_total), bill.currency, "en-NG")}<br /><strong>Total:</strong> ${formatTemplateCurrency(Number(bill.total_amount), bill.currency, "en-NG")}</p><p style="color:#475569">${escapeHtml(attachmentText)} Private attachments are not exposed by email.</p>${bill.notes ? `<p><strong>Notes:</strong> ${escapeHtml(bill.notes)}</p>` : ""}`;
+  const email = renderBrandedEmail({ subject, preheader: `${bill.bill_number} · ${formatTemplateCurrency(Number(bill.total_amount), bill.currency, "en-NG")}`, heading: "Bill breakdown", bodyHtml, footerText: businessName, logoUrl: `${appBaseUrl}/logo.png`, logoAlt: "Moniger", brandHref: appBaseUrl });
+  const text = [`Hello ${recipientName},`, `Bill ${bill.bill_number} from ${businessName}`, `Vendor: ${vendorName}`, "", "Breakdown:", ...items.map((item) => `${item.description}: ${item.quantity} × ${formatTemplateCurrency(Number(item.unit_price), bill.currency, "en-NG")}`), "", `Subtotal: ${formatTemplateCurrency(Number(bill.subtotal), bill.currency, "en-NG")}`, `Tax / charges: ${formatTemplateCurrency(Number(bill.tax_total), bill.currency, "en-NG")}`, `Total: ${formatTemplateCurrency(Number(bill.total_amount), bill.currency, "en-NG")}`, attachmentText].join("\n");
   return { ...email, text };
 };
 
@@ -663,12 +731,16 @@ Deno.serve(async (request) => {
         ? payload.inviteeEmail.trim().toLowerCase()
         : payload.action === "invoice-delivery"
           ? payload.email.trim().toLowerCase()
+          : payload.action === "bill-delivery"
+            ? payload.email.trim().toLowerCase()
           : senderEmail;
     const subject =
       payload.action === "team-invite"
         ? translateTemplate(templateLanguage, "email.invite.subjectGranted", { businessName: businessRecord.name })
         : payload.action === "invoice-delivery"
           ? payload.subject.trim()
+          : payload.action === "bill-delivery"
+            ? "Bill breakdown"
           : translateTemplate(templateLanguage, "email.digest.subjectPreview", {
               businessName: businessRecord.name,
               date: formatTemplateDate(new Date(), templateLocale),
@@ -774,7 +846,7 @@ Deno.serve(async (request) => {
 
       const { data: invoice } = await adminClient
         .from("invoices")
-        .select("id, customer_id, invoice_number, issue_date, due_date, status, total_amount, currency, sent_at, delivery_attempt_count")
+        .select("id, customer_id, invoice_number, issue_date, due_date, status, total_amount, currency, sent_at, delivery_attempt_count, payment_public_token, payment_link_enabled")
         .eq("business_id", payload.businessId)
         .eq("id", payload.invoiceId)
         .maybeSingle();
@@ -798,9 +870,26 @@ Deno.serve(async (request) => {
       const customerRecord = customer as CustomerRow | null;
       const customerName = customerRecord?.name?.trim() || recipientEmail;
       const now = new Date().toISOString();
+      const paymentUrl = `${appBaseUrl.replace(/\/+$/, "")}/pay/${encodeURIComponent(invoiceRecord.payment_public_token)}`;
       const nextInvoiceStatus = invoiceRecord.status === "draft" ? "sent" : invoiceRecord.status;
       const isResend =
         (invoiceRecord.delivery_attempt_count ?? 0) > 0 || invoiceRecord.status === "sent" || invoiceRecord.status === "overdue";
+
+      if (!invoiceRecord.payment_link_enabled) {
+        const { error: paymentLinkError } = await adminClient
+          .from("invoices")
+          .update({
+            payment_link_enabled: true,
+            payment_link_last_shared_at: now,
+            updated_by: user.id,
+          })
+          .eq("id", invoiceRecord.id);
+
+        if (paymentLinkError) {
+          return json({ error: "The invoice payment link could not be enabled." }, 500);
+        }
+      }
+
       const invoiceEmail = buildInvoiceEmail({
         appBaseUrl,
         businessName: businessRecord.name,
@@ -811,6 +900,8 @@ Deno.serve(async (request) => {
         language: templateLanguage,
         locale: templateLocale,
         message,
+        paymentUrl,
+        paymentStatus: nextInvoiceStatus,
         recipientEmail,
         subject,
         totalAmount: formatTemplateCurrency(invoiceRecord.total_amount, invoiceRecord.currency, templateLocale),
@@ -831,6 +922,7 @@ Deno.serve(async (request) => {
             customer_name: customerName,
             invoice_id: invoiceRecord.id,
             invoice_number: invoiceRecord.invoice_number,
+            payment_link_enabled: true,
             provider_id: providerResponse.id ?? null,
             sender_email: senderEmail,
             sender_name: senderName,
@@ -946,6 +1038,52 @@ Deno.serve(async (request) => {
       }
     }
 
+    if (payload.action === "bill-delivery") {
+      const recipientEmail = payload.email.trim().toLowerCase();
+      if (!payload.billId || !isValidEmailAddress(recipientEmail)) {
+        return json({ error: "Bill email requires a valid vendor email and bill." }, 400);
+      }
+
+      const { data: bill } = await adminClient
+        .from("bills")
+        .select("id, vendor_id, bill_number, bill_date, due_date, status, subtotal, tax_total, total_amount, currency, category, notes")
+        .eq("business_id", payload.businessId)
+        .eq("id", payload.billId)
+        .maybeSingle();
+      const billRecord = bill as BillEmailRow | null;
+      if (!billRecord) return json({ error: "Bill not found." }, 404);
+
+      const [{ data: vendor }, { data: items }, { count: attachmentCount }] = await Promise.all([
+        adminClient.from("vendors").select("business_name, email").eq("business_id", payload.businessId).eq("id", billRecord.vendor_id).maybeSingle(),
+        adminClient.from("bill_items").select("description, quantity, unit_price").eq("business_id", payload.businessId).eq("bill_id", billRecord.id).order("line_number", { ascending: true }),
+        adminClient.from("bill_attachments").select("id", { count: "exact", head: true }).eq("business_id", payload.businessId).eq("bill_id", billRecord.id),
+      ]);
+      const vendorRecord = vendor as VendorEmailRow | null;
+      const billEmail = buildBillEmail({
+        appBaseUrl,
+        attachmentCount: attachmentCount ?? 0,
+        bill: billRecord,
+        businessName: businessRecord.name,
+        items: (items ?? []) as BillItemEmailRow[],
+        recipientName: vendorRecord?.business_name || recipientEmail,
+        vendorName: vendorRecord?.business_name || "vendor",
+      });
+      const providerResponse = await sendViaResend({ fromAddress, html: billEmail.html, recipientEmail, resendApiKey, subject: billEmail.subject, text: billEmail.text });
+      const deliveryId = await safeRecordDelivery({
+        metadata: { attachment_count: attachmentCount ?? 0, bill_id: billRecord.id, business_name: businessRecord.name, provider_id: providerResponse.id ?? null },
+        recipientEmail,
+        status: "sent",
+        subject: billEmail.subject,
+      });
+      await safeInsertAuditLog({
+        action: "bill.delivery_email.sent",
+        detail: { attachment_count: attachmentCount ?? 0, bill_id: billRecord.id, description: `Bill ${billRecord.bill_number} emailed to ${recipientEmail}.`, provider: "resend" },
+        summary: "Bill breakdown email sent",
+        entityId: billRecord.id,
+      });
+      return json({ deliveryId, provider: "resend", recipientEmail, status: "sent", subject: billEmail.subject });
+    }
+
     const notificationPreference = await adminClient
       .from("notification_preferences")
       .select("email_digest")
@@ -1023,12 +1161,16 @@ Deno.serve(async (request) => {
         ? payload.inviteeEmail.trim().toLowerCase()
         : payload.action === "invoice-delivery"
           ? payload.email.trim().toLowerCase()
+          : payload.action === "bill-delivery"
+            ? payload.email.trim().toLowerCase()
           : senderEmail;
     const subject =
       payload.action === "team-invite"
         ? translateTemplate(templateLanguage, "email.invite.subjectGranted", { businessName: businessRecord.name })
         : payload.action === "invoice-delivery"
           ? payload.subject.trim()
+          : payload.action === "bill-delivery"
+            ? "Bill breakdown"
           : translateTemplate(templateLanguage, "email.digest.subjectPreview", {
               businessName: businessRecord.name,
               date: formatTemplateDate(new Date(), templateLocale),

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Enums } from "@/integrations/supabase/types";
 import { supabase } from "@/lib/supabase";
 
-type EmailDeliveryAction = "digest-preview" | "invoice-delivery" | "team-invite";
+type EmailDeliveryAction = "digest-preview" | "invoice-delivery" | "bill-delivery" | "team-invite";
 
 type EmailDeliveryResponse = {
   deliveryId: string;
@@ -29,6 +29,11 @@ type InvoiceDeliveryEmailInput = {
   invoiceId: string;
   message?: string | null;
   subject: string;
+};
+type BillDeliveryEmailInput = {
+  businessId: string;
+  billId: string;
+  email: string;
 };
 
 type ResponseLike = {
@@ -107,7 +112,7 @@ const getResponseErrorMessage = async (response: ResponseLike | undefined) => {
 
 const invokeEmailDelivery = async (
   action: EmailDeliveryAction,
-  payload: DigestPreviewEmailInput | InvoiceDeliveryEmailInput | TeamInviteEmailInput,
+  payload: DigestPreviewEmailInput | InvoiceDeliveryEmailInput | BillDeliveryEmailInput | TeamInviteEmailInput,
 ): Promise<EmailDeliveryResponse> => {
   const {
     data: { session },
@@ -169,6 +174,22 @@ export const useSendInvoiceDeliveryEmail = (businessId?: string, userId?: string
         queryClient.invalidateQueries({ queryKey: ["operations", businessId] }),
         ...(userId ? [queryClient.invalidateQueries({ queryKey: ["notifications", businessId, userId] })] : []),
       ]);
+    },
+  });
+};
+
+export const useSendBillDeliveryEmail = (businessId?: string, userId?: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: BillDeliveryEmailInput) => invokeEmailDelivery("bill-delivery", payload),
+    onSuccess: async () => {
+      if (businessId) {
+        await queryClient.invalidateQueries({ queryKey: ["bills", businessId] });
+      }
+      if (businessId && userId) {
+        await queryClient.invalidateQueries({ queryKey: ["notifications", businessId, userId] });
+      }
     },
   });
 };

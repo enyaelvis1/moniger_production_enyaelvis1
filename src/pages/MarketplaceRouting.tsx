@@ -32,6 +32,17 @@ const normalizeOptionalText = (value: string) => {
   return normalized || null;
 };
 
+const formatUpdatedAt = (value: string | null | undefined) => {
+  if (!value) {
+    return "Not saved yet";
+  }
+
+  return new Intl.DateTimeFormat("en-NG", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+};
+
 const getErrorMessage = (error: unknown, fallbackMessage: string) =>
   getFriendlyErrorMessage(error, fallbackMessage);
 
@@ -303,6 +314,10 @@ const MarketplaceRoutingPage = () => {
                   to resync or change it.
                 </p>
               ) : null}
+
+              <p className="mt-2 text-xs text-muted-foreground">
+                Last updated: {formatUpdatedAt(payoutAccountConfig?.updatedAt)}
+              </p>
 
               {payoutAccountConfig?.lastSyncError ? (
                 <div className="mt-4 rounded-lg border border-[#F8C9C9] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B42318]">

@@ -10,4 +10,10 @@ test.describe("public payment confirmation placeholder", () => {
     await expect(page.getByRole("heading", { name: /we couldn't confirm this payment yet/i })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("link", { name: /return to payment page/i })).toBeVisible({ timeout: 15_000 });
   });
+
+  test("requires a reference before attempting confirmation", async ({ page }) => {
+    await page.goto("/pay/test-token/confirmed", { timeout: 60_000, waitUntil: "domcontentloaded" });
+    await expect(page.getByText(/could not find the paystack payment reference/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: /return to payment page/i })).toBeVisible({ timeout: 15_000 });
+  });
 });
