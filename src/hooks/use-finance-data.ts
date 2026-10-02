@@ -48,9 +48,12 @@ type BillRow = Pick<
   | "notes"
   | "scheduled_payment_date"
   | "status"
+  | "subtotal"
+  | "tax_total"
   | "total_amount"
   | "vendor_id"
 >;
+type BillItemRow = Pick<Tables<"bill_items">, "bill_id" | "description" | "id" | "line_number" | "quantity" | "unit_price">;
 type VendorNameRow = Pick<Tables<"vendors">, "business_name" | "id">;
 type PaymentRow = Pick<
   Tables<"payments">,
@@ -129,8 +132,11 @@ export type BillRecord = {
   dueDate: string | null;
   id: string;
   notes: string;
+  lineItems: FinanceLineItem[];
   scheduledPaymentDate: string | null;
   status: Enums<"bill_status">;
+  subtotal: number;
+  taxTotal: number;
   vendorId: string;
   vendorName: string;
 };
@@ -176,6 +182,9 @@ export type BillInput = {
   notes?: string | null;
   scheduled_payment_date?: string | null;
   status: Enums<"bill_status">;
+  line_items: FinanceLineItem[];
+  subtotal: number;
+  tax_total: number;
   vendor_id: string;
 };
 
@@ -484,13 +493,14 @@ const fetchInvoices = async (businessId: string): Promise<InvoiceRecord[]> => {
 };
 
 const fetchBills = async (businessId: string): Promise<BillRecord[]> => {
-  const [{ data: billRows, error: billError }, { data: vendorRows, error: vendorError }] = await Promise.all([
+  const [{ data: billRows, error: billError }, { data: vendorRows, error: vendorError }, { data: billItemRows, error: billItemError }] = await Promise.all([
     supabase
       .from("bills")
-      .select("id, vendor_id, bill_number, bill_date, due_date, status, category, total_amount, amount_paid, currency, notes, scheduled_payment_date")
+      .select("id, vendor_id, bill_number, bill_date, due_date, status, category, subtotal, tax_total, total_amount, amount_paid, currency, notes, scheduled_payment_date")
       .eq("business_id", businessId)
       .order("bill_date", { ascending: false }),
     supabase.from("vendors").select("id, business_name").eq("business_id", businessId),
+    supabase.from("bill_items").select("bill_id, description, id, line_number, quantity, unit_price").eq("business_id", businessId).order("line_number", { ascending: true }),
   ]);
 
   if (billError) {
@@ -500,8 +510,17 @@ const fetchBills = async (businessId: string): Promise<BillRecord[]> => {
   if (vendorError) {
     throw vendorError;
   }
+  if (billItemError) {
+    throw billItemError;
+  }
 
   const vendorNameById = new Map(((vendorRows ?? []) as VendorNameRow[]).map((vendor) => [vendor.id, vendor.business_name]));
+  const itemsByBillId = new Map<string, FinanceLineItem[]>();
+  for (const item of (billItemRows ?? []) as BillItemRow[]) {
+    const currentItems = itemsByBillId.get(item.bill_id) ?? [];
+    currentItems.push({ description: item.description, id: item.id, qty: Number(item.quantity), unitPrice: Number(item.unit_price) });
+    itemsByBillId.set(item.bill_id, currentItems);
+  }
 
   return ((billRows ?? []) as BillRow[]).map((bill) => ({
     amount: Number(bill.total_amount),
@@ -513,8 +532,11 @@ const fetchBills = async (businessId: string): Promise<BillRecord[]> => {
     dueDate: bill.due_date,
     id: bill.id,
     notes: bill.notes ?? "",
+    lineItems: itemsByBillId.get(bill.id) ?? [],
     scheduledPaymentDate: bill.scheduled_payment_date,
     status: bill.status,
+    subtotal: Number(bill.subtotal),
+    taxTotal: Number(bill.tax_total),
     vendorId: bill.vendor_id,
     vendorName: vendorNameById.get(bill.vendor_id) ?? "Unknown Vendor",
   }));
@@ -1429,8 +1451,8 @@ const createBill = async (businessId: string, userId: string, values: BillInput)
       notes: values.notes ?? null,
       scheduled_payment_date: scheduledPaymentDate,
       status: values.status,
-      subtotal: totalAmount,
-      tax_total: 0,
+      subtotal: values.subtotal,
+      tax_total: values.tax_total,
       total_amount: totalAmount,
       updated_by: userId,
       vendor_id: values.vendor_id,
@@ -1440,6 +1462,20 @@ const createBill = async (businessId: string, userId: string, values: BillInput)
 
   if (error) {
     throw error;
+  }
+
+  if (values.line_items.length > 0) {
+    const { error: itemError } = await supabase.from("bill_items").insert(
+      values.line_items.map((item, index) => ({
+        bill_id: data.id,
+        business_id: businessId,
+        description: item.description.trim(),
+        line_number: index + 1,
+        quantity: item.qty,
+        unit_price: item.unitPrice,
+      })),
+    );
+    if (itemError) throw itemError;
   }
 
   await syncBillPaymentRecord({
@@ -1493,8 +1529,8 @@ const updateBill = async (businessId: string, bill: BillRecord, userId: string, 
       notes: values.notes ?? null,
       scheduled_payment_date: nextScheduledPaymentDate,
       status: nextStatus,
-      subtotal: totalAmount,
-      tax_total: 0,
+      subtotal: values.subtotal,
+      tax_total: values.tax_total,
       total_amount: totalAmount,
       updated_by: userId,
       vendor_id: values.vendor_id,
@@ -1504,6 +1540,22 @@ const updateBill = async (businessId: string, bill: BillRecord, userId: string, 
 
   if (error) {
     throw error;
+  }
+
+  const { error: deleteItemsError } = await supabase.from("bill_items").delete().eq("business_id", businessId).eq("bill_id", bill.id);
+  if (deleteItemsError) throw deleteItemsError;
+  if (values.line_items.length > 0) {
+    const { error: itemError } = await supabase.from("bill_items").insert(
+      values.line_items.map((item, index) => ({
+        bill_id: bill.id,
+        business_id: businessId,
+        description: item.description.trim(),
+        line_number: index + 1,
+        quantity: item.qty,
+        unit_price: item.unitPrice,
+      })),
+    );
+    if (itemError) throw itemError;
   }
 
   await syncBillPaymentRecord({

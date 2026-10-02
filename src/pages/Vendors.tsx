@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CheckCircle2, Eye, Loader2, Pencil, Trash2 } from "lucide-react";
 import AppLayout from "@/components/app/AppLayout";
 import DataPage from "@/components/app/DataPage";
@@ -98,11 +99,15 @@ const vendorFormValidator = createFormValidator({
 const inputErrorClassName = "border-destructive focus-visible:ring-destructive";
 const inlineErrorClassName = "text-sm font-medium text-destructive";
 const vendorImportTemplate = importTemplates.find((template) => template.key === "vendors")!;
+const maskAccountNumber = (value: string | null) => {
+  const digits = value?.replace(/\D/g, "") ?? "";
+  return digits.length >= 4 ? `****${digits.slice(-4)}` : value || null;
+};
 const vendorSpreadsheetColumns = vendorImportTemplate.headers.map((header) => ({
   header,
   value: (row: VendorDirectoryItem) => ({
     account_name: row.accountName,
-    account_number: row.accountNumber,
+    account_number: maskAccountNumber(row.accountNumber),
     bank_name: row.bankName,
     business_name: row.businessName,
     contact_name: row.contactName,
@@ -136,6 +141,7 @@ const VendorsPage = () => {
   const { createVendor, deleteVendor, importVendors, updateVendor } = useVendorMutations(businessId, user?.id);
 
   const [search, setSearch] = useSearchParamState();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState("All");
   const [modalOpen, setModalOpen] = useState(false);
   const [detailVendorId, setDetailVendorId] = useState<string | null>(null);
@@ -285,6 +291,17 @@ const VendorsPage = () => {
     setHasTriedVendorStepAdvance(false);
     setModalOpen(true);
   };
+
+  useEffect(() => {
+    if (searchParams.get("create") !== "1" || modalOpen || !businessId) {
+      return;
+    }
+
+    openCreateModal();
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("create");
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [businessId, modalOpen, searchParams, setSearchParams]);
 
   const openEditModal = (vendor: VendorDirectoryItem) => {
     setEditingVendorId(vendor.id);

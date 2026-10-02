@@ -14,12 +14,12 @@ export type ImportTemplate = {
 
 export const importTemplates: ImportTemplate[] = [
   {
-    description: "Customer name, email, phone, and billing details.",
+    description: "Customer contact, billing, and optional record-keeping bank details.",
     filename: "moniger-customers-template.csv",
-    headers: ["name", "email", "phone", "business_name", "street_address", "city_state", "notes"],
+    headers: ["name", "email", "phone", "business_name", "street_address", "city_state", "notes", "bank_name", "account_name", "account_number"],
     key: "customers",
     requiredHeaders: ["name"],
-    sample: { name: "Ada Example", email: "ada@example.com", phone: "+2348000000000", business_name: "Example Foods", street_address: "12 Marina Road", city_state: "Lagos, NG", notes: "Primary contact" },
+    sample: { name: "Ada Example", email: "ada@example.com", phone: "+2348000000000", business_name: "Example Foods", street_address: "12 Marina Road", city_state: "Lagos, NG", notes: "Primary contact", bank_name: "Example Bank", account_name: "Ada Example", account_number: "0123456789" },
     title: "Customers",
   },
   {

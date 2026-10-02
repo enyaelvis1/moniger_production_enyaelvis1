@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Eye, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Eye, Landmark, Loader2, Pencil, Trash2 } from "lucide-react";
 import AppLayout from "@/components/app/AppLayout";
 import DataPage from "@/components/app/DataPage";
 import { DirectorySpreadsheetTools } from "@/components/app/DirectorySpreadsheetTools";
 import StatusBadge from "@/components/app/StatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCustomersDirectory, useCustomerMutations, type CustomerDirectoryItem } from "@/hooks/use-directory-data";
+import { useBanksList, useCustomersDirectory, useCustomerMutations, type CustomerDirectoryItem } from "@/hooks/use-directory-data";
 import { useSettingsData } from "@/hooks/use-settings-data";
 import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,7 @@ import { AdvancedFilter } from "@/components/ui/advanced-filter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatNaira } from "@/data/seedData";
 import { getFormFieldAriaProps } from "@/lib/accessibility";
@@ -76,6 +77,10 @@ const getDeleteErrorMessage = (error: unknown, entityName: string) => {
 };
 
 type CustomerFormState = {
+  accountName: string;
+  accountNumber: string;
+  bankId: string;
+  bankName: string;
   businessName: string;
   cityState: string;
   email: string;
@@ -87,6 +92,10 @@ type CustomerFormState = {
 type CustomerFormErrors = Partial<Record<"email" | "name" | "phone", string>>;
 
 const emptyForm: CustomerFormState = {
+  accountName: "",
+  accountNumber: "",
+  bankId: "",
+  bankName: "",
   businessName: "",
   cityState: "",
   email: "",
@@ -104,10 +113,17 @@ const customerFormValidator = createFormValidator({
 const inputErrorClassName = "border-destructive focus-visible:ring-destructive";
 const inlineErrorClassName = "text-sm font-medium text-destructive";
 const customerImportTemplate = importTemplates.find((template) => template.key === "customers")!;
+const maskAccountNumber = (value: string | null) => {
+  const digits = value?.replace(/\D/g, "") ?? "";
+  return digits.length >= 4 ? `****${digits.slice(-4)}` : value || null;
+};
 const customerSpreadsheetColumns = customerImportTemplate.headers.map((header) => ({
   header,
   value: (row: CustomerDirectoryItem) => ({
     business_name: row.businessName,
+    account_name: row.accountName,
+    account_number: maskAccountNumber(row.accountNumber),
+    bank_name: row.bankName,
     city_state: row.cityState,
     email: row.email,
     name: row.name,
@@ -122,6 +138,7 @@ const CustomersPage = () => {
   const { user } = useAuth();
   const settingsQuery = useSettingsData(user?.id);
   const workspaceSubscription = useWorkspaceSubscription();
+  const banksQuery = useBanksList();
   const businessId = settingsQuery.data?.business?.id;
   const customersQuery = useCustomersDirectory(businessId);
   const { createCustomer, deleteCustomer, importCustomers, updateCustomer } = useCustomerMutations(businessId, user?.id);
@@ -332,6 +349,10 @@ const CustomersPage = () => {
         try {
           const parsedDraft = JSON.parse(draft) as Partial<CustomerFormState>;
           setForm({
+            accountName: parsedDraft.accountName ?? "",
+            accountNumber: parsedDraft.accountNumber ?? "",
+            bankId: parsedDraft.bankId ?? "",
+            bankName: parsedDraft.bankName ?? "",
             businessName: parsedDraft.businessName ?? "",
             cityState: parsedDraft.cityState ?? "",
             email: parsedDraft.email ?? "",
@@ -355,6 +376,10 @@ const CustomersPage = () => {
   const openEditModal = (customer: CustomerDirectoryItem) => {
     setEditingCustomerId(customer.id);
     setForm({
+      accountName: customer.accountName ?? "",
+      accountNumber: customer.accountNumber ?? "",
+      bankId: customer.bankId ?? "",
+      bankName: customer.bankName ?? "",
       businessName: customer.businessName ?? "",
       cityState: customer.cityState ?? "",
       email: customer.email ?? "",
@@ -409,6 +434,10 @@ const CustomersPage = () => {
     const normalizedName = normalizeRequiredText(form.name);
 
     const payload = {
+      account_name: normalizeOptionalText(form.accountName),
+      account_number: normalizeOptionalText(form.accountNumber),
+      bank_id: normalizeOptionalText(form.bankId),
+      bank_name: normalizeOptionalText(form.bankName),
       business_name: normalizeOptionalText(form.businessName),
       city_state: normalizeOptionalText(form.cityState),
       email: normalizeOptionalText(form.email),
@@ -444,7 +473,19 @@ const CustomersPage = () => {
       throw new Error(`Row ${invalidPhoneRow + 2}: phone must be an 11-digit Nigerian number, such as 0801 234 5678.`);
     }
 
+    const invalidBankRow = rows.findIndex((row) => {
+      const hasBankDetails = Boolean(row.bank_name || row.account_name || row.account_number);
+      const accountDigits = row.account_number?.replace(/\D/g, "") ?? "";
+      return hasBankDetails && (!row.bank_name || !row.account_name || accountDigits.length < 10 || accountDigits.length > 20 || row.account_number.includes("*"));
+    });
+    if (invalidBankRow >= 0) {
+      throw new Error(`Row ${invalidBankRow + 2}: bank details require a bank, account name, and a full account number containing 10–20 digits.`);
+    }
+
     await importCustomers.mutateAsync(rows.map((row) => ({
+      account_name: normalizeOptionalText(row.account_name),
+      account_number: normalizeOptionalText(row.account_number),
+      bank_name: normalizeOptionalText(row.bank_name),
       business_name: normalizeOptionalText(row.business_name),
       city_state: normalizeOptionalText(row.city_state),
       email: normalizeOptionalText(row.email),
@@ -829,6 +870,43 @@ const CustomersPage = () => {
                 onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
                 className="rounded-lg"
               />
+            </div>
+            <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
+              <div className="flex items-start gap-3">
+                <Landmark className="mt-0.5 h-4 w-4 text-primary" aria-hidden="true" />
+                <div>
+                  <p className="font-semibold text-foreground">Optional bank details</p>
+                  <p className="text-xs text-muted-foreground">Record-keeping only. These details are visible to authorized finance roles and are not used to send payouts.</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="customer-bank">Bank</Label>
+                <Select
+                  value={form.bankId}
+                  onValueChange={(value) => {
+                    const bank = banksQuery.data?.find((item) => item.id === value);
+                    setForm((current) => ({ ...current, bankId: value, bankName: bank?.name ?? current.bankName }));
+                  }}
+                >
+                  <SelectTrigger id="customer-bank"><SelectValue placeholder={banksQuery.isLoading ? "Loading banks…" : "Select a bank"} /></SelectTrigger>
+                  <SelectContent>
+                    {(banksQuery.data ?? []).filter((bank) => bank.is_active).map((bank) => (
+                      <SelectItem key={bank.id} value={bank.id}>{bank.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="customer-account-name">Account Name</Label>
+                  <Input id="customer-account-name" value={form.accountName} onChange={(event) => setForm((current) => ({ ...current, accountName: event.target.value }))} placeholder="Customer account name" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customer-account-number">Account Number</Label>
+                  <Input id="customer-account-number" inputMode="numeric" value={form.accountNumber} onChange={(event) => setForm((current) => ({ ...current, accountNumber: event.target.value.replace(/\D/g, "").slice(0, 20) }))} placeholder="10–20 digits" />
+                </div>
+              </div>
+              {form.accountNumber && form.accountNumber.length >= 4 ? <p className="text-xs text-muted-foreground">Saved account will display as ****{form.accountNumber.slice(-4)}.</p> : null}
             </div>
           </div>
           <div className="sticky bottom-0 border-t border-border bg-background/95 px-6 py-4 backdrop-blur">
