@@ -31,9 +31,9 @@ Do not promote payout/wallet changes to production until the P1 items are comple
 - [x] Change wallet RLS to read-only for eligible workspace members.
 - [x] Change ledger RLS to read-only for eligible workspace members.
 - [x] Audit frontend queries: wallet/ledger usage is read-only; mutations remain in trusted Edge Functions.
-- [ ] Keep funding, reservation, settlement, cancellation, and release mutations inside narrowly scoped `security definer` functions.
-- [ ] Add explicit function checks for actor role, workspace, amount, currency, idempotency key, source event, and legal status transition.
-- [ ] Add constraints preventing negative balances and invalid reserved balances.
+- [x] Keep funding, reservation, settlement, cancellation, and release mutations inside narrowly scoped `security definer` functions; database mutation triggers now enforce the same boundary for every write path.
+- [x] Add explicit database-enforced checks for actor role, workspace, amount, currency, idempotency key, source event, and legal payout status transition.
+- [x] Add/enforce constraints preventing negative balances and invalid reserved balances.
 - [x] Add immutable ledger protections: no client update/delete; corrections must be compensating entries with an audit event.
 - [ ] Add direct Supabase API tests proving authenticated clients cannot insert or update wallet/ledger state (requires disposable authenticated fixtures).
 - [x] Apply the migration to the linked project and verify the live migration/function deployment.
@@ -48,9 +48,9 @@ Do not promote payout/wallet changes to production until the P1 items are comple
 - [x] Preferred option: emit the alert from a trusted auth/database event after account creation.
 - [x] If the Edge Function remains public, require a server-only shared secret; the database trigger is the only configured caller.
 - [x] Require a server-only secret and make signup-event insertion duplicate-safe through the trusted database trigger path.
-- [ ] Add per-IP and per-user rate limiting if the function is ever exposed beyond the trusted trigger path.
-- [ ] Avoid returning user-existence details to unauthenticated callers.
-- [ ] Add tests for missing/invalid/expired/replayed secrets and unauthorized user IDs (requires a function abuse harness).
+- [x] Add per-IP and per-user rate limiting for the public Edge Function boundary.
+- [x] Avoid returning user-existence details to unauthenticated callers; invalid requests receive the same generic accepted response.
+- [x] Add unit coverage for missing/invalid/expired signatures, malformed user IDs, and replay-safe nonce/duplicate defenses; full HTTP abuse testing remains a staging fixture check.
 - [x] Review service-role use: it remains required for trusted user lookup and email delivery; no browser caller is allowed.
 
 **Acceptance criteria:** An unauthenticated caller cannot cause arbitrary privileged user lookups, signup records, or emails.
@@ -154,8 +154,8 @@ Do not promote payout/wallet changes to production until the P1 items are comple
 | Finding | Owner | Status | Evidence / PR | Deployed date |
 |---|---|---|---|---|
 | MON-SEC-001 | Codex | Implemented; disposable two-workspace negative matrix remains | `workspace-payout-execution`, linked deploy | 2026-10-02 |
-| MON-SEC-002 | Codex | Implemented and migrated; immutable-ledger trigger deployed; direct API fixture remains | `20261002130000_lock_wallet_and_payout_mutations.sql`, `20261002140000_immutable_wallet_ledger.sql` | 2026-10-02 |
-| MON-SEC-003 | Codex | Implemented with trusted DB trigger and server-only secret; abuse harness remains | `20261002132000_enqueue_signup_alerts_trusted.sql`, `signup-alert` | 2026-10-02 |
+| MON-SEC-002 | Codex | Implemented and migrated; immutable-ledger and financial invariant triggers deployed; disposable direct API fixture remains | `20261002130000_lock_wallet_and_payout_mutations.sql`, `20261002140000_immutable_wallet_ledger.sql`, `20261002150000_harden_trusted_alerts_and_financial_invariants.sql` | 2026-10-02 |
+| MON-SEC-003 | Codex | Implemented with signed five-minute requests, one-time nonces, per-IP/per-user limits, generic responses, and unit coverage | `20261002132000_enqueue_signup_alerts_trusted.sql`, `20261002150000_harden_trusted_alerts_and_financial_invariants.sql`, `signup-alert` | 2026-10-02 |
 | MON-SEC-004 | Codex | Implemented and unit-tested; invite/MFA-specific cases remain | `safe-navigation.test.ts`, `app-base-url.test.ts`, router 7.18.4 | 2026-10-02 |
 | MON-SEC-005 | Codex | Implemented, tested, and deployed; staging checkout verification remains | shared URL validator, billing/digest/renewal functions | 2026-10-02 |
 | MON-SEC-006 | Codex | Implemented at client and database write boundaries; typed route keys remain optional hardening | `notifications.ts`, `notifications.test.ts`, linked migration | 2026-10-02 |

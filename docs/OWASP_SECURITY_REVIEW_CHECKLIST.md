@@ -114,6 +114,8 @@ Current branch at review time: `fix/security-remediation-2026-10-02`
 - [x] Hostile chart configuration regression tests cover identifier, key, and color escaping.
 - [x] pnpm is the authoritative package manager, React Router is upgraded to 7.18.4, CI runs the production dependency audit, and the audit reports no known vulnerabilities.
 - [x] Notification links are validated at client and database write boundaries; wallet ledger rows are immutable to clients and corrections require compensating entries.
+- [x] Signup alerts use signed, short-lived, one-time requests with generic unauthenticated responses and per-IP/per-user rate limiting.
+- [x] Financial mutation triggers enforce authorized actors, workspace ownership, wallet currency, positive amounts, idempotency keys, source-event metadata, and legal payout transitions.
 - [ ] Add the remaining two-workspace authorization, storage, public-function abuse, and provider replay matrices against disposable/staging fixtures before production release.
 
 The remaining unchecked items require authenticated multi-workspace data, storage objects, or provider-side payment fixtures. They are intentionally not executed against the linked production project by default because the repository verification scripts create records and payment side effects.
