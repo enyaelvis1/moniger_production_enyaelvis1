@@ -516,4 +516,15 @@ The current release is ready for structured client UAT around:
 5. Repeat as Starter. Confirm the attachment control is unavailable and the upgrade message is shown.
 6. Use a second workspace account and confirm it cannot see or open the first workspace's attachment.
 
+### Security remediation smoke checks
+
+1. Create two disposable workspaces and verify that a payout, vendor, bill, wallet, or bank identifier from workspace A cannot be used by workspace B; the UI should show a generic not-found/forbidden result and create no side effect.
+2. As a normal authenticated client, verify wallet balances and ledger history remain readable where permitted, but direct mutations are rejected.
+3. Create a notification with an internal path and confirm it navigates inside Moniger. Confirm protocol-relative, absolute, backslash, and control-character destinations are rejected.
+4. Open login, registration, password reset, and notification links containing encoded external destinations. Confirm they remain on Moniger or fall back to the safe default.
+5. Confirm paid-link and renewal emails use the configured application URL and never the browser request's `Origin` header.
+6. Run `pnpm audit --prod --audit-level=high` and confirm it reports no known vulnerabilities.
+
+Run the two-workspace, storage, and provider checks only with disposable/staging fixtures. The production verification scripts can create records and payment side effects and must not be used as casual production smoke tests.
+
 For billing and real-money verification, wait for the Paystack live approval step before treating those flows as final production sign-off.

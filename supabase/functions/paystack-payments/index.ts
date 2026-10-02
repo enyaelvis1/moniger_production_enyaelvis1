@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { getConfiguredAppBaseUrl } from "../_shared/app-base-url.ts";
 import { deliverPaymentReceipt } from "../_shared/payment-receipts.ts";
 import {
   buildMarketplaceInitializationPayload,
@@ -68,19 +69,7 @@ const createPaymentReference = (invoiceNumber: string) => {
   return `PSK-${cleanedInvoiceNumber}-${suffix}`;
 };
 
-const getAppBaseUrl = (request: Request) => {
-  const configuredUrl = Deno.env.get("APP_BASE_URL")?.trim();
-  if (configuredUrl) {
-    return configuredUrl.replace(/\/$/, "");
-  }
-
-  const requestOrigin = request.headers.get("origin")?.trim();
-  if (requestOrigin) {
-    return requestOrigin.replace(/\/$/, "");
-  }
-
-  return "https://moniger.net";
-};
+const getAppBaseUrl = () => getConfiguredAppBaseUrl();
 
 const getInvoiceAccessError = (invoice: InvoiceRow) => {
   if (!invoice.payment_link_enabled) {
@@ -364,7 +353,7 @@ Deno.serve(async (request) => {
     }
 
     const reference = createPaymentReference(context.invoice.invoice_number);
-    const callbackUrl = `${getAppBaseUrl(request)}/pay/${encodeURIComponent(paymentToken)}/confirmed`;
+    const callbackUrl = `${getAppBaseUrl()}/pay/${encodeURIComponent(paymentToken)}/confirmed`;
     const amountKobo = toKobo(context.invoice.balance_due);
     let marketplaceRouting: MarketplaceRoutingConfig;
 

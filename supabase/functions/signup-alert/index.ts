@@ -1,11 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { renderBrandedEmail } from "../_shared/branded-email.ts";
+import { buildSignupAlertSignaturePayload, isSignupAlertTimestampFresh, isValidSignupAlertUserId, verifySignupAlertSignature } from "../_shared/signup-alert-auth.ts";
 import { buildSignupAlertContext, buildSignupDeliveryUpdate, isDuplicateSignupAlertError } from "../_shared/signup-alert.ts";
 
 const corsHeaders = { "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Origin": "*" };
 const json = (body: Record<string, unknown>, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 const asString = (value: unknown) => typeof value === "string" ? value.trim() : "";
 const escapeHtml = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const genericAcceptedResponse = () => json({ ok: false }, 202);
 
 const sendEmail = async ({ fromAddress, html, recipients, resendApiKey, subject, text }: { fromAddress: string; html: string; recipients: string[]; resendApiKey: string; subject: string; text: string }) => {
   const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: fromAddress, to: recipients, subject, html, text }) });
@@ -17,13 +19,27 @@ const sendEmail = async ({ fromAddress, html, recipients, resendApiKey, subject,
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
   if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
+  const configuredSecret = Deno.env.get("SIGNUP_ALERT_INTERNAL_SECRET")?.trim() ?? "";
+  const providedSecret = request.headers.get("x-signup-alert-secret")?.trim() ?? "";
+  if (!configuredSecret || !providedSecret || providedSecret !== configuredSecret) {
+    return genericAcceptedResponse();
+  }
+
   let adminClient: ReturnType<typeof createClient> | null = null;
   let signupEventId = "";
   try {
     const payload = await request.json().catch(() => ({})) as Record<string, unknown>;
     const userId = asString(payload.userId);
     const plan = asString(payload.plan);
-    if (!userId || !["starter", "growth", "business"].includes(plan)) return json({ error: "A valid signup context is required." }, 400);
+    const nonce = asString(payload.nonce);
+    const signature = asString(payload.signature);
+    const issuedAt = typeof payload.issuedAt === "number" ? payload.issuedAt : Number(asString(payload.issuedAt));
+    if (!isValidSignupAlertUserId(userId) || !["starter", "growth", "business"].includes(plan) || !nonce || !isSignupAlertTimestampFresh({ issuedAt })) return genericAcceptedResponse();
+
+    const signaturePayload = buildSignupAlertSignaturePayload({ issuedAt, nonce, plan, userId });
+    if (!(await verifySignupAlertSignature({ payload: signaturePayload, providedSignature: signature, secret: configuredSecret }))) {
+      return genericAcceptedResponse();
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim() ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() ?? "";
@@ -33,8 +49,23 @@ Deno.serve(async (request) => {
     if (!supabaseUrl || !serviceRoleKey || !resendApiKey || !fromAddress || recipients.length === 0) return json({ error: "Signup alert delivery is not configured." }, 500);
 
     adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+    const nonceResponse = await adminClient.rpc("consume_signup_alert_nonce", {
+      p_issued_at: new Date(issuedAt * 1000).toISOString(),
+      p_nonce: nonce,
+    });
+    if (nonceResponse.error || nonceResponse.data !== true) return genericAcceptedResponse();
+
+    const forwardedIp = request.headers.get("cf-connecting-ip")?.trim()
+      || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      || `trusted-trigger:${userId}`;
+    const rateLimitResponse = await adminClient.rpc("consume_signup_alert_rate_limit", {
+      p_ip_key: forwardedIp,
+      p_user_id: userId,
+    });
+    if (rateLimitResponse.error || rateLimitResponse.data !== true) return genericAcceptedResponse();
+
     const userResponse = await adminClient.auth.admin.getUserById(userId);
-    if (userResponse.error || !userResponse.data.user) return json({ error: "Signup account was not found." }, 404);
+    if (userResponse.error || !userResponse.data.user) return genericAcceptedResponse();
     const user = userResponse.data.user;
     const metadata = user.user_metadata ?? {};
     const email = (user.email || "").trim().toLowerCase();
