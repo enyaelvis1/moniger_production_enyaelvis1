@@ -307,3 +307,13 @@ Live cutover checklist after Paystack approval:
 - [x] Signed-out paid checkout confirmation now shows a prominent payment-success state, an automatic sign-in/dashboard fallback, and a manual dashboard link.
 - [x] Authenticated legacy sessions without a confirmed email show a resend-confirmation action and remain restricted from full workspace activation.
 - [ ] Confirm the final production signup behavior with one disposable Starter account and one disposable paid-plan account, including payment and direct dashboard landing.
+
+### 2026-10-02 — Security remediation branch
+
+- [x] Created `fix/security-remediation-2026-10-02` from `develop` after pruning local and remote branches already merged into `develop`; the remaining unmerged client-feedback branch was preserved.
+- [x] Scoped payout bill, payout, vendor, and wallet lookups to the authenticated workspace and added explicit payout ownership assertions.
+- [x] Applied `20261002130000_lock_wallet_and_payout_mutations.sql` so authenticated clients can read eligible wallet/ledger state but cannot directly mutate financial records.
+- [x] Replaced browser-triggered privileged signup alerts with an `auth.users` database trigger and server-only shared secret; the linked migration and `signup-alert` function are deployed.
+- [x] Centralized internal continuation-path validation, upgraded React Router to 7.18.4, removed unsafe chart HTML injection, and removed request-origin fallbacks from billing/security links.
+- [x] Normalized dependency management on pnpm and removed unused competing lockfiles. The linked production dependency audit has no high or critical findings; one low transitive `postcss-selector-parser` advisory remains.
+- [x] Linked Supabase migrations are applied and the changed functions are deployed. Full two-workspace authorization, storage, and provider replay matrices remain release follow-up work documented in `docs/SECURITY_REMEDIATION_CHECKLIST_2026-10-02.md`.

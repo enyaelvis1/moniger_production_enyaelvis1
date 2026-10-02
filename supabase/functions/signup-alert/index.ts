@@ -17,6 +17,12 @@ const sendEmail = async ({ fromAddress, html, recipients, resendApiKey, subject,
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
   if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
+  const configuredSecret = Deno.env.get("SIGNUP_ALERT_INTERNAL_SECRET")?.trim() ?? "";
+  const providedSecret = request.headers.get("x-signup-alert-secret")?.trim() ?? "";
+  if (!configuredSecret || !providedSecret || providedSecret !== configuredSecret) {
+    return json({ error: "Unauthorized." }, 401);
+  }
+
   let adminClient: ReturnType<typeof createClient> | null = null;
   let signupEventId = "";
   try {

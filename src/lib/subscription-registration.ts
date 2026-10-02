@@ -3,6 +3,7 @@ import {
   getDefaultSubscriptionBillingCycle,
   type SubscriptionPlan,
 } from "@/lib/subscriptions";
+import { getSafeInternalPath } from "@/lib/safe-navigation";
 
 export const getEmailConfirmationRedirect = ({
   origin,
@@ -30,9 +31,11 @@ export const getEmailConfirmationRedirect = ({
 };
 
 export const getRegistrationDestination = (nextPath: string | null, plan: SubscriptionPlan) => {
+  const safeNextPath = getSafeInternalPath(nextPath, "");
+
   if (plan !== "starter") {
-    if (nextPath?.startsWith("/pricing")) {
-      return nextPath;
+    if (safeNextPath.startsWith("/pricing")) {
+      return safeNextPath;
     }
 
     return createSubscriptionIntentPath({
@@ -41,5 +44,5 @@ export const getRegistrationDestination = (nextPath: string | null, plan: Subscr
     });
   }
 
-  return nextPath?.startsWith("/") ? nextPath : "/dashboard";
+  return safeNextPath || "/dashboard";
 };

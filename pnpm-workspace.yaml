@@ -1,0 +1,6 @@
+allowBuilds:
+  '@swc/core': set this to true or false
+  esbuild: set this to true or false
+overrides:
+  lodash: ">=4.17.24"
+  ws: ">=8.21.0"

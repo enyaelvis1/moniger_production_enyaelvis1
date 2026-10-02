@@ -5,10 +5,11 @@ import AuthShell, {
   authPrimaryButtonClassName,
   authSecondaryButtonClassName,
 } from "@/components/auth/AuthShell";
+import { getSafeInternalPath } from "@/lib/safe-navigation";
 
 const ForgotPasswordConfirmedPage = () => {
   const [searchParams] = useSearchParams();
-  const next = searchParams.get("next")?.trim() || "";
+  const next = getSafeInternalPath(searchParams.get("next"), "");
   const loginPath = useMemo(() => (next ? `/login?next=${encodeURIComponent(next)}` : "/login"), [next]);
 
   return (

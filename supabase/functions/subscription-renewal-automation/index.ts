@@ -114,7 +114,11 @@ Deno.serve(async (request) => {
   if (receivedSecret !== cronSecret) return json({ error: "Unauthorized." }, 401);
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const appBaseUrl = (Deno.env.get("APP_BASE_URL")?.trim() || "https://moniger.net").replace(/\/$/, "");
+  const configuredAppBaseUrl = Deno.env.get("APP_BASE_URL")?.trim();
+  if (!configuredAppBaseUrl) {
+    throw new Error("APP_BASE_URL is required for subscription renewal links.");
+  }
+  const appBaseUrl = configuredAppBaseUrl.replace(/\/$/, "");
   const now = new Date();
   const nowMs = now.getTime();
   const { data: configRow } = await adminClient

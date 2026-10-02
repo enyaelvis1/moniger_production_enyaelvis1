@@ -68,18 +68,13 @@ const createPaymentReference = (invoiceNumber: string) => {
   return `PSK-${cleanedInvoiceNumber}-${suffix}`;
 };
 
-const getAppBaseUrl = (request: Request) => {
+const getAppBaseUrl = (_request: Request) => {
   const configuredUrl = Deno.env.get("APP_BASE_URL")?.trim();
   if (configuredUrl) {
     return configuredUrl.replace(/\/$/, "");
   }
 
-  const requestOrigin = request.headers.get("origin")?.trim();
-  if (requestOrigin) {
-    return requestOrigin.replace(/\/$/, "");
-  }
-
-  return "https://moniger.net";
+  throw new Error("APP_BASE_URL is required for payment callbacks.");
 };
 
 const getInvoiceAccessError = (invoice: InvoiceRow) => {

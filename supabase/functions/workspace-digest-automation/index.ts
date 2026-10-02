@@ -55,18 +55,13 @@ const escapeHtml = (value: string) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
-const getAppBaseUrl = (request: Request) => {
+const getAppBaseUrl = (_request: Request) => {
   const configuredUrl = Deno.env.get("APP_BASE_URL")?.trim();
   if (configuredUrl) {
     return configuredUrl.replace(/\/$/, "");
   }
 
-  const requestOrigin = request.headers.get("origin")?.trim();
-  if (requestOrigin) {
-    return requestOrigin.replace(/\/$/, "");
-  }
-
-  return "https://moniger.net";
+  throw new Error("APP_BASE_URL is required for workspace digest links.");
 };
 
 const getUtcWeekStart = (value: Date) => {

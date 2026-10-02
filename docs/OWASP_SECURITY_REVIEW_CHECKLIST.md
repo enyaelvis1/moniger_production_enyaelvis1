@@ -2,7 +2,7 @@
 
 Tracking checklist for the current Moniger app security review using OWASP-style priorities. This is focused on the concrete findings from the app scan on 2026-05-21.
 
-Current branch at review time: `main`
+Current branch at review time: `fix/security-remediation-2026-10-02`
 
 ## Status key
 
@@ -102,3 +102,14 @@ Current branch at review time: `main`
 3. Lock down public subscription confirmation behavior.
 4. Add browser security headers and revisit session storage strategy.
 5. Add regression tests for all remediations.
+
+## 2026-10-02 remediation update
+
+- [x] Workspace payout, bill, vendor, wallet, and payout-record lookups are tenant-scoped in the Edge Function.
+- [x] Authenticated clients can no longer directly mutate wallet, ledger, or workspace payout rows; the linked migration is applied.
+- [x] Browser signup-alert invocation was removed. Signup alerts now originate from a trusted `auth.users` trigger and require a server-only secret.
+- [x] Internal continuation paths and notification destinations are validated by one shared helper, including repeatedly encoded protocol-relative paths.
+- [x] Billing link helpers fail closed without configured `APP_BASE_URL`; the changed functions are deployed to the linked project.
+- [x] Chart style generation no longer uses `dangerouslySetInnerHTML` and sanitizes identifiers and colors.
+- [x] pnpm is the authoritative package manager, React Router is upgraded to 7.18.4, and the production dependency audit has no high or critical findings.
+- [ ] Add the remaining two-workspace authorization, storage, public-function abuse, provider replay, and hostile-chart automated matrices before production release.
