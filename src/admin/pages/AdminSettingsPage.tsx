@@ -28,6 +28,9 @@ import {
 } from "@/admin/components/AdminUi";
 
 const buildBulkTestDataConfirmation = (count: number) => `DELETE ${count} RECORDS`;
+const globalDataDeletionConfirmation = "DELETE ALL NON-SUPER-ADMIN DATA";
+const buildGlobalDataDeletionBulkConfirmation = (userCount: number, businessCount: number) =>
+  `DELETE ${userCount} USERS AND ${businessCount} WORKSPACES`;
 
 type BillingCatalogDraft = Record<
   SubscriptionPlan,
@@ -114,6 +117,19 @@ const AdminSettingsPage = () => {
   const [testDataReason, setTestDataReason] = useState("");
   const [testDataPreview, setTestDataPreview] = useState<{ confirmationCount?: number; blocked?: { payments?: Array<{ id: string; reason: string }>; payouts: Array<{ id: string; status: string }> }; deletable?: { payments: number; payouts: number; receivables?: number }; other?: { announcements: number; bills: number; businesses: number; checkoutSessions: number; content: number; customers: number; invoices: number; signupAlerts: number; users: number; vendors: number; blocked: number } } | null>(null);
   const [isCleaningTestData, setIsCleaningTestData] = useState(false);
+  const [globalDataDeletionPreview, setGlobalDataDeletionPreview] = useState<{
+    protectedSuperAdminCount: number;
+    targetUserCount: number;
+    targetBusinessCount: number;
+    records: Record<string, number>;
+    totalRecords: number;
+    confirmation: string;
+    bulkConfirmation: string;
+  } | null>(null);
+  const [globalDataDeletionConfirmationInput, setGlobalDataDeletionConfirmationInput] = useState("");
+  const [globalDataDeletionBulkConfirmation, setGlobalDataDeletionBulkConfirmation] = useState("");
+  const [globalDataDeletionReason, setGlobalDataDeletionReason] = useState("");
+  const [isDeletingGlobalData, setIsDeletingGlobalData] = useState(false);
   const [isClearingAppCache, setIsClearingAppCache] = useState(false);
   const [revokingAdminUserId, setRevokingAdminUserId] = useState<string | null>(null);
   const testDataDeletionCount = testDataPreview?.confirmationCount ?? 0;
@@ -133,6 +149,20 @@ const AdminSettingsPage = () => {
       toast({ title: "Preview failed", description: error instanceof Error ? error.message : "Unable to preview marked test data.", variant: "destructive" });
     }
   }, [testDataResource, toast]);
+
+  const previewGlobalDataDeletion = useCallback(async () => {
+    try {
+      const result = await invokeAdminConsole<typeof globalDataDeletionPreview>("settings.dangerAction", {
+        type: "preview_delete_all_non_super_admin_data",
+      });
+      setGlobalDataDeletionPreview(result);
+      setGlobalDataDeletionConfirmationInput("");
+      setGlobalDataDeletionBulkConfirmation("");
+    } catch (error) {
+      setGlobalDataDeletionPreview(null);
+      toast({ title: "Preview failed", description: error instanceof Error ? error.message : "Unable to preview non-super-admin data.", variant: "destructive" });
+    }
+  }, [toast]);
 
   useEffect(() => {
     setSessionTimeoutInput(String(sessionTimeoutMinutes));
@@ -647,6 +677,136 @@ const AdminSettingsPage = () => {
                   >
                     Export Platform Data
                   </Button>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-[#991B1B] bg-gradient-to-br from-[#3B1018] via-[#21131A] to-[#121722] shadow-[0_18px_60px_rgba(0,0,0,0.24)]">
+                  <div className="border-b border-[#FCA5A5]/20 px-5 py-5 sm:px-6">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-xl border border-[#FCA5A5]/30 bg-[#EF4444]/15 p-2.5 text-[#FCA5A5]">
+                        <Trash2 className="h-5 w-5" aria-hidden="true" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-semibold text-[#FFF1F2]">Delete all non-super-admin data</h3>
+                          <AdminBadge tone="danger">Super admin only</AdminBadge>
+                        </div>
+                        <p className="mt-1 max-w-3xl text-sm leading-6 text-[#FECACA]">
+                          Permanently removes every non-super-admin account, its owned workspaces, workspace records, and private bill attachments. Every current Super Admin account and its workspace data is protected.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-3 text-sm text-[#FDE68A]">
+                      <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                      <p>This is irreversible. Preview the exact scope first, then type the required phrases and a reason. This action never deletes Super Admin accounts.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[0.9fr_1.1fr]">
+                    <div className="space-y-4">
+                      <Button
+                        variant="ghost"
+                        className="h-10 w-full border border-[#FCA5A5]/40 bg-[#7F1D1D]/30 text-[#FFF1F2] hover:bg-[#7F1D1D]/50"
+                        onClick={() => void previewGlobalDataDeletion()}
+                      >
+                        <Database className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Preview deletion scope
+                      </Button>
+                      {globalDataDeletionPreview ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            ["Users", globalDataDeletionPreview.targetUserCount],
+                            ["Workspaces", globalDataDeletionPreview.targetBusinessCount],
+                            ["Customers", globalDataDeletionPreview.records.customers ?? 0],
+                            ["Vendors", globalDataDeletionPreview.records.vendors ?? 0],
+                            ["Invoices", globalDataDeletionPreview.records.invoices ?? 0],
+                            ["Bills", globalDataDeletionPreview.records.bills ?? 0],
+                            ["Payments", globalDataDeletionPreview.records.payments ?? 0],
+                            ["Attachments", globalDataDeletionPreview.records.bill_attachments ?? 0],
+                          ].map(([label, count]) => (
+                            <div key={label} className="rounded-xl border border-[#FCA5A5]/20 bg-black/20 p-3">
+                              <p className="text-xs text-[#FECACA]/70">{label}</p>
+                              <p className="mt-1 text-xl font-semibold text-white">{count}</p>
+                            </div>
+                          ))}
+                          <div className="col-span-2 rounded-xl border border-[#22C55E]/20 bg-[#22C55E]/10 p-3 text-sm text-[#BBF7D0]">
+                            {globalDataDeletionPreview.protectedSuperAdminCount} Super Admin account(s) are protected.
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-[#FCA5A5]/20 bg-black/20 p-4 text-sm text-[#FECACA]/70">
+                          Preview the scope before entering any confirmation.
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border border-[#FCA5A5]/20 bg-black/20 p-4 sm:p-5">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="danger-global-data-reason" className="text-[#FFE4E6]">Reason for deletion</Label>
+                          <Textarea
+                            id="danger-global-data-reason"
+                            value={globalDataDeletionReason}
+                            onChange={(event) => setGlobalDataDeletionReason(event.target.value)}
+                            placeholder="Example: Remove all non-admin UAT accounts after production sign-off"
+                            className="min-h-[96px] w-full resize-y border-[#FCA5A5]/25 bg-[#120F16] text-white placeholder:text-[#FCA5A5]/50"
+                          />
+                          <p className="text-xs text-[#FECACA]/60">At least 20 characters. This is recorded in the deletion manifest and audit log.</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="danger-global-data-confirm" className="text-[#FFE4E6]">Type {globalDataDeletionConfirmation}</Label>
+                          <Input
+                            id="danger-global-data-confirm"
+                            value={globalDataDeletionConfirmationInput}
+                            onChange={(event) => setGlobalDataDeletionConfirmationInput(event.target.value)}
+                            placeholder={globalDataDeletionConfirmation}
+                            className="border-[#FCA5A5]/25 bg-[#120F16] text-white placeholder:text-[#FCA5A5]/50"
+                          />
+                        </div>
+                        {globalDataDeletionPreview ? (
+                          <div className="space-y-2">
+                            <Label htmlFor="danger-global-data-bulk-confirm" className="text-[#FFE4E6]">Type {buildGlobalDataDeletionBulkConfirmation(globalDataDeletionPreview.targetUserCount, globalDataDeletionPreview.targetBusinessCount)}</Label>
+                            <Input
+                              id="danger-global-data-bulk-confirm"
+                              value={globalDataDeletionBulkConfirmation}
+                              onChange={(event) => setGlobalDataDeletionBulkConfirmation(event.target.value)}
+                              placeholder={buildGlobalDataDeletionBulkConfirmation(globalDataDeletionPreview.targetUserCount, globalDataDeletionPreview.targetBusinessCount)}
+                              className="border-[#FCA5A5]/25 bg-[#120F16] text-white placeholder:text-[#FCA5A5]/50"
+                            />
+                          </div>
+                        ) : null}
+                        <Button
+                          className="h-11 w-full bg-[#DC2626] text-white shadow-lg shadow-[#EF4444]/20 hover:bg-[#B91C1C]"
+                          disabled={isDeletingGlobalData || !globalDataDeletionPreview || globalDataDeletionPreview.totalRecords === 0 || globalDataDeletionReason.trim().length < 20 || globalDataDeletionConfirmationInput.trim().toUpperCase() !== globalDataDeletionConfirmation || globalDataDeletionBulkConfirmation.trim().toUpperCase() !== (globalDataDeletionPreview ? buildGlobalDataDeletionBulkConfirmation(globalDataDeletionPreview.targetUserCount, globalDataDeletionPreview.targetBusinessCount) : "")}
+                          onClick={async () => {
+                            if (!globalDataDeletionPreview) return;
+                            setIsDeletingGlobalData(true);
+                            try {
+                              const result = await invokeAdminConsole<{ deleted: Record<string, number> }>("settings.dangerAction", {
+                                type: "delete_all_non_super_admin_data",
+                                confirmation: globalDataDeletionConfirmationInput.trim(),
+                                bulkConfirmation: globalDataDeletionBulkConfirmation.trim(),
+                                reason: globalDataDeletionReason.trim(),
+                              });
+                              const deletedTotal = Object.values(result.deleted).reduce((sum, count) => sum + count, 0);
+                              toast({ title: "Non-super-admin data deleted", description: `${deletedTotal} record(s) were removed. Super Admin accounts and their workspaces were preserved.` });
+                              setGlobalDataDeletionPreview(null);
+                              setGlobalDataDeletionConfirmationInput("");
+                              setGlobalDataDeletionBulkConfirmation("");
+                              setGlobalDataDeletionReason("");
+                              await refreshSettings();
+                            } catch (error) {
+                              toast({ title: "Deletion failed", description: error instanceof Error ? error.message : "Unable to delete non-super-admin data.", variant: "destructive" });
+                            } finally {
+                              setIsDeletingGlobalData(false);
+                            }
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                          {isDeletingGlobalData ? "Deleting all non-admin data..." : "Delete all non-super-admin data"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="overflow-hidden rounded-2xl border border-[#EF4444]/25 bg-gradient-to-br from-[#2A1720] via-[#1B1720] to-[#121722] shadow-[0_18px_60px_rgba(0,0,0,0.18)]">

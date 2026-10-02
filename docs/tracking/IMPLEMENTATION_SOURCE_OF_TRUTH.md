@@ -90,6 +90,7 @@ That changes the implementation priority:
 - [x] Active Growth and Business workspaces can attach private PDF/JPG/PNG/WEBP vendor invoice files up to 10 MB to bills; Starter users are blocked by both UI entitlement checks and storage/database RLS.
 - [x] Optional customer bank details are stored separately from customer contact records, masked in the UI, and restricted by RLS to owner/admin/accountant roles. They are record-keeping only and are not used for payouts or refunds.
 - [x] Bills support persisted line-item descriptions, quantities, unit prices, subtotal/tax/total calculations, print-ready breakdowns, private attachments with replacement/progress states, attachment audit events, and bill breakdown email delivery without exposing private storage paths.
+- [x] Super Admin Settings includes a previewed, audited global deletion action that removes non-super-admin accounts, their owned workspaces and workspace data, and private bill attachments while protecting every current super-admin account and workspace. The action requires exact scope confirmation and is intended for controlled test-data cleanup.
 
 ### Customer payment collection
 
