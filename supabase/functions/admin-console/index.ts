@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { buildPasswordResetEmail } from "../_shared/auth-reset-email.ts";
+import { buildGlobalDataDeletionBulkConfirmation, canManageGlobalDataDeletion, globalDataDeletionConfirmation, selectNonSuperAdminUserIds } from "../_shared/global-data-deletion-policy.ts";
 import { buildBulkTestDataConfirmation, canManageTestData, isMarkedTestData, isSafeToDeletePayment, isSafeToDeletePayout, validateTestDataDeletionBatch } from "../_shared/test-data-policy.ts";
 
 type AdminConsoleAction =
@@ -634,6 +635,102 @@ const listAllAuthUsers = async (adminClient: ReturnType<typeof createClient>) =>
   }
 
   return users;
+};
+
+const globalDeletionTables = [
+  "business_members",
+  "business_subscriptions",
+  "customers",
+  "vendors",
+  "invoices",
+  "bills",
+  "payments",
+  "workspace_payouts",
+  "bill_attachments",
+] as const;
+
+type GlobalDeletionTable = (typeof globalDeletionTables)[number];
+
+type GlobalDataDeletionPlan = {
+  protectedSuperAdminIds: string[];
+  targetUserIds: string[];
+  targetBusinessIds: string[];
+  records: Record<GlobalDeletionTable, number>;
+  totalRecords: number;
+};
+
+const buildGlobalDataDeletionPlan = async (
+  adminClient: ReturnType<typeof createClient>,
+): Promise<GlobalDataDeletionPlan> => {
+  const [authUsers, adminUsersResponse, businessesResponse] = await Promise.all([
+    listAllAuthUsers(adminClient),
+    adminClient.from("admin_users").select("user_id, role"),
+    adminClient.from("businesses").select("id, owner_user_id"),
+  ]);
+
+  if (adminUsersResponse.error) throw adminUsersResponse.error;
+  if (businessesResponse.error) throw businessesResponse.error;
+
+  const protectedSuperAdminIds = (adminUsersResponse.data ?? [])
+    .filter((row) => asString(row.role) === "super_admin")
+    .map((row) => asString(row.user_id))
+    .filter(Boolean);
+  const targetUserIds = selectNonSuperAdminUserIds(
+    authUsers.map((authUser) => authUser.id),
+    protectedSuperAdminIds,
+  );
+  const targetUserIdSet = new Set(targetUserIds);
+  const targetBusinessIds = (businessesResponse.data ?? [])
+    .filter((row) => targetUserIdSet.has(asString(row.owner_user_id)))
+    .map((row) => asString(row.id))
+    .filter(Boolean);
+
+  const records = Object.fromEntries(
+    await Promise.all(globalDeletionTables.map(async (table) => {
+      if (targetBusinessIds.length === 0) {
+        return [table, 0] as const;
+      }
+
+      const response = await adminClient
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .in("business_id", targetBusinessIds);
+      if (response.error) throw response.error;
+      return [table, response.count ?? 0] as const;
+    })),
+  ) as Record<GlobalDeletionTable, number>;
+
+  const totalRecords = targetUserIds.length + targetBusinessIds.length + Object.values(records).reduce((sum, count) => sum + count, 0);
+
+  return {
+    protectedSuperAdminIds,
+    targetUserIds,
+    targetBusinessIds,
+    records,
+    totalRecords,
+  };
+};
+
+const removeBillAttachmentFiles = async (
+  adminClient: ReturnType<typeof createClient>,
+  businessIds: string[],
+) => {
+  if (businessIds.length === 0) return;
+
+  const response = await adminClient
+    .from("bill_attachments")
+    .select("storage_path")
+    .in("business_id", businessIds);
+  if (response.error) throw response.error;
+
+  const paths = (response.data ?? [])
+    .map((row) => asString(row.storage_path))
+    .filter(Boolean);
+
+  for (let index = 0; index < paths.length; index += 100) {
+    const removal = await adminClient.storage.from("bill-attachments").remove(paths.slice(index, index + 100));
+    if (removal.error) throw removal.error;
+  }
 };
 
 const getActorAuditBusinessId = async (adminClient: ReturnType<typeof createClient>, actorUserId: string) => {
@@ -3999,6 +4096,131 @@ Deno.serve(async (request) => {
         }
 
         const type = asString(payload.type);
+
+        if (type === "preview_delete_all_non_super_admin_data") {
+          const plan = await buildGlobalDataDeletionPlan(adminClient);
+          return json({
+            protectedSuperAdminCount: plan.protectedSuperAdminIds.length,
+            targetUserCount: plan.targetUserIds.length,
+            targetBusinessCount: plan.targetBusinessIds.length,
+            records: plan.records,
+            totalRecords: plan.totalRecords,
+            confirmation: globalDataDeletionConfirmation,
+            bulkConfirmation: buildGlobalDataDeletionBulkConfirmation(plan.targetUserIds.length, plan.targetBusinessIds.length),
+          });
+        }
+
+        if (type === "delete_all_non_super_admin_data") {
+          const confirmation = asString(payload.confirmation).trim().toUpperCase();
+          const reason = asString(payload.reason).trim();
+          const plan = await buildGlobalDataDeletionPlan(adminClient);
+          const bulkConfirmation = buildGlobalDataDeletionBulkConfirmation(plan.targetUserIds.length, plan.targetBusinessIds.length);
+
+          if (!canManageGlobalDataDeletion(adminAccess.role)) {
+            return json({ error: "Only super admins can delete non-super-admin data." }, 403);
+          }
+          if (confirmation !== globalDataDeletionConfirmation) {
+            return json({ error: `Type ${globalDataDeletionConfirmation} to confirm this deletion.` }, 400);
+          }
+          if (reason.length < 20) {
+            return json({ error: "Provide a deletion reason with at least 20 characters." }, 400);
+          }
+          if (asString(payload.bulkConfirmation).trim().toUpperCase() !== bulkConfirmation) {
+            return json({ error: `Type ${bulkConfirmation} to confirm the current deletion scope.` }, 400);
+          }
+          if (!plan.protectedSuperAdminIds.includes(user.id)) {
+            return json({ error: "The current account is not in the protected Super Admin set." }, 409);
+          }
+          if (plan.targetUserIds.includes(user.id)) {
+            return json({ error: "The current Super Admin cannot be included in the deletion scope." }, 409);
+          }
+          if (plan.targetUserIds.length === 0 && plan.targetBusinessIds.length === 0) {
+            return json({ error: "No non-super-admin user data is available to delete." }, 400);
+          }
+
+          const manifestResponse = await adminClient
+            .from("admin_global_data_deletion_manifests")
+            .insert({
+              actor_user_id: user.id,
+              protected_super_admin_ids: plan.protectedSuperAdminIds,
+              target_user_ids: plan.targetUserIds,
+              target_business_ids: plan.targetBusinessIds,
+              planned_records: plan.records,
+              reason,
+            })
+            .select("id")
+            .single();
+          if (manifestResponse.error) throw manifestResponse.error;
+          const manifestId = asString(manifestResponse.data?.id);
+
+          try {
+            await removeBillAttachmentFiles(adminClient, plan.targetBusinessIds);
+
+            if (plan.targetBusinessIds.length > 0) {
+              const deleteBusinessesResponse = await adminClient
+                .from("businesses")
+                .delete()
+                .in("id", plan.targetBusinessIds);
+              if (deleteBusinessesResponse.error) throw deleteBusinessesResponse.error;
+            }
+
+            for (const targetUserId of plan.targetUserIds) {
+              const deleteUserResponse = await adminClient.auth.admin.deleteUser(targetUserId);
+              if (deleteUserResponse.error) throw deleteUserResponse.error;
+            }
+
+            const manifestUpdate = await adminClient
+              .from("admin_global_data_deletion_manifests")
+              .update({
+                completed_at: new Date().toISOString(),
+                deleted_records: {
+                  ...plan.records,
+                  businesses: plan.targetBusinessIds.length,
+                  users: plan.targetUserIds.length,
+                },
+                status: "completed",
+              })
+              .eq("id", manifestId);
+            if (manifestUpdate.error) throw manifestUpdate.error;
+          } catch (error) {
+            await adminClient.from("admin_global_data_deletion_manifests").update({
+              failure_reason: error instanceof Error ? error.message : "Unknown deletion failure.",
+              status: "failed",
+            }).eq("id", manifestId);
+            throw error;
+          }
+
+          await insertAdminAuditLog({
+            action: "admin_global_non_super_admin_data_deleted",
+            actorUserId: user.id,
+            adminClient,
+            businessId: null,
+            detail: {
+              deleted_records: {
+                ...plan.records,
+                businesses: plan.targetBusinessIds.length,
+                users: plan.targetUserIds.length,
+              },
+              manifest_id: manifestId,
+              protected_super_admin_count: plan.protectedSuperAdminIds.length,
+              reason,
+            },
+            entityId: null,
+            entityType: "global_data_deletion",
+            summary: "All non-super-admin user data deleted",
+          });
+
+          return json({
+            ok: true,
+            manifestId,
+            protectedSuperAdminCount: plan.protectedSuperAdminIds.length,
+            deleted: {
+              ...plan.records,
+              businesses: plan.targetBusinessIds.length,
+              users: plan.targetUserIds.length,
+            },
+          });
+        }
 
         if (type === "export_platform_data") {
           const [businesses, members, invoices, bills, payments] = await Promise.all([
