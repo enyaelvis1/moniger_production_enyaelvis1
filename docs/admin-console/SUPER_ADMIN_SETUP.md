@@ -1,6 +1,6 @@
 # Super Admin Setup
 
-Last updated: 2026-04-20
+Last updated: 2026-10-02
 
 ## Purpose
 
@@ -17,6 +17,34 @@ Important difference:
 
 - `support` can access the admin console, but cannot perform super-admin-only actions such as user deletion.
 - `super_admin` can perform restricted platform-level actions.
+
+## Delete All Non-Super-Admin Data
+
+The Admin Settings danger zone provides a protected, audited purge for test or reset environments. It is available only to users whose `public.admin_users.role` is `super_admin`.
+
+The action removes:
+
+- all non-super-admin auth accounts;
+- businesses owned by those accounts;
+- workspace records belonging to those businesses;
+- private bill attachment files in the `bill-attachments` bucket.
+
+Every current `super_admin` account and its workspace is excluded from the live deletion plan. The operation requires a preview, a reason of at least 20 characters, the exact phrase `DELETE ALL NON-SUPER-ADMIN DATA`, and an exact current-scope confirmation such as `DELETE 12 USERS AND 4 WORKSPACES`. The server recalculates the scope immediately before deletion and records a manifest plus audit event.
+
+This is irreversible. A failed run is recorded as a failed manifest for investigation; because Supabase Auth deletion and database/storage deletion are separate services, the operation should be used only for controlled test-data cleanup.
+
+### How To Test The Danger Zone
+
+1. Sign in as a known `super_admin` and open **Admin → Settings**.
+2. Confirm **Delete all non-super-admin data** is visible. Sign in as a `support` admin and confirm the destructive controls are not available.
+3. Click **Preview deletion scope** and record the protected super-admin count and target counts.
+4. Enter a reason with at least 20 characters.
+5. Enter `DELETE ALL NON-SUPER-ADMIN DATA` exactly.
+6. Enter the exact generated bulk confirmation shown by the preview.
+7. Submit the deletion and confirm the success message includes a manifest ID.
+8. Verify the protected super-admin accounts can still sign in and access their workspaces.
+9. Verify a targeted non-super-admin account can no longer sign in and its owned workspace data is gone.
+10. Review the admin audit log and confirm the deletion event includes the manifest ID, protected count, deleted counts, and reason.
 
 ## Before You Start
 

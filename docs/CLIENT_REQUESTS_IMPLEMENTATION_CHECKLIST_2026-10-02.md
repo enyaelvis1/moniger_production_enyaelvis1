@@ -26,6 +26,24 @@ This checklist turns the latest client requests into scoped implementation work,
 - [ ] Verify that only Super Admins can perform global administration and re-enable disabled subscriptions.
 - [ ] Record account creation/recovery in the admin audit log.
 
+### Global non-super-admin data deletion
+
+- [x] Add a Super Admin Settings danger zone that previews the deletion scope.
+- [x] Protect every current `super_admin` account and its owned workspace from deletion.
+- [x] Require an exact destructive confirmation phrase and exact live record-count confirmation.
+- [x] Delete non-super-admin accounts, owned workspace records, and private bill attachment files through the admin-only Edge Function.
+- [x] Record a deletion manifest and admin audit event with protected/deleted counts and the operator reason.
+- [x] Add authorization-policy unit tests and deploy the database migration plus `admin-console` function.
+
+Test handoff:
+
+1. As a Super Admin, open **Admin → Settings** and preview the deletion scope.
+2. Confirm all expected Super Admin accounts are listed as protected.
+3. Enter the required reason, exact phrase, and exact generated scope confirmation; submit only in a test environment.
+4. Confirm targeted non-super-admin accounts and owned workspace data are removed, while Super Admin access remains.
+5. Review the audit log and deletion manifest.
+6. As a support admin, confirm the danger-zone action is unavailable.
+
 Acceptance criteria:
 
 - Each confirmed account can sign in to the intended project.
