@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { getConfiguredAppBaseUrl } from "../_shared/app-base-url.ts";
 import { formatTemplateDate, normalizeTemplateLanguage, normalizeTemplateLocale, translateTemplate } from "../_shared/localization.ts";
 
 type NotificationRow = {
@@ -55,14 +56,7 @@ const escapeHtml = (value: string) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
-const getAppBaseUrl = (_request: Request) => {
-  const configuredUrl = Deno.env.get("APP_BASE_URL")?.trim();
-  if (configuredUrl) {
-    return configuredUrl.replace(/\/$/, "");
-  }
-
-  throw new Error("APP_BASE_URL is required for workspace digest links.");
-};
+const getAppBaseUrl = () => getConfiguredAppBaseUrl();
 
 const getUtcWeekStart = (value: Date) => {
   const normalized = new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
@@ -231,7 +225,7 @@ Deno.serve(async (request) => {
     },
   });
 
-  const appBaseUrl = getAppBaseUrl(request);
+  const appBaseUrl = getAppBaseUrl();
   const now = new Date();
   const periodKey = getWeeklyPeriodKey(now);
   const windowStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();

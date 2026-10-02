@@ -1,5 +1,6 @@
 import type { Enums, Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/lib/supabase";
+import { getSafeInternalPath } from "@/lib/safe-navigation";
 
 export type NotificationPreferenceKey =
   | "bill_due"
@@ -72,7 +73,7 @@ export const createNotificationSafe = async ({
     const payload: Tables<"notifications">["Insert"] = {
       body,
       business_id: businessId,
-      link,
+      link: link ? getSafeInternalPath(link, "") || null : null,
       recipient_user_id: userId,
       title,
       type,

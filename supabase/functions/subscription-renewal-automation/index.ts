@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { getConfiguredAppBaseUrl } from "../_shared/app-base-url.ts";
 import { escapeHtml, renderBrandedEmail } from "../_shared/branded-email.ts";
 
 type SubscriptionRow = {
@@ -114,11 +115,7 @@ Deno.serve(async (request) => {
   if (receivedSecret !== cronSecret) return json({ error: "Unauthorized." }, 401);
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const configuredAppBaseUrl = Deno.env.get("APP_BASE_URL")?.trim();
-  if (!configuredAppBaseUrl) {
-    throw new Error("APP_BASE_URL is required for subscription renewal links.");
-  }
-  const appBaseUrl = configuredAppBaseUrl.replace(/\/$/, "");
+  const appBaseUrl = getConfiguredAppBaseUrl();
   const now = new Date();
   const nowMs = now.getTime();
   const { data: configRow } = await adminClient
