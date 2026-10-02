@@ -15,6 +15,7 @@ type BillRow = Pick<
   "amount_paid" | "bill_date" | "bill_number" | "due_date" | "id" | "status" | "total_amount" | "vendor_id"
 >;
 type BankRow = Tables<"banks">;
+type CustomerBankAccountRow = Tables<"customer_bank_accounts">;
 
 export type CustomerHistoryItem = {
   amount: number;
@@ -26,6 +27,11 @@ export type CustomerHistoryItem = {
 };
 
 export type CustomerDirectoryItem = {
+  accountName: string | null;
+  accountNumber: string | null;
+  bankName: string | null;
+  bankId: string | null;
+  bankAccountUpdatedAt: string | null;
   billingAddress: string | null;
   businessName: string | null;
   cityState: string | null;
@@ -65,6 +71,10 @@ export type VendorDirectoryItem = {
 };
 
 export type CustomerInput = {
+  account_name?: string | null;
+  account_number?: string | null;
+  bank_name?: string | null;
+  bank_id?: string | null;
   billing_address?: string | null;
   business_name?: string | null;
   city_state?: string | null;
@@ -94,13 +104,14 @@ const customersQueryKey = (businessId: string) => ["customers", businessId] as c
 const vendorsQueryKey = (businessId: string) => ["vendors", businessId] as const;
 
 const fetchCustomers = async (businessId: string): Promise<CustomerDirectoryItem[]> => {
-  const [{ data: customerRows, error: customerError }, { data: invoiceRows, error: invoiceError }] = await Promise.all([
+  const [{ data: customerRows, error: customerError }, { data: invoiceRows, error: invoiceError }, { data: bankAccountRows, error: bankAccountError }] = await Promise.all([
     supabase.from("customers").select("*").eq("business_id", businessId).order("created_at", { ascending: false }),
     supabase
       .from("invoices")
       .select("id, customer_id, invoice_number, issue_date, due_date, status, total_amount, balance_due")
       .eq("business_id", businessId)
       .order("issue_date", { ascending: false }),
+    supabase.from("customer_bank_accounts").select("*").eq("business_id", businessId),
   ]);
 
   if (customerError) {
@@ -109,6 +120,15 @@ const fetchCustomers = async (businessId: string): Promise<CustomerDirectoryItem
 
   if (invoiceError) {
     throw invoiceError;
+  }
+
+  if (bankAccountError) {
+    throw bankAccountError;
+  }
+
+  const bankAccountsByCustomer = new Map<string, CustomerBankAccountRow>();
+  for (const account of (bankAccountRows ?? []) as CustomerBankAccountRow[]) {
+    bankAccountsByCustomer.set(account.customer_id, account);
   }
 
   const invoicesByCustomer = new Map<string, CustomerHistoryItem[]>();
@@ -136,8 +156,14 @@ const fetchCustomers = async (businessId: string): Promise<CustomerDirectoryItem
 
   return ((customerRows ?? []) as CustomerRow[]).map((customer) => {
     const totals = invoiceTotals.get(customer.id) ?? { outstanding: 0, totalInvoiced: 0 };
+    const bankAccount = bankAccountsByCustomer.get(customer.id);
 
     return {
+      accountName: bankAccount?.account_name ?? null,
+      accountNumber: bankAccount?.account_number ?? null,
+      bankName: bankAccount?.bank_name ?? null,
+      bankId: bankAccount?.bank_id ?? null,
+      bankAccountUpdatedAt: bankAccount?.updated_at ?? null,
       billingAddress: buildBillingAddress(customer.street_address, customer.city_state) ?? customer.billing_address,
       businessName: customer.business_name,
       cityState: customer.city_state,
@@ -243,6 +269,8 @@ const insertCustomer = async (businessId: string, userId: string, values: Custom
     throw error;
   }
 
+  await syncCustomerBankAccount(businessId, data.id, userId, values);
+
   await logAuditEventSafe({
     action: "customer.created",
     actorUserId: userId,
@@ -259,20 +287,9 @@ const insertCustomer = async (businessId: string, userId: string, values: Custom
 };
 
 const insertCustomers = async (businessId: string, userId: string, values: CustomerInput[]) => {
-  const rows = values.map((value) => ({
-    billing_address: buildBillingAddress(value.street_address, value.city_state) ?? value.billing_address ?? null,
-    business_name: value.business_name ?? null,
-    business_id: businessId,
-    city_state: value.city_state ?? null,
-    created_by: userId,
-    email: value.email ?? null,
-    name: value.name,
-    notes: value.notes ?? null,
-    phone: value.phone ?? null,
-    street_address: value.street_address ?? null,
-  }));
-  const { data, error } = await supabase.from("customers").insert(rows).select("id");
-  if (error) throw error;
+  for (const value of values) {
+    await insertCustomer(businessId, userId, value);
+  }
 
   await logAuditEventSafe({
     action: "customer.created",
@@ -282,7 +299,6 @@ const insertCustomers = async (businessId: string, userId: string, values: Custo
     entityType: "customer",
     summary: `${values.length} customers imported`,
   });
-  return data;
 };
 
 const updateCustomer = async (businessId: string, customerId: string, userId: string, values: CustomerInput) => {
@@ -305,6 +321,8 @@ const updateCustomer = async (businessId: string, customerId: string, userId: st
     throw error;
   }
 
+  await syncCustomerBankAccount(businessId, customerId, userId, values);
+
   await logAuditEventSafe({
     action: "customer.updated",
     actorUserId: userId,
@@ -317,6 +335,46 @@ const updateCustomer = async (businessId: string, customerId: string, userId: st
     entityId: customerId,
     entityType: "customer",
     summary: `Customer ${values.name} updated`,
+  });
+};
+
+const syncCustomerBankAccount = async (businessId: string, customerId: string, userId: string, values: CustomerInput) => {
+  const accountNumber = values.account_number?.replace(/\D/g, "") ?? "";
+  const accountName = values.account_name?.trim() ?? "";
+  const bankName = values.bank_name?.trim() ?? "";
+  const bankId = values.bank_id ?? null;
+  const hasAnyDetails = Boolean(accountNumber || accountName || bankName || bankId);
+
+  if (!hasAnyDetails) {
+    const { error } = await supabase.from("customer_bank_accounts").delete().eq("business_id", businessId).eq("customer_id", customerId);
+    if (error) throw error;
+    return;
+  }
+
+  if (accountNumber.length < 10 || accountNumber.length > 20 || !accountName || !bankName) {
+    throw new Error("Provide the bank, account name, and an account number containing 10 to 20 digits, or leave all bank fields blank.");
+  }
+
+  const { error } = await supabase.from("customer_bank_accounts").upsert({
+    account_name: accountName,
+    account_number: accountNumber,
+    bank_id: bankId,
+    bank_name: bankName,
+    business_id: businessId,
+    created_by: userId,
+    customer_id: customerId,
+    updated_by: userId,
+  }, { onConflict: "customer_id" });
+  if (error) throw error;
+
+  await logAuditEventSafe({
+    action: "customer.bank_details_updated",
+    actorUserId: userId,
+    businessId,
+    detail: { account_number_last4: accountNumber.slice(-4), customer_id: customerId, description: "Customer bank details updated" },
+    entityId: customerId,
+    entityType: "customer",
+    summary: "Customer bank details updated",
   });
 };
 

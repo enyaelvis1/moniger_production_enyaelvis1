@@ -489,4 +489,31 @@ The current release is ready for structured client UAT around:
 7. Enter a phone number with letters or an invalid digit count. Confirm invalid characters are filtered and the validation message explains the accepted digit range.
 8. Use the City / State field and confirm Nigerian state suggestions appear while typing.
 
+### Invoice email payment link
+
+1. On an active Growth or Business workspace, create an invoice with a customer email and complete the invoice review flow.
+2. Send the invoice email and confirm delivery succeeds.
+3. Open the email and confirm the primary action says **Pay invoice securely** and points to a `/pay/<token>` URL. The plain-text version should contain the same URL.
+4. Open the link while signed out or in a private browser window. Confirm the public invoice page shows the correct customer-facing invoice details and payment action.
+5. Confirm that opening the link does not mark the invoice paid; only a successful Paystack checkout and webhook settlement should do that.
+6. Repeat with a resent invoice and confirm the same payment route remains usable.
+
+### Bill breakdown summary
+
+1. Open **Bills -> Add Bill** on an active workspace.
+2. Select a vendor and enter a subtotal, for example `10000`, and tax/charges, for example `750`.
+3. Confirm the read-only **Total amount** immediately shows `10750`.
+4. Save the bill, reopen it, and confirm the subtotal, tax/charges, and total remain correct.
+5. Open the bill's details and confirm the same breakdown is visible before using **Pay now** or **Schedule Payment**.
+6. Repeat with zero tax and confirm the total equals the subtotal.
+
+### Vendor invoice attachments
+
+1. On an active Growth or Business workspace, open **Bills**, create and save a bill, then reopen it.
+2. Select **Attach file** and upload a PDF, JPG, PNG, or WEBP smaller than 10 MB.
+3. Confirm the attachment appears in the bill, opens in a new tab, and can be removed.
+4. Try a text file and a file larger than 10 MB. Confirm both are rejected with a clear message.
+5. Repeat as Starter. Confirm the attachment control is unavailable and the upgrade message is shown.
+6. Use a second workspace account and confirm it cannot see or open the first workspace's attachment.
+
 For billing and real-money verification, wait for the Paystack live approval step before treating those flows as final production sign-off.

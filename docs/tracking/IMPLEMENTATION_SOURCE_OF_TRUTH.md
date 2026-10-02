@@ -1,6 +1,6 @@
 # Moniger Implementation Source Of Truth
 
-Last reviewed: 2026-05-21
+Last reviewed: 2026-10-02
 
 ## Purpose
 
@@ -75,6 +75,7 @@ That changes the implementation priority:
 - [x] The workspace shell now shows a subscription status banner, and `/reports` plus `/audit-trail` now show an in-app workspace upgrade page with direct checkout and a highlighted current-plan summary when the plan is not active.
 - [x] Deployment resilience now uses a non-cacheable HTML app shell, immutable hashed assets, guarded lazy-chunk retry, and an admin action to clear the current browser's app cache without touching authentication or platform data.
 - [x] Growth and Business workspaces can import/export customer and vendor CSV files using the documented templates; Starter workspaces retain their three-record limits and do not receive spreadsheet tools.
+- [x] Customer CSV templates accept optional record-keeping bank fields with validation, while downloaded customer/vendor records mask account numbers by default.
 - [x] Customer and vendor forms validate phone digit counts explicitly, offer Nigerian state suggestions, and keep primary save actions visible while scrolling.
 - [x] Multi-workspace users can switch workspaces from the sidebar; the selected workspace is persisted per user and settings/subscription queries are scoped to the selected business.
 - [x] The workspace profile upgrade action now opens a plan comparison dialog first, so users can review the available plans before starting checkout.
@@ -84,6 +85,11 @@ That changes the implementation priority:
 - [x] Added a workspace dashboard renewal countdown and Super Admin controls for the first-reminder and final-reminder timing; the default remains 14 days and 48 hours, and expiry enforcement remains server-side.
 - [x] Paid Growth and Business checkout enables Paystack recurring billing automatically; workspace Settings now states the renewal state, and only Super Admins can re-enable a disabled subscription from the admin console.
 - [x] Growth and Business plans require paid Paystack checkout before workspace operations are enabled; unpaid paid-plan signups remain in the upgrade/payment flow.
+- [x] Invoice delivery emails now enable the invoice's existing public payment link when sent and use `/pay/:paymentToken` as the primary CTA and plain-text fallback; they do not send customers to the authenticated workspace invoice route. The email summary includes the customer, invoice number, amount, dates, payment status, payment instructions, and a safety note.
+- [x] Bill creation and editing now capture subtotal and tax/charges and calculate a visible total breakdown; line-item descriptions and extraction remain pending.
+- [x] Active Growth and Business workspaces can attach private PDF/JPG/PNG/WEBP vendor invoice files up to 10 MB to bills; Starter users are blocked by both UI entitlement checks and storage/database RLS.
+- [x] Optional customer bank details are stored separately from customer contact records, masked in the UI, and restricted by RLS to owner/admin/accountant roles. They are record-keeping only and are not used for payouts or refunds.
+- [x] Bills support persisted line-item descriptions, quantities, unit prices, subtotal/tax/total calculations, print-ready breakdowns, private attachments with replacement/progress states, attachment audit events, and bill breakdown email delivery without exposing private storage paths.
 
 ### Customer payment collection
 
