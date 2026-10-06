@@ -1824,6 +1824,64 @@ const InvoicesPage = () => {
                         ) : null}
                       </div>
 
+                      <div className="rounded-2xl border border-border bg-muted/20 p-5">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-base font-semibold text-foreground">Invoice breakdown</h3>
+                            <p className="mt-1 text-sm text-muted-foreground">Confirm each item, quantity, and amount before saving or sending.</p>
+                          </div>
+                          <span className="rounded-full bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+                            {validLineItems.length} {validLineItems.length === 1 ? "item" : "items"}
+                          </span>
+                        </div>
+                        <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-background">
+                          <table className="w-full min-w-[620px] text-sm">
+                            <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                              <tr>
+                                <th className="px-4 py-3 font-semibold">Description</th>
+                                <th className="px-4 py-3 text-right font-semibold">Quantity</th>
+                                <th className="px-4 py-3 text-right font-semibold">Unit price</th>
+                                <th className="px-4 py-3 text-right font-semibold">Line total</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                              {validLineItems.length > 0 ? (
+                                validLineItems.map((lineItem, index) => (
+                                  <tr key={`${lineItem.description}-${index}`}>
+                                    <td className="px-4 py-3 font-medium text-foreground">{lineItem.description}</td>
+                                    <td className="px-4 py-3 text-right text-muted-foreground">{lineItem.qty}</td>
+                                    <td className="px-4 py-3 text-right text-muted-foreground">{formatNaira(lineItem.unitPrice)}</td>
+                                    <td className="px-4 py-3 text-right font-semibold text-foreground">
+                                      {formatNaira(lineItem.qty * lineItem.unitPrice)}
+                                    </td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan={4} className="px-4 py-5 text-center text-muted-foreground">
+                                    No line items have been added yet.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                            <tfoot className="border-t border-border bg-muted/30">
+                              <tr>
+                                <td colSpan={3} className="px-4 py-3 text-right text-muted-foreground">Subtotal</td>
+                                <td className="px-4 py-3 text-right font-semibold text-foreground">{formatNaira(subtotal)}</td>
+                              </tr>
+                              <tr>
+                                <td colSpan={3} className="px-4 py-2 text-right text-muted-foreground">Tax / charges</td>
+                                <td className="px-4 py-2 text-right font-semibold text-foreground">{formatNaira(taxAmount)}</td>
+                              </tr>
+                              <tr>
+                                <td colSpan={3} className="px-4 py-3 text-right font-semibold text-foreground">Grand total</td>
+                                <td className="px-4 py-3 text-right text-lg font-bold text-primary">{formatNaira(grandTotal)}</td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      </div>
+
                       {activeInvoice ? (
                         <div className="space-y-4">
                           <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
