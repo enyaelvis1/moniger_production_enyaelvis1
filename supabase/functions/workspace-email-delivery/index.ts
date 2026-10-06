@@ -60,6 +60,7 @@ type InvoiceRow = {
   status: string;
   total_amount: number | string;
 };
+type InvoiceItemEmailRow = { description: string; quantity: number | string; unit_price: number | string };
 
 type CustomerRow = {
   email: string | null;
@@ -178,8 +179,10 @@ const buildInvoiceEmail = ({
   appBaseUrl,
   businessName,
   customerName,
+  currency,
   dueDate,
   invoiceNumber,
+  items,
   issueDate,
   language,
   locale,
@@ -194,8 +197,10 @@ const buildInvoiceEmail = ({
   appBaseUrl: string;
   businessName: string;
   customerName: string;
+  currency: string;
   dueDate: string | null;
   invoiceNumber: string;
+  items: InvoiceItemEmailRow[];
   issueDate: string;
   language: string | null | undefined;
   locale: string | null | undefined;
@@ -227,6 +232,24 @@ const buildInvoiceEmail = ({
   const paymentSafetyNote = translateTemplate(language, "email.invoice.paymentSafetyNote");
   const customerLabel = translateTemplate(language, "email.invoice.customer");
   const paymentStatusLabel = translateTemplate(language, "email.invoice.paymentStatus");
+  const itemsLabel = translateTemplate(language, "email.invoice.items");
+  const descriptionLabel = translateTemplate(language, "email.invoice.description");
+  const quantityLabel = translateTemplate(language, "email.invoice.quantity");
+  const unitPriceLabel = translateTemplate(language, "email.invoice.unitPrice");
+  const lineTotalLabel = translateTemplate(language, "email.invoice.lineTotal");
+  const itemRows = items.length
+    ? items
+        .map((item) => {
+          const quantity = Number(item.quantity);
+          const unitPrice = Number(item.unit_price);
+          return `<tr><td style="padding: 9px 8px; border-bottom: 1px solid #E2E8F0; color: #1E293B;">${escapeHtml(item.description)}</td><td style="padding: 9px 8px; border-bottom: 1px solid #E2E8F0; text-align: right; color: #475569;">${escapeHtml(String(quantity))}</td><td style="padding: 9px 8px; border-bottom: 1px solid #E2E8F0; text-align: right; color: #475569;">${escapeHtml(formatTemplateCurrency(unitPrice, currency, locale))}</td><td style="padding: 9px 8px; border-bottom: 1px solid #E2E8F0; text-align: right; color: #1E293B; font-weight: 600;">${escapeHtml(formatTemplateCurrency(quantity * unitPrice, currency, locale))}</td></tr>`;
+        })
+        .join("")
+    : `<tr><td colspan="4" style="padding: 10px 8px; color: #64748B;">No line-item breakdown was recorded.</td></tr>`;
+  const itemLines = items.length
+    ? items.map((item) => `${item.description} — ${item.quantity} × ${formatTemplateCurrency(Number(item.unit_price), currency, locale)} = ${formatTemplateCurrency(Number(item.quantity) * Number(item.unit_price), currency, locale)}`)
+    : ["No line-item breakdown was recorded."];
+  const itemsHtml = `<div style="margin: 18px 0;"><h3 style="margin: 0 0 8px; color: #172554; font-size: 16px;">${escapeHtml(itemsLabel)}</h3><table role="presentation" style="width: 100%; border-collapse: collapse; border: 1px solid #DCE2F2; border-radius: 12px; overflow: hidden; font-size: 14px;"><thead><tr style="background: #F8F9FD;"><th style="padding: 9px 8px; text-align: left; color: #475569;">${escapeHtml(descriptionLabel)}</th><th style="padding: 9px 8px; text-align: right; color: #475569;">${escapeHtml(quantityLabel)}</th><th style="padding: 9px 8px; text-align: right; color: #475569;">${escapeHtml(unitPriceLabel)}</th><th style="padding: 9px 8px; text-align: right; color: #475569;">${escapeHtml(lineTotalLabel)}</th></tr></thead><tbody>${itemRows}</tbody></table></div>`;
   const bodyHtml = `
     <p>${escapeHtml(greeting)}</p>
     <p>${escapeMultilineHtml(sanitizedMessage)}</p>
@@ -238,6 +261,7 @@ const buildInvoiceEmail = ({
       ${formattedDueDate ? `<p style="margin: 0 0 8px;"><strong>${escapeHtml(dueLabel)}:</strong> ${escapeHtml(formattedDueDate)}</p>` : ""}
       <p style="margin: 0;"><strong>${escapeHtml(paymentStatusLabel)}:</strong> ${escapeHtml(paymentStatus)}</p>
     </div>
+    ${itemsHtml}
     <p>${escapeHtml(paymentInstructions)}</p>
     <p style="font-size: 13px; color: #5B6478;">${escapeHtml(paymentSafetyNote)}</p>
   `;
@@ -264,6 +288,9 @@ const buildInvoiceEmail = ({
     ...(formattedIssueDate ? [`${issuedLabel}: ${formattedIssueDate}`] : []),
     ...(formattedDueDate ? [`${dueLabel}: ${formattedDueDate}`] : []),
     `${paymentStatusLabel}: ${paymentStatus}`,
+    "",
+    `${itemsLabel}:`,
+    ...itemLines,
     "",
     paymentInstructions,
     paymentSafetyNote,
@@ -869,6 +896,16 @@ Deno.serve(async (request) => {
 
       const customerRecord = customer as CustomerRow | null;
       const customerName = customerRecord?.name?.trim() || recipientEmail;
+      const { data: invoiceItems, error: invoiceItemsError } = await adminClient
+        .from("invoice_items")
+        .select("description, quantity, unit_price")
+        .eq("invoice_id", invoiceRecord.id)
+        .order("line_number", { ascending: true });
+
+      if (invoiceItemsError) {
+        return json({ error: "Invoice items could not be loaded for email delivery." }, 500);
+      }
+
       const now = new Date().toISOString();
       const paymentUrl = `${appBaseUrl.replace(/\/+$/, "")}/pay/${encodeURIComponent(invoiceRecord.payment_public_token)}`;
       const nextInvoiceStatus = invoiceRecord.status === "draft" ? "sent" : invoiceRecord.status;
@@ -894,8 +931,10 @@ Deno.serve(async (request) => {
         appBaseUrl,
         businessName: businessRecord.name,
         customerName,
+        currency: invoiceRecord.currency,
         dueDate: invoiceRecord.due_date,
         invoiceNumber: invoiceRecord.invoice_number,
+        items: (invoiceItems ?? []) as InvoiceItemEmailRow[],
         issueDate: invoiceRecord.issue_date,
         language: templateLanguage,
         locale: templateLocale,
