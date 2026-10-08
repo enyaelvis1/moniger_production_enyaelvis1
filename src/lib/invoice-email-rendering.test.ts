@@ -17,4 +17,10 @@ describe("invoice email itemization contract", () => {
     expect(source).toContain("...itemLines");
     expect(source).toContain("No line-item breakdown was recorded.");
   });
+
+  it("includes subtotal and tax or charges in the invoice summary", () => {
+    expect(source).toContain("tax_total");
+    expect(source).toContain("email.invoice.taxCharges");
+    expect(source).toContain("taxTotal: formatTemplateCurrency");
+  });
 });

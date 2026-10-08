@@ -58,6 +58,8 @@ type InvoiceRow = {
   payment_public_token: string;
   sent_at: string | null;
   status: string;
+  subtotal: number | string;
+  tax_total: number | string;
   total_amount: number | string;
 };
 type InvoiceItemEmailRow = { description: string; quantity: number | string; unit_price: number | string };
@@ -190,7 +192,9 @@ const buildInvoiceEmail = ({
   paymentUrl,
   paymentStatus,
   recipientEmail,
+  subtotal,
   subject,
+  taxTotal,
   totalAmount,
   workspaceSlug,
 }: {
@@ -208,7 +212,9 @@ const buildInvoiceEmail = ({
   paymentUrl: string;
   paymentStatus: string;
   recipientEmail: string;
+  subtotal: string;
   subject: string;
+  taxTotal: string;
   totalAmount: string;
   workspaceSlug?: string | null;
 }) => {
@@ -237,6 +243,8 @@ const buildInvoiceEmail = ({
   const quantityLabel = translateTemplate(language, "email.invoice.quantity");
   const unitPriceLabel = translateTemplate(language, "email.invoice.unitPrice");
   const lineTotalLabel = translateTemplate(language, "email.invoice.lineTotal");
+  const subtotalLabel = translateTemplate(language, "email.invoice.subtotal");
+  const taxChargesLabel = translateTemplate(language, "email.invoice.taxCharges");
   const itemRows = items.length
     ? items
         .map((item) => {
@@ -256,6 +264,8 @@ const buildInvoiceEmail = ({
     <div style="margin: 18px 0; padding: 16px; border: 1px solid #DCE2F2; border-radius: 16px; background: #F8F9FD;">
       <p style="margin: 0 0 8px;"><strong>${escapeHtml(customerLabel)}:</strong> ${escapeHtml(customerName)}</p>
       <p style="margin: 0 0 8px;"><strong>${escapeHtml(invoiceLabel)}:</strong> ${escapeHtml(invoiceNumber)}</p>
+      <p style="margin: 0 0 8px;"><strong>${escapeHtml(subtotalLabel)}:</strong> ${escapeHtml(subtotal)}</p>
+      <p style="margin: 0 0 8px;"><strong>${escapeHtml(taxChargesLabel)}:</strong> ${escapeHtml(taxTotal)}</p>
       <p style="margin: 0 0 8px;"><strong>${escapeHtml(totalLabel)}:</strong> ${escapeHtml(totalAmount)}</p>
       ${formattedIssueDate ? `<p style="margin: 0 0 8px;"><strong>${escapeHtml(issuedLabel)}:</strong> ${escapeHtml(formattedIssueDate)}</p>` : ""}
       ${formattedDueDate ? `<p style="margin: 0 0 8px;"><strong>${escapeHtml(dueLabel)}:</strong> ${escapeHtml(formattedDueDate)}</p>` : ""}
@@ -284,6 +294,8 @@ const buildInvoiceEmail = ({
     "",
     `${customerLabel}: ${customerName}`,
     `${invoiceLabel}: ${invoiceNumber}`,
+    `${subtotalLabel}: ${subtotal}`,
+    `${taxChargesLabel}: ${taxTotal}`,
     `${totalLabel}: ${totalAmount}`,
     ...(formattedIssueDate ? [`${issuedLabel}: ${formattedIssueDate}`] : []),
     ...(formattedDueDate ? [`${dueLabel}: ${formattedDueDate}`] : []),
@@ -873,7 +885,7 @@ Deno.serve(async (request) => {
 
       const { data: invoice } = await adminClient
         .from("invoices")
-        .select("id, customer_id, invoice_number, issue_date, due_date, status, total_amount, currency, sent_at, delivery_attempt_count, payment_public_token, payment_link_enabled")
+        .select("id, customer_id, invoice_number, issue_date, due_date, status, subtotal, tax_total, total_amount, currency, sent_at, delivery_attempt_count, payment_public_token, payment_link_enabled")
         .eq("business_id", payload.businessId)
         .eq("id", payload.invoiceId)
         .maybeSingle();
@@ -942,7 +954,9 @@ Deno.serve(async (request) => {
         paymentUrl,
         paymentStatus: nextInvoiceStatus,
         recipientEmail,
+        subtotal: formatTemplateCurrency(invoiceRecord.subtotal, invoiceRecord.currency, templateLocale),
         subject,
+        taxTotal: formatTemplateCurrency(invoiceRecord.tax_total, invoiceRecord.currency, templateLocale),
         totalAmount: formatTemplateCurrency(invoiceRecord.total_amount, invoiceRecord.currency, templateLocale),
       });
 
