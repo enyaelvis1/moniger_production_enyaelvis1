@@ -2,10 +2,13 @@ import { supabase } from "@/lib/supabase";
 
 type WorkspacePayoutRoutingAction =
   | "self.get-config"
+  | "self.refresh-payout-verification"
   | "self.upsert-payout-account"
   | "self.upsert-split-config"
   | "admin.get-config"
-  | "admin.upsert-split-config";
+  | "admin.upsert-split-config"
+  | "admin.get-global-fee"
+  | "admin.upsert-global-fee";
 
 type ResponseLike = {
   clone: () => ResponseLike;
@@ -67,8 +70,35 @@ export type WorkspacePayoutRoutingConfigResult = {
   ok: true;
   payoutAccount: WorkspacePayoutAccountRecord | null;
   splitConfig: WorkspaceSplitConfigRecord | null;
+  routingReady?: boolean;
   sync?: WorkspacePayoutRoutingSyncResult;
 };
+
+export type GlobalMarketplaceFee = {
+  currency: string;
+  fee_mode: "flat" | "percentage";
+  flat_amount: number | string;
+  percentage_basis_points: number | null;
+  status: "active" | "disabled";
+  updated_at: string;
+};
+
+export const getAdminGlobalMarketplaceFee = () =>
+  invokeWorkspacePayoutRouting<{ ok: true; globalFee: GlobalMarketplaceFee | null }>("admin.get-global-fee", {});
+
+export const saveAdminGlobalMarketplaceFee = (values: {
+  currency: string;
+  feeMode: "flat" | "percentage";
+  flatAmount?: number;
+  percentageBasisPoints?: number;
+  enabled: boolean;
+}) => invokeWorkspacePayoutRouting<{ ok: true; globalFee: GlobalMarketplaceFee }>("admin.upsert-global-fee", {
+  currency: values.currency,
+  feeMode: values.feeMode,
+  flatAmount: values.flatAmount ?? null,
+  percentageBasisPoints: values.percentageBasisPoints ?? null,
+  globalFeeEnabled: values.enabled,
+});
 
 export type WorkspacePayoutAccountInput = {
   accountName?: string | null;
@@ -184,6 +214,9 @@ export const getWorkspacePayoutRoutingConfig = (businessId?: string) =>
   invokeWorkspacePayoutRouting<WorkspacePayoutRoutingConfigResult>("self.get-config", {
     businessId: businessId ?? null,
   });
+
+export const refreshWorkspacePayoutVerification = (businessId: string) =>
+  invokeWorkspacePayoutRouting<WorkspacePayoutRoutingConfigResult>("self.refresh-payout-verification", { businessId });
 
 export const upsertWorkspacePayoutAccount = (businessId: string, values: WorkspacePayoutAccountInput) =>
   invokeWorkspacePayoutRouting<WorkspacePayoutRoutingConfigResult>("self.upsert-payout-account", {

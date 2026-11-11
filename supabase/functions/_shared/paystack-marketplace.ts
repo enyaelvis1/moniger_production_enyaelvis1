@@ -294,6 +294,21 @@ export const updatePaystackSubaccount = async ({
   return response.data;
 };
 
+export const getPaystackSubaccount = async ({ paystackSecretKey, subaccountCode }: {
+  paystackSecretKey: string;
+  subaccountCode: string;
+}) => {
+  const response = await sendPaystackRequest<{ data?: PaystackSubaccountRecord }>(
+    `/subaccount/${encodeURIComponent(subaccountCode)}`,
+    "GET",
+    paystackSecretKey,
+  );
+  if (!response.data || typeof response.data !== "object") {
+    throw new Error("Paystack returned an unexpected subaccount status response.");
+  }
+  return response.data;
+};
+
 export const getPaystackSubaccountSyncStatus = (subaccount: PaystackSubaccountRecord) => {
   if (subaccount.is_verified === true) {
     return "verified";

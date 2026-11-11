@@ -1,6 +1,7 @@
 type JsonLike = boolean | null | number | string | JsonLike[] | { [key: string]: JsonLike };
 
 export type PayoutRoutingAccountRow = {
+  currency: string;
   id: string;
   provider_metadata: Record<string, unknown> | null;
   provider_subaccount_code: string | null;
@@ -8,12 +9,23 @@ export type PayoutRoutingAccountRow = {
 };
 
 export type PayoutRoutingSplitConfigRow = {
+  currency: string;
   id: string;
   moniger_fee_flat_amount: number | string;
   provider_metadata: Record<string, unknown> | null;
   provider_split_code: string | null;
+  provider_subaccount_code: string | null;
+  payout_account_id: string | null;
   split_mode: string;
   status: string;
+};
+
+export type PlatformMarketplaceFeeRow = {
+  currency: string;
+  fee_mode: "flat" | "percentage";
+  flat_amount: number | string;
+  percentage_basis_points: number | null;
+  status: "active" | "disabled";
 };
 
 export type MarketplaceRoutingConfig =
@@ -70,34 +82,67 @@ const toJsonLike = (value: unknown): JsonLike | null => {
 
 export const resolveMarketplaceRoutingConfig = ({
   amountKobo,
+  currency,
   payoutAccount,
+  platformFee = null,
   splitConfig,
   toKobo,
 }: {
   amountKobo: number;
+  currency: string;
   payoutAccount: PayoutRoutingAccountRow | null;
+  platformFee?: PlatformMarketplaceFeeRow | null;
   splitConfig: PayoutRoutingSplitConfigRow | null;
   toKobo: (value: number | string) => number;
 }): MarketplaceRoutingConfig => {
-  if (!payoutAccount || !splitConfig) {
+  if (!payoutAccount) {
     return { status: "inactive" };
   }
 
-  if (splitConfig.status !== "ready") {
-    return { status: "inactive" };
-  }
-
-  if (!["pending_verification", "verified"].includes(payoutAccount.status)) {
+  const payoutMetadata = payoutAccount.provider_metadata ?? {};
+  if (
+    payoutAccount.status !== "verified" ||
+    payoutMetadata.is_verified !== true ||
+    payoutMetadata.active !== true || payoutAccount.currency.toUpperCase() !== currency.toUpperCase()
+  ) {
     return { status: "inactive" };
   }
 
   const providerSubaccountCode = asNullableString(payoutAccount.provider_subaccount_code);
   if (!providerSubaccountCode) {
-    throw new Error("Workspace payout routing is marked active but missing a Paystack subaccount code.");
+    return { status: "inactive" };
   }
 
-  if (splitConfig.split_mode === "percentage") {
-    const providerSplitCode = asNullableString(splitConfig.provider_split_code);
+  const validSplitConfig = splitConfig?.status === "ready" &&
+    splitConfig.payout_account_id === payoutAccount.id &&
+    splitConfig.provider_subaccount_code === providerSubaccountCode &&
+    splitConfig.currency.toUpperCase() === payoutAccount.currency.toUpperCase();
+
+  if (!validSplitConfig) {
+    if (!platformFee || platformFee.status !== "active" || platformFee.currency.toUpperCase() !== currency.toUpperCase()) {
+      return { status: "inactive" };
+    }
+    const charge = platformFee.fee_mode === "percentage"
+      ? Math.round(amountKobo * ((asNullableNumber(platformFee.percentage_basis_points) ?? -1) / 10000))
+      : toKobo(asNullableNumber(platformFee.flat_amount) ?? -1);
+    if (charge < 0 || charge > amountKobo) {
+      return { status: "inactive" };
+    }
+    return {
+      mode: platformFee.fee_mode,
+      payoutAccountId: payoutAccount.id,
+      providerMetadata: payoutMetadata,
+      providerSplitCode: null,
+      providerSubaccountCode,
+      splitConfigId: "platform-default",
+      splitConfigMetadata: { fee_source: "platform_default", fee_mode: platformFee.fee_mode },
+      status: "ready",
+      transactionChargeKobo: charge,
+    };
+  }
+
+  if (splitConfig!.split_mode === "percentage") {
+    const providerSplitCode = asNullableString(splitConfig!.provider_split_code);
     if (!providerSplitCode) {
       throw new Error("Workspace payout routing is marked ready but missing a Paystack split code.");
     }
@@ -105,17 +150,17 @@ export const resolveMarketplaceRoutingConfig = ({
     return {
       mode: "percentage",
       payoutAccountId: payoutAccount.id,
-      providerMetadata: payoutAccount.provider_metadata ?? {},
+      providerMetadata: payoutMetadata,
       providerSplitCode,
       providerSubaccountCode,
-      splitConfigId: splitConfig.id,
-      splitConfigMetadata: splitConfig.provider_metadata ?? {},
+      splitConfigId: splitConfig!.id,
+      splitConfigMetadata: splitConfig!.provider_metadata ?? {},
       status: "ready",
       transactionChargeKobo: null,
     };
   }
 
-  const monigerFeeFlatAmount = asNullableNumber(splitConfig.moniger_fee_flat_amount);
+  const monigerFeeFlatAmount = asNullableNumber(splitConfig!.moniger_fee_flat_amount);
   if (monigerFeeFlatAmount === null || monigerFeeFlatAmount < 0) {
     throw new Error("Workspace payout routing is marked ready but its flat-fee amount is invalid.");
   }
@@ -128,11 +173,11 @@ export const resolveMarketplaceRoutingConfig = ({
   return {
     mode: "flat",
     payoutAccountId: payoutAccount.id,
-    providerMetadata: payoutAccount.provider_metadata ?? {},
+    providerMetadata: payoutMetadata,
     providerSplitCode: null,
     providerSubaccountCode,
-    splitConfigId: splitConfig.id,
-    splitConfigMetadata: splitConfig.provider_metadata ?? {},
+    splitConfigId: splitConfig!.id,
+    splitConfigMetadata: splitConfig!.provider_metadata ?? {},
     status: "ready",
     transactionChargeKobo,
   };
@@ -143,7 +188,7 @@ export const buildMarketplaceInitializationPayload = (routingConfig: Marketplace
     return {};
   }
 
-  if (routingConfig.mode === "percentage") {
+  if (routingConfig.mode === "percentage" && routingConfig.providerSplitCode) {
     return {
       bearer: "account",
       split_code: routingConfig.providerSplitCode,

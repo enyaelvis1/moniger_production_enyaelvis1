@@ -5,29 +5,37 @@ import {
   resolveMarketplaceRoutingMetadata,
   type PayoutRoutingAccountRow,
   type PayoutRoutingSplitConfigRow,
+  type PlatformMarketplaceFeeRow,
 } from "../../supabase/functions/_shared/paystack-marketplace-routing";
 
 const verifiedPayoutAccount: PayoutRoutingAccountRow = {
+  currency: "NGN",
   id: "payout-1",
-  provider_metadata: { settlement_bank: "GTBank" },
+  provider_metadata: { active: true, is_verified: true, settlement_bank: "GTBank" },
   provider_subaccount_code: "SUB_123",
   status: "verified",
 };
 
 const readyPercentageSplit: PayoutRoutingSplitConfigRow = {
   id: "split-1",
+  currency: "NGN",
   moniger_fee_flat_amount: 0,
+  payout_account_id: "payout-1",
   provider_metadata: { strategy: "split_code" },
   provider_split_code: "SPL_123",
+  provider_subaccount_code: "SUB_123",
   split_mode: "percentage",
   status: "ready",
 };
 
 const readyFlatSplit: PayoutRoutingSplitConfigRow = {
   id: "split-2",
+  currency: "NGN",
   moniger_fee_flat_amount: 500,
+  payout_account_id: "payout-1",
   provider_metadata: { strategy: "transaction_charge" },
   provider_split_code: null,
+  provider_subaccount_code: "SUB_123",
   split_mode: "flat",
   status: "ready",
 };
@@ -41,6 +49,7 @@ describe("paystack marketplace routing helper", () => {
     expect(
       resolveMarketplaceRoutingConfig({
         amountKobo: 100_000,
+        currency: "NGN",
         payoutAccount: null,
         splitConfig: readyPercentageSplit,
         toKobo: (value) => Math.round(Number(value) * 100),
@@ -50,6 +59,7 @@ describe("paystack marketplace routing helper", () => {
     expect(
       resolveMarketplaceRoutingConfig({
         amountKobo: 100_000,
+        currency: "NGN",
         payoutAccount: verifiedPayoutAccount,
         splitConfig: { ...readyPercentageSplit, status: "draft" },
         toKobo: (value) => Math.round(Number(value) * 100),
@@ -59,6 +69,7 @@ describe("paystack marketplace routing helper", () => {
     expect(
       resolveMarketplaceRoutingConfig({
         amountKobo: 100_000,
+        currency: "NGN",
         payoutAccount: { ...verifiedPayoutAccount, status: "draft" },
         splitConfig: readyPercentageSplit,
         toKobo: (value) => Math.round(Number(value) * 100),
@@ -69,6 +80,7 @@ describe("paystack marketplace routing helper", () => {
   it("builds a ready percentage routing config and initialization payload", () => {
     const config = resolveMarketplaceRoutingConfig({
       amountKobo: 100_000,
+      currency: "NGN",
       payoutAccount: verifiedPayoutAccount,
       splitConfig: readyPercentageSplit,
       toKobo: (value) => Math.round(Number(value) * 100),
@@ -77,7 +89,7 @@ describe("paystack marketplace routing helper", () => {
     expect(config).toEqual({
       mode: "percentage",
       payoutAccountId: "payout-1",
-      providerMetadata: { settlement_bank: "GTBank" },
+      providerMetadata: { active: true, is_verified: true, settlement_bank: "GTBank" },
       providerSplitCode: "SPL_123",
       providerSubaccountCode: "SUB_123",
       splitConfigId: "split-1",
@@ -95,6 +107,7 @@ describe("paystack marketplace routing helper", () => {
   it("builds a ready flat routing config and initialization payload", () => {
     const config = resolveMarketplaceRoutingConfig({
       amountKobo: 100_000,
+      currency: "NGN",
       payoutAccount: verifiedPayoutAccount,
       splitConfig: readyFlatSplit,
       toKobo: (value) => Math.round(Number(value) * 100),
@@ -103,7 +116,7 @@ describe("paystack marketplace routing helper", () => {
     expect(config).toEqual({
       mode: "flat",
       payoutAccountId: "payout-1",
-      providerMetadata: { settlement_bank: "GTBank" },
+      providerMetadata: { active: true, is_verified: true, settlement_bank: "GTBank" },
       providerSplitCode: null,
       providerSubaccountCode: "SUB_123",
       splitConfigId: "split-2",
@@ -120,18 +133,20 @@ describe("paystack marketplace routing helper", () => {
   });
 
   it("throws when ready routing is missing required provider fields or exceeds invoice amount", () => {
-    expect(() =>
+    expect(
       resolveMarketplaceRoutingConfig({
         amountKobo: 100_000,
+        currency: "NGN",
         payoutAccount: { ...verifiedPayoutAccount, provider_subaccount_code: null },
         splitConfig: readyPercentageSplit,
         toKobo: (value) => Math.round(Number(value) * 100),
       }),
-    ).toThrow("missing a Paystack subaccount code");
+    ).toEqual({ status: "inactive" });
 
     expect(() =>
       resolveMarketplaceRoutingConfig({
         amountKobo: 100_000,
+        currency: "NGN",
         payoutAccount: verifiedPayoutAccount,
         splitConfig: { ...readyPercentageSplit, provider_split_code: null },
         toKobo: (value) => Math.round(Number(value) * 100),
@@ -141,11 +156,70 @@ describe("paystack marketplace routing helper", () => {
     expect(() =>
       resolveMarketplaceRoutingConfig({
         amountKobo: 10_000,
+        currency: "NGN",
         payoutAccount: verifiedPayoutAccount,
         splitConfig: readyFlatSplit,
         toKobo: (value) => Math.round(Number(value) * 100),
       }),
     ).toThrow("fee exceeds this invoice amount");
+  });
+
+  it("uses the active platform default when no aligned workspace override exists", () => {
+    const platformFee: PlatformMarketplaceFeeRow = {
+      currency: "NGN",
+      fee_mode: "percentage",
+      flat_amount: 0,
+      percentage_basis_points: 1500,
+      status: "active",
+    };
+    const config = resolveMarketplaceRoutingConfig({
+      amountKobo: 100_000,
+      currency: "NGN",
+      payoutAccount: verifiedPayoutAccount,
+      platformFee,
+      splitConfig: { ...readyPercentageSplit, status: "draft" },
+      toKobo: (value) => Math.round(Number(value) * 100),
+    });
+
+    expect(config).toMatchObject({
+      mode: "percentage",
+      splitConfigId: "platform-default",
+      splitConfigMetadata: { fee_source: "platform_default", fee_mode: "percentage" },
+      status: "ready",
+      transactionChargeKobo: 15_000,
+    });
+    expect(buildMarketplaceInitializationPayload(config)).toEqual({
+      bearer: "account",
+      subaccount: "SUB_123",
+      transaction_charge: 15_000,
+    });
+  });
+
+  it("fails closed when the platform fee currency does not match or a flat fee exceeds the invoice", () => {
+    const mismatchedFee: PlatformMarketplaceFeeRow = {
+      currency: "USD",
+      fee_mode: "percentage",
+      flat_amount: 0,
+      percentage_basis_points: 1500,
+      status: "active",
+    };
+    expect(resolveMarketplaceRoutingConfig({
+      amountKobo: 100_000,
+      currency: "NGN",
+      payoutAccount: verifiedPayoutAccount,
+      platformFee: mismatchedFee,
+      splitConfig: null,
+      toKobo: (value) => Math.round(Number(value) * 100),
+    })).toEqual({ status: "inactive" });
+
+    expect(resolveMarketplaceRoutingConfig({
+      amountKobo: 10_000,
+      currency: "NGN",
+      payoutAccount: verifiedPayoutAccount,
+      platformFee: { ...mismatchedFee, currency: "NGN", fee_mode: "flat", flat_amount: 200 },
+      splitConfig: null,
+      toKobo: (value) => Math.round(Number(value) * 100),
+    })).toEqual({ status: "inactive" });
   });
 
   it("merges settlement details into existing routing metadata", () => {
