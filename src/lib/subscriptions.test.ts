@@ -17,6 +17,7 @@ describe("subscription helpers", () => {
       "Up to 3 customers",
       "Up to 3 vendors",
       "Basic payment tracking",
+      "Route invoice payments to your bank account",
       "Email support",
     ]);
     expect(subscriptionCatalog.growth.features).toContain("Bills and vendor workflows");

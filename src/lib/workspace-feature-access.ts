@@ -19,6 +19,7 @@ const starterFeatures: ReadonlySet<WorkspaceFeature> = new Set([
   "customers",
   "payments",
   "vendors",
+  "marketplaceRouting",
 ]);
 
 export const isWorkspaceFeatureAvailable = (

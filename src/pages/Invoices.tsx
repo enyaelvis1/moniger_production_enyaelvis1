@@ -43,6 +43,7 @@ import {
 } from "@/lib/advanced-filters";
 import { createFormValidator, getFriendlyErrorMessage, ValidationRules } from "@/lib/error-handling";
 import { useWorkspaceSubscription } from "@/hooks/use-workspace-subscription";
+import { useWorkspacePayoutRoutingConfig } from "@/hooks/use-workspace-payout-routing";
 import { Link, useNavigate } from "react-router-dom";
 
 type SheetMode = "create" | "edit" | "view";
@@ -310,6 +311,7 @@ const InvoicesPage = () => {
   const { subscription } = useWorkspaceSubscription();
   const businessId = settingsQuery.data?.business?.id;
   const businessName = settingsQuery.data?.business?.name ?? "Moniger Workspace";
+  const payoutRoutingQuery = useWorkspacePayoutRoutingConfig(businessId);
   const customersQuery = useCustomersDirectory(businessId);
   const invoicesQuery = useInvoicesData(businessId);
   const { createInvoice, deleteInvoice, deliverInvoice, enableInvoicePaymentLink, updateInvoice, updateInvoiceStatus } = useInvoiceMutations(
@@ -802,6 +804,17 @@ const InvoicesPage = () => {
 
   const handleDeliverInvoice = async (method: "backend_email" | "mail_app" = "backend_email") => {
     if (!deliveryDialogContext) {
+      return;
+    }
+
+    if (payoutRoutingQuery.data?.routingReady !== true) {
+      toast({
+        title: "Set up invoice payment routing first",
+        description: "Save a receiving account, complete Paystack verification, and ensure an active Moniger fee rule is available before sending an invoice.",
+        variant: "destructive",
+      });
+      closeDeliveryDialog();
+      navigate("/marketplace-routing");
       return;
     }
 
@@ -2086,7 +2099,7 @@ const InvoicesPage = () => {
                             <Button
                               className="flex-1 rounded-lg bg-[#5B67F7] text-white btn-press hover:bg-[#4653D8] disabled:bg-[#5B67F7]/50 disabled:text-white/70"
                               onClick={openDeliveryDialogForForm}
-                              disabled={isMutating}
+                              disabled={isMutating || payoutRoutingQuery.data?.routingReady !== true}
                             >
                               {getBackendDeliveryActionLabel(activeInvoice)}
                             </Button>
@@ -2105,13 +2118,18 @@ const InvoicesPage = () => {
                             <Button
                               className="flex-1 rounded-lg bg-[#5B67F7] text-white btn-press hover:bg-[#4653D8] disabled:bg-[#5B67F7]/50 disabled:text-white/70"
                               onClick={openDeliveryDialogForForm}
-                              disabled={isMutating}
+                              disabled={isMutating || payoutRoutingQuery.data?.routingReady !== true}
                             >
                               Send Email
                             </Button>
                           </>
                         )}
                       </div>
+                    ) : null}
+                    {formStep === "review" && !isReadOnly && payoutRoutingQuery.data?.routingReady !== true ? (
+                      <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                        Save this invoice as a draft now. To send it or activate its payment link, <Link className="font-semibold underline" to="/marketplace-routing">complete and verify invoice payment routing</Link> first.
+                      </p>
                     ) : null}
                   </div>
                 </div>

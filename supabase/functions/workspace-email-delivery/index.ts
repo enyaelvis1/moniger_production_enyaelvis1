@@ -896,6 +896,19 @@ Deno.serve(async (request) => {
         return json({ error: "Invoice not found." }, 404);
       }
 
+      const routingReadiness = await adminClient.rpc("marketplace_routing_is_ready", {
+        p_business_id: payload.businessId,
+        p_currency: invoiceRecord.currency,
+        p_amount: Number(invoiceRecord.total_amount),
+      });
+      if (routingReadiness.error) {
+        console.error("Unable to verify invoice payment routing before email delivery", routingReadiness.error);
+        return json({ error: "Invoice payment routing could not be verified. Try again after checking the workspace routing settings." }, 503);
+      }
+      if (routingReadiness.data !== true) {
+        return json({ error: "This invoice cannot be sent until the workspace receiving account is verified and routing is ready." }, 409);
+      }
+
       if (invoiceRecord.status === "paid" || invoiceRecord.status === "cancelled") {
         return json({ error: "Paid or cancelled invoices cannot be sent again." }, 400);
       }

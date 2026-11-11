@@ -23,6 +23,7 @@ import {
   WalletCards,
   MoonStar,
   SunMedium,
+  Percent,
 } from "lucide-react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
@@ -68,6 +69,7 @@ const ADMIN_NAV: AdminNavSection[] = [
       { label: "Users", to: "/admin/users", icon: Users },
       { label: "Subscriptions", to: "/admin/subscriptions", icon: CreditCard },
       { label: "Payments", to: "/admin/payments", icon: ArrowLeftRight },
+      { label: "Marketplace Fees", to: "/admin/marketplace-fees", icon: Percent },
       { label: "Receivables", to: "/admin/receivables", icon: WalletCards },
       { label: "Payouts", to: "/admin/payouts", icon: ArrowLeftRight },
     ],
@@ -101,6 +103,7 @@ const routeMeta: Record<string, { breadcrumb: string[]; page: string }> = {
   "/admin/users": { breadcrumb: ["Management"], page: "Users" },
   "/admin/subscriptions": { breadcrumb: ["Management"], page: "Subscriptions" },
   "/admin/payments": { breadcrumb: ["Management"], page: "Payments" },
+  "/admin/marketplace-fees": { breadcrumb: ["Management"], page: "Marketplace Fees" },
   "/admin/receivables": { breadcrumb: ["Management"], page: "Receivables" },
   "/admin/payouts": { breadcrumb: ["Management"], page: "Payouts" },
   "/admin/announcements": { breadcrumb: ["Operations"], page: "Announcements" },

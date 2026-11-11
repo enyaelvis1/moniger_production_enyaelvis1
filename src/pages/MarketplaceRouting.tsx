@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRightLeft, Landmark, Loader2 } from "lucide-react";
+import { ArrowRightLeft, Landmark, Loader2, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/app/AppLayout";
 import { Badge } from "@/components/ui/badge";
@@ -230,6 +230,23 @@ const MarketplaceRoutingPage = () => {
     }
   };
 
+  const handleVerificationRefresh = async () => {
+    try {
+      const result = await payoutRoutingMutations.refreshVerification.mutateAsync();
+      toast({
+        title: result.payoutAccount?.status === "verified" ? "Paystack account verified" : "Verification is still pending",
+        description: result.routingReady
+          ? "Your receiving account and invoice payment routing are ready."
+          : result.payoutAccount?.status === "verified"
+            ? "Paystack verified the account. Configure an active Moniger fee rule before sending invoices."
+            : "Paystack has not marked this subaccount as verified yet. Complete verification in Paystack, then check again.",
+        variant: result.payoutAccount?.status === "verified" ? "default" : "destructive",
+      });
+    } catch (error) {
+      toast({ title: "Unable to refresh verification", description: getErrorMessage(error, "Please try again."), variant: "destructive" });
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -244,12 +261,24 @@ const MarketplaceRoutingPage = () => {
               This page manages incoming customer payment routing through Paystack subaccounts and split configuration. It does not
               control outgoing vendor payouts.
             </p>
+            <p className="max-w-2xl text-sm font-medium text-primary">
+              Basic receiving-account setup is available on Starter, Growth, and Business. New invoice payments route only after
+              Paystack sync and the platform fee rule are both ready.
+            </p>
           </div>
 
           <div className="flex flex-col gap-2 sm:items-end">
-            <Badge variant="outline" className={getRoutingStatusBadgeClassName(payoutAccountConfig?.status)}>
-              {getRoutingStatusLabel(payoutAccountConfig?.status)}
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className={getRoutingStatusBadgeClassName(payoutAccountConfig?.status)}>
+                {payoutRoutingQuery.data?.routingReady ? "Routing ready" : getRoutingStatusLabel(payoutAccountConfig?.status)}
+              </Badge>
+              {payoutAccountConfig?.providerSubaccountCode ? (
+                <Button type="button" variant="outline" size="sm" onClick={() => void handleVerificationRefresh()} disabled={payoutRoutingMutations.refreshVerification.isPending}>
+                  <RefreshCw className={`h-4 w-4 ${payoutRoutingMutations.refreshVerification.isPending ? "animate-spin" : ""}`} />
+                  Check Paystack verification
+                </Button>
+              ) : null}
+            </div>
             <Button type="button" variant="outline" onClick={() => navigate("/settings?tab=business")}>
               Back to settings
             </Button>
@@ -299,8 +328,7 @@ const MarketplaceRoutingPage = () => {
                   </div>
                   <h3 className="text-base font-semibold text-foreground">Save the bank account that should receive routed payments</h3>
                   <p className="text-sm text-muted-foreground">
-                    If the payout destination changes, a platform admin may need to re-save the fee rule before new invoice checkouts
-                    use the updated bank account.
+                    New invoice payments stay disabled until Paystack verifies this account and a platform fee rule is active. After Paystack approves it, use “Check Paystack verification” to refresh the status safely.
                   </p>
                 </div>
                 <Badge variant="outline" className={getRoutingStatusBadgeClassName(payoutAccountConfig?.status)}>
@@ -401,7 +429,7 @@ const MarketplaceRoutingPage = () => {
 
                 <p className="text-xs text-muted-foreground">
                   Live Paystack sync currently supports NG and GH account resolution. For those countries, use the full 10-digit bank
-                  account number.
+                  account number. Saving the destination does not activate invoice checkout until Paystack verification is confirmed.
                 </p>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">

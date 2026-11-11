@@ -2,7 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { settingsQueryOptions } from "@/lib/query";
 import {
   getAdminWorkspacePayoutRoutingConfig,
+  getAdminGlobalMarketplaceFee,
   getWorkspacePayoutRoutingConfig,
+  refreshWorkspacePayoutVerification,
+  saveAdminGlobalMarketplaceFee,
   upsertAdminWorkspaceSplitConfig,
   upsertWorkspacePayoutAccount,
   upsertWorkspaceSplitConfig,
@@ -20,6 +23,26 @@ export const useWorkspacePayoutRoutingConfig = (businessId?: string) =>
     enabled: Boolean(businessId),
     ...settingsQueryOptions,
   });
+
+export const useAdminGlobalMarketplaceFee = () => {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["admin-global-marketplace-fee"],
+    queryFn: getAdminGlobalMarketplaceFee,
+    ...settingsQueryOptions,
+  });
+  const mutation = useMutation({
+    mutationFn: saveAdminGlobalMarketplaceFee,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-global-marketplace-fee"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-workspace-payout-routing"] }),
+        queryClient.invalidateQueries({ queryKey: ["workspace-payout-routing"] }),
+      ]);
+    },
+  });
+  return { query, mutation };
+};
 
 export const useAdminWorkspacePayoutRoutingConfig = (businessId?: string) =>
   useQuery({
@@ -43,6 +66,13 @@ export const useWorkspacePayoutRoutingMutations = (businessId?: string) => {
   };
 
   return {
+    refreshVerification: useMutation({
+      mutationFn: () => {
+        if (!businessId) throw new Error("A business workspace is required before checking payout verification.");
+        return refreshWorkspacePayoutVerification(businessId);
+      },
+      onSuccess: invalidate,
+    }),
     upsertPayoutAccount: useMutation({
       mutationFn: (values: WorkspacePayoutAccountInput) => {
         if (!businessId) {

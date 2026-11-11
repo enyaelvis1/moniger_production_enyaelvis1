@@ -122,6 +122,23 @@ Expected result:
 
 ## 2. Customer And Vendor Data Management
 
+### 2.0 Starter receiving account and invoice routing
+
+Test steps:
+
+1. Sign in to an active Starter workspace as its owner or admin.
+2. Open `Finance -> Marketplace Routing`.
+3. Save and sync the workspace bank account with Paystack.
+4. Confirm a platform admin has configured the workspace fee rule and the routing status is ready.
+5. Create and send a new invoice, then complete a low-value checkout using the approved test method/environment.
+6. Check the Paystack transaction details and Moniger payment record for routing/settlement metadata.
+
+Expected result:
+
+- Starter owners/admins can save and sync the workspace receiving account; this is separate from record-keeping bank details on a customer profile.
+- The checkout routes only after both the payout destination and platform fee rule are ready. Existing completed payments are not rerouted.
+- Workspace users cannot edit Moniger fee rules.
+
 ### 2.1 Customer business name
 
 Test steps:
@@ -329,20 +346,43 @@ Test steps:
 6. Enter or confirm the account name if required.
 7. Click `Save & Sync Paystack`.
 8. Wait for the response and refresh the page if needed.
+9. Complete any pending subaccount verification in the Paystack dashboard, return to Moniger, and click `Check Paystack verification`.
 
 Expected result:
 
 - The payout account saves successfully.
 - Moniger attempts to create or update the linked Paystack subaccount automatically.
-- A status such as `Pending verification` or `Verified` should appear.
+- The account stays `Pending verification` until Paystack itself marks the subaccount verified; syncing bank details alone does not make invoice routing ready.
 - A Paystack subaccount code should be visible once sync succeeds.
+- After Paystack verification, `Check Paystack verification` refreshes status with a read-only Paystack request and shows whether invoice routing is ready.
+- Starter workspaces can configure their receiving account too.
+
+### 5.2 Platform default routing fee and invoice-send gate
+
+Test steps:
+
+1. Apply the routing-readiness migration and deploy the matching Edge Functions to the UAT environment as a single controlled change.
+2. Sign in as a Super Admin and open **Admin -> Marketplace Fees** (`/admin/marketplace-fees`); no workspace selection is required.
+3. Set the platform-wide default fee mode, currency, and amount; save it. Confirm the page shows `Default active`.
+4. Configure and verify a receiving account for a workspace using section 5.1. The admin fee is global by default; a ready workspace-specific fee rule remains an explicit override.
+5. As that workspace owner, create an invoice and save it as a draft before routing is ready. Confirm draft saving still works.
+6. Try to send the draft before Paystack verification or without an active fee. Confirm sending is unavailable and the page directs you to Marketplace Routing.
+7. After both the receiving account is verified and an applicable fee is active, send the invoice and open its public payment link.
+8. Repeat with a flat fee larger than the invoice total; the invoice should not be sent with an unusable payment link.
+
+Expected result:
+
+- Draft invoices remain available during setup.
+- Sending an invoice, enabling its public payment link, and initializing Paystack checkout require a Paystack-verified, active subaccount and an aligned workspace override or active platform default in the same currency.
+- A workspace-specific rule can override the platform default when it has been successfully synced to the current receiving account.
+- Already-completed payments are not changed by fee-setting updates.
 
 Important note:
 
 - Workspace users do not create Paystack subaccounts directly inside the Paystack dashboard for this flow.
 - The subaccount is created from inside Moniger when payout details are saved and synced.
 
-### 5.2 Pricing confirmation page for signed-out users
+### 5.3 Pricing confirmation page for signed-out users
 
 Test steps:
 
