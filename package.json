@@ -20,6 +20,7 @@
     "create:test-user": "node scripts/create-test-user.mjs",
     "create:admin-test-users": "node scripts/create-admin-test-users.mjs",
     "reset:linked-data": "node scripts/reset-local-platform-data.mjs",
+    "backfill:bank-codes": "node scripts/backfill-bank-codes.mjs",
     "verify:webhook:routed": "node scripts/verify-routed-paystack-webhook.mjs",
     "verify:release:security": "node scripts/verify-release-security-config.mjs",
     "verify:production:routes": "node scripts/verify-production-routes.mjs",
@@ -79,8 +80,7 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
-    "web-vitals": "^5.2.0",
-    "zod": "^3.25.76"
+    "web-vitals": "^5.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

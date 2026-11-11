@@ -15,7 +15,7 @@ import { AdvancedFilter } from "@/components/ui/advanced-filter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BankDirectorySelect } from "@/components/app/BankDirectorySelect";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatNaira } from "@/data/seedData";
 import { getFormFieldAriaProps } from "@/lib/accessibility";
@@ -881,20 +881,18 @@ const CustomersPage = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="customer-bank">Bank</Label>
-                <Select
+                <BankDirectorySelect
+                  allowClear
+                  banks={banksQuery.data ?? []}
+                  disabled={banksQuery.isLoading}
+                  id="customer-bank"
+                  placeholder={banksQuery.isLoading ? "Loading banks…" : "Search or select bank"}
                   value={form.bankId}
                   onValueChange={(value) => {
                     const bank = banksQuery.data?.find((item) => item.id === value);
-                    setForm((current) => ({ ...current, bankId: value, bankName: bank?.name ?? current.bankName }));
+                    setForm((current) => ({ ...current, bankId: value, bankName: bank?.name ?? (value ? current.bankName : "") }));
                   }}
-                >
-                  <SelectTrigger id="customer-bank"><SelectValue placeholder={banksQuery.isLoading ? "Loading banks…" : "Select a bank"} /></SelectTrigger>
-                  <SelectContent>
-                    {(banksQuery.data ?? []).filter((bank) => bank.is_active).map((bank) => (
-                      <SelectItem key={bank.id} value={bank.id}>{bank.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">

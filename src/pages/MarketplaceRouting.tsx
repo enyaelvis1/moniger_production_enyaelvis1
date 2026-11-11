@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BankDirectorySelect } from "@/components/app/BankDirectorySelect";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBanksList } from "@/hooks/use-directory-data";
 import { useSettingsData } from "@/hooks/use-settings-data";
@@ -113,7 +113,7 @@ const MarketplaceRoutingPage = () => {
 
   const businessCurrency = settingsQuery.data?.business?.default_currency ?? "NGN";
   const payoutAccountConfig = payoutRoutingQuery.data?.payoutAccount ?? null;
-  const payoutRoutingBankOptions = (banksQuery.data ?? []).filter((bank) => bank.is_active);
+  const payoutRoutingBankOptions = banksQuery.data ?? [];
   const isBusy =
     payoutRoutingQuery.isLoading ||
     payoutRoutingMutations.upsertPayoutAccount.isPending ||
@@ -328,22 +328,15 @@ const MarketplaceRoutingPage = () => {
               <div className="mt-5 space-y-4">
                 <div className="space-y-2">
                   <Label>Bank</Label>
-                  <Select
+                  <BankDirectorySelect
+                    banks={payoutRoutingBankOptions}
+                    id="workspace-payout-bank"
                     value={payoutRoutingForm.bankId}
                     onValueChange={(value) => setPayoutRoutingForm((current) => ({ ...current, bankId: value }))}
                     disabled={isBusy}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={banksQuery.isLoading ? "Loading banks..." : "Select a bank"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {payoutRoutingBankOptions.map((bankOption) => (
-                        <SelectItem key={bankOption.id} value={bankOption.id}>
-                          {bankOption.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    payoutOnly
+                    placeholder={banksQuery.isLoading ? "Loading banks…" : "Search or select bank"}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

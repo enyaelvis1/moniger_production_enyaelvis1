@@ -16,7 +16,7 @@ import { AdvancedFilter } from "@/components/ui/advanced-filter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BankDirectorySelect } from "@/components/app/BankDirectorySelect";
 import { formatNaira } from "@/data/seedData";
 import { getFormFieldAriaProps } from "@/lib/accessibility";
 import {
@@ -137,7 +137,6 @@ const VendorsPage = () => {
   const businessId = settingsQuery.data?.business?.id;
   const vendorsQuery = useVendorsDirectory(businessId);
   const banksQuery = useBanksList();
-  const [bankFilter, setBankFilter] = useState("");
   const { createVendor, deleteVendor, importVendors, updateVendor } = useVendorMutations(businessId, user?.id);
 
   const [search, setSearch] = useSearchParamState();
@@ -889,47 +888,18 @@ const VendorsPage = () => {
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2 md:col-span-2">
                           <Label>Bank Name</Label>
-                          <Select value={form.bankId} onValueChange={(value) => setForm((current) => ({ ...current, bankId: value }))}>
-                            <SelectTrigger className="rounded-lg">
-                              <SelectValue placeholder="Select bank" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <div className="p-2">
-                                <Input
-                                  placeholder="Search or add bank"
-                                  value={bankFilter}
-                                  onChange={(e) => setBankFilter(e.target.value)}
-                                  className="w-full"
-                                />
-                              </div>
-                              {(() => {
-                                const normalizedQuery = bankFilter.trim().toLowerCase();
-
-                                const bankOptions: { value: string; label: string }[] = banksQuery.data && banksQuery.data.length > 0
-                                  ? banksQuery.data.map((b) => ({ value: b.id, label: b.name }))
-                                  : [];
-
-                                const filtered = normalizedQuery
-                                  ? bankOptions.filter((opt) => opt.label.toLowerCase().includes(normalizedQuery))
-                                  : bankOptions;
-
-                                return (
-                                  <>
-                                    {filtered.map((opt) => (
-                                      <SelectItem key={opt.value} value={opt.value}>
-                                        {opt.label}
-                                      </SelectItem>
-                                    ))}
-                                    {filtered.length === 0 ? (
-                                      <p className="px-2 py-2 text-sm text-muted-foreground">
-                                        {banksQuery.isLoading ? "Loading approved banks…" : "No approved bank matches your search."}
-                                      </p>
-                                    ) : null}
-                                  </>
-                                );
-                              })()}
-                            </SelectContent>
-                          </Select>
+                          <BankDirectorySelect
+                            allowClear
+                            banks={banksQuery.data ?? []}
+                            disabled={banksQuery.isLoading}
+                            id="vendor-bank"
+                            payoutOnly
+                            placeholder={banksQuery.isLoading ? "Loading banks…" : "Search or select bank"}
+                            value={form.bankId}
+                            onValueChange={(value) => setForm((current) => value
+                              ? { ...current, bankId: value }
+                              : { ...current, bankId: "", bankName: "" })}
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="vendor-account-number">Account Number</Label>
