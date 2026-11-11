@@ -50,7 +50,7 @@ export const BankDirectorySelect = ({
           aria-expanded={open}
           id={id}
           disabled={disabled}
-          className="h-10 w-full justify-between rounded-md px-3 font-normal"
+          className="h-12 w-full justify-between rounded-md px-3 font-normal"
         >
           {selectedBank ? (
             <span className="flex min-w-0 items-center gap-2">
@@ -102,7 +102,7 @@ export const BankDirectorySelect = ({
                         onSelect={() => { onValueChange(bank.id); setOpen(false); }}
                         className="min-h-12 gap-3 py-2 pl-10"
                       >
-                        <BankOptionLogo name={alias} bankCode={bank.bank_code} className="h-8 w-8" />
+                        <BankOptionLogo name={alias} bankCode={bank.bank_code} />
                         <span className="min-w-0 flex-1 truncate">{alias}</span>
                         <span className="text-[10px] text-muted-foreground">Same provider code</span>
                       </CommandItem>

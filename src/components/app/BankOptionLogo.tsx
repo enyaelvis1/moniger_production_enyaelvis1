@@ -14,11 +14,11 @@ export const BankOptionLogo = ({ bankCode, className, name }: BankOptionLogoProp
   const logoUrl = getBankLogoUrl(name, bankCode);
 
   return (
-    <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-white p-0.5", className)} aria-hidden="true">
+    <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-white", className)} aria-hidden="true">
       {failed ? (
         <Landmark className="h-4 w-4 text-muted-foreground" />
       ) : (
-        <img src={logoUrl} alt="" className="h-full w-full object-contain" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+        <img src={logoUrl} alt="" className="h-full w-full scale-125 object-contain" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
       )}
     </span>
   );
