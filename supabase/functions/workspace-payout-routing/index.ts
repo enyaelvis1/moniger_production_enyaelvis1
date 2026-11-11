@@ -3,6 +3,7 @@ import {
   addOrUpdatePaystackSplitSubaccount,
   createPaystackSplit,
   createPaystackSubaccount,
+  getPaystackSubaccount,
   getPaystackSubaccountSyncStatus,
   resolvePaystackAccountNumber,
   resolvePaystackBankCode,
@@ -12,10 +13,13 @@ import {
 
 type PayoutRoutingAction =
   | "self.get-config"
+  | "self.refresh-payout-verification"
   | "self.upsert-payout-account"
   | "self.upsert-split-config"
   | "admin.get-config"
-  | "admin.upsert-split-config";
+  | "admin.upsert-split-config"
+  | "admin.get-global-fee"
+  | "admin.upsert-global-fee";
 
 type PayoutRoutingRequest = {
   action: PayoutRoutingAction;
@@ -26,6 +30,10 @@ type PayoutRoutingRequest = {
   businessId?: string | null;
   countryCode?: string | null;
   currency?: string | null;
+  feeMode?: "flat" | "percentage" | null;
+  flatAmount?: number | null;
+  percentageBasisPoints?: number | null;
+  globalFeeEnabled?: boolean | null;
   monigerFeeFlatAmount?: number | null;
   monigerFeePercentageBasisPoints?: number | null;
   providerSettlementBankCode?: string | null;
@@ -78,9 +86,11 @@ type SplitConfigRow = {
   provider: string;
   provider_split_id: string | null;
   provider_split_code: string | null;
+  provider_subaccount_code: string | null;
   split_mode: string;
   status: string;
   updated_at: string;
+  fee_source?: string;
 };
 
 type BankRow = {
@@ -119,7 +129,7 @@ const isWorkspaceManagerRole = (value: unknown) => {
 };
 
 const isAdminRoutingAction = (value: PayoutRoutingAction) =>
-  value === "admin.get-config" || value === "admin.upsert-split-config";
+  value === "admin.get-config" || value === "admin.upsert-split-config" || value === "admin.get-global-fee" || value === "admin.upsert-global-fee";
 
 const toNullableBoolean = (value: unknown) => (typeof value === "boolean" ? value : null);
 const toNullableNumber = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
@@ -331,7 +341,7 @@ const loadSplitConfig = async ({
 }) => {
   const response = await adminClient
     .from("business_payment_split_configs")
-    .select("id, business_id, payout_account_id, provider, status, split_mode, moniger_fee_flat_amount, moniger_fee_percentage_basis_points, currency, provider_split_id, provider_split_code, provider_metadata, last_sync_error, updated_at")
+    .select("id, business_id, payout_account_id, provider, status, split_mode, moniger_fee_flat_amount, moniger_fee_percentage_basis_points, currency, provider_split_id, provider_split_code, provider_subaccount_code, provider_metadata, last_sync_error, updated_at")
     .eq("business_id", businessId)
     .maybeSingle<SplitConfigRow>();
 
@@ -340,6 +350,22 @@ const loadSplitConfig = async ({
   }
 
   return response.data;
+};
+
+const isRoutingReady = async ({ adminClient, businessId, payoutAccount, splitConfig }: {
+  adminClient: ReturnType<typeof createClient>;
+  businessId: string;
+  payoutAccount: PayoutAccountRow | null;
+  splitConfig: SplitConfigRow | null;
+}) => {
+  if (!payoutAccount || payoutAccount.provider !== "paystack" || !payoutAccount.provider_subaccount_code || payoutAccount.status !== "verified" || payoutAccount.provider_metadata?.is_verified !== true || payoutAccount.provider_metadata?.active !== true) return false;
+  const alignedOverride = splitConfig?.status === "ready" && splitConfig.payout_account_id === payoutAccount.id &&
+    splitConfig.provider_subaccount_code === payoutAccount.provider_subaccount_code && splitConfig.currency === payoutAccount.currency && splitConfig.provider === "paystack" &&
+    (splitConfig.split_mode !== "percentage" || Boolean(splitConfig.provider_split_code));
+  if (alignedOverride) return true;
+  const globalFee = await adminClient.from("platform_marketplace_fee_settings").select("currency, status").eq("singleton", true).maybeSingle<{ currency: string; status: string }>();
+  if (globalFee.error) throw globalFee.error;
+  return Boolean(globalFee.data?.status === "active" && globalFee.data.currency === payoutAccount.currency && payoutAccount.provider_subaccount_code);
 };
 
 
@@ -354,7 +380,7 @@ const safeInsertAuditLog = async ({
 }: {
   action: string;
   adminClient: ReturnType<typeof createClient>;
-  businessId: string;
+  businessId: string | null;
   detail: Record<string, unknown>;
   entityId: string | null;
   summary: string;
@@ -386,7 +412,7 @@ const safeInsertSplitAuditLog = async ({
 }: {
   action: string;
   adminClient: ReturnType<typeof createClient>;
-  businessId: string;
+  businessId: string | null;
   detail: Record<string, unknown>;
   entityId: string | null;
   summary: string;
@@ -598,10 +624,13 @@ Deno.serve(async (request) => {
 
   if (
     payload.action !== "self.get-config" &&
+    payload.action !== "self.refresh-payout-verification" &&
     payload.action !== "self.upsert-payout-account" &&
     payload.action !== "self.upsert-split-config" &&
     payload.action !== "admin.get-config" &&
-    payload.action !== "admin.upsert-split-config"
+    payload.action !== "admin.upsert-split-config" &&
+    payload.action !== "admin.get-global-fee" &&
+    payload.action !== "admin.upsert-global-fee"
   ) {
     return json({ error: "Unsupported payout routing action." }, 400);
   }
@@ -618,6 +647,40 @@ Deno.serve(async (request) => {
 
     if (isAdminRoutingAction(payload.action) && !adminAccess) {
       return json({ error: "Only platform admins can manage Moniger fee rules." }, 403);
+    }
+
+    if (payload.action === "admin.get-global-fee") {
+      const response = await adminClient
+        .from("platform_marketplace_fee_settings")
+        .select("fee_mode, flat_amount, percentage_basis_points, currency, status, updated_at")
+        .eq("singleton", true)
+        .maybeSingle();
+      if (response.error) throw response.error;
+      return json({ ok: true, globalFee: response.data ?? null });
+    }
+
+    if (payload.action === "admin.upsert-global-fee") {
+      const feeMode = payload.feeMode;
+      const currency = normalizeCurrencyCode(payload.currency) || "NGN";
+      const flatAmount = roundMoney(toNullableNumber(payload.flatAmount) ?? 0);
+      const percentageBasisPoints = toNullableNumber(payload.percentageBasisPoints);
+      if (feeMode !== "flat" && feeMode !== "percentage") return json({ error: "Choose a valid platform fee mode." }, 400);
+      if (!/^[A-Z]{3}$/.test(currency)) return json({ error: "Use a valid 3-letter fee currency." }, 400);
+      if (flatAmount < 0 || (feeMode === "percentage" && (percentageBasisPoints === null || percentageBasisPoints < 0 || percentageBasisPoints > 10000 || percentageBasisPoints % 100 !== 0))) {
+        return json({ error: "Enter a valid non-negative fee; synced percentages must use whole-percent increments." }, 400);
+      }
+      const response = await adminClient.from("platform_marketplace_fee_settings").upsert({
+        singleton: true,
+        fee_mode: feeMode,
+        flat_amount: feeMode === "flat" ? flatAmount : 0,
+        percentage_basis_points: feeMode === "percentage" ? percentageBasisPoints : null,
+        currency,
+        status: payload.globalFeeEnabled === false ? "disabled" : "active",
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "singleton" }).select("fee_mode, flat_amount, percentage_basis_points, currency, status, updated_at").single();
+      if (response.error) throw response.error;
+      return json({ ok: true, globalFee: response.data });
     }
 
     const business = isAdminRoutingAction(payload.action)
@@ -646,6 +709,20 @@ Deno.serve(async (request) => {
       );
     }
 
+    if (!isAdminRoutingAction(payload.action)) {
+      const operationalAccess = await adminClient.rpc("has_workspace_operational_access", {
+        p_business_id: business.id,
+      });
+
+      if (operationalAccess.error) {
+        throw operationalAccess.error;
+      }
+
+      if (!operationalAccess.data) {
+        return json({ error: "This workspace is not active. Resolve its subscription status before managing payment routing." }, 403);
+      }
+    }
+
     if (payload.action === "self.get-config" || payload.action === "admin.get-config") {
       const [payoutAccount, splitConfig] = await Promise.all([
         loadPayoutAccount({ adminClient, businessId: business.id }),
@@ -656,7 +733,41 @@ Deno.serve(async (request) => {
         ok: true,
         payoutAccount: mapPayoutAccount(payoutAccount),
         splitConfig: mapSplitConfig(splitConfig),
+        routingReady: await isRoutingReady({ adminClient, businessId: business.id, payoutAccount, splitConfig }),
       });
+    }
+
+    if (payload.action === "self.refresh-payout-verification") {
+      if (!paystackSecretKey) return json({ error: "Paystack status checks require PAYSTACK_SECRET_KEY." }, 500);
+      const payoutAccount = await loadPayoutAccount({ adminClient, businessId: business.id });
+      if (!payoutAccount?.provider_subaccount_code) return json({ error: "Sync a Paystack payout subaccount before checking verification." }, 400);
+      const providerStatus = await getPaystackSubaccount({ paystackSecretKey, subaccountCode: payoutAccount.provider_subaccount_code });
+      const status = getPaystackSubaccountSyncStatus(providerStatus);
+      const saved = await adminClient.from("business_payout_accounts").update({
+        status,
+        last_verified_at: new Date().toISOString(),
+        last_sync_error: null,
+        provider_metadata: {
+          ...(payoutAccount.provider_metadata ?? {}),
+          active: providerStatus.active ?? null,
+          is_verified: providerStatus.is_verified ?? null,
+          raw_settlement_bank: asNullableString(providerStatus.settlement_bank),
+          updated_at: asNullableString(providerStatus.updatedAt),
+        },
+        updated_by: user.id,
+      }).eq("id", payoutAccount.id).select("*").single<PayoutAccountRow>();
+      if (saved.error) throw saved.error;
+      const splitConfig = await loadSplitConfig({ adminClient, businessId: business.id });
+      await safeInsertAuditLog({
+        action: "marketplace.payout_account.verification_refreshed",
+        adminClient,
+        businessId: business.id,
+        detail: { status },
+        entityId: payoutAccount.id,
+        summary: "Paystack payout subaccount verification status refreshed",
+        userId: user.id,
+      });
+      return json({ ok: true, payoutAccount: mapPayoutAccount(saved.data), splitConfig: mapSplitConfig(splitConfig), routingReady: await isRoutingReady({ adminClient, businessId: business.id, payoutAccount: saved.data, splitConfig }) });
     }
 
     if (payload.action === "self.upsert-split-config") {
@@ -716,6 +827,7 @@ Deno.serve(async (request) => {
         business_id: business.id,
         created_by: user.id,
         currency,
+        fee_source: "workspace_override",
         moniger_fee_flat_amount: flatAmount,
         moniger_fee_percentage_basis_points: percentageBasisPoints,
         payout_account_id: existingPayoutAccount.id,

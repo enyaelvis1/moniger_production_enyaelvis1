@@ -18,6 +18,7 @@ const AdminSubscriptionsPage = lazyWithReload(() => import("@/admin/pages/AdminS
 const AdminPaymentsPage = lazyWithReload(() => import("@/admin/pages/AdminPaymentsPage"));
 const AdminReceivablesPage = lazyWithReload(() => import("@/admin/pages/AdminReceivablesPage"));
 const AdminPayoutsPage = lazyWithReload(() => import("@/admin/pages/AdminPayoutsPage"));
+const AdminMarketplaceFeesPage = lazyWithReload(() => import("@/admin/pages/AdminMarketplaceFeesPage"));
 const AdminAnnouncementsPage = lazyWithReload(() => import("@/admin/pages/AdminAnnouncementsPage"));
 const AdminContentPage = lazyWithReload(() => import("@/admin/pages/AdminContentPage"));
 const AdminSignupAlertsPage = lazyWithReload(() => import("@/admin/pages/AdminSignupAlertsPage"));
@@ -44,6 +45,7 @@ const AdminApp = () => (
             <Route path="payments" element={<AdminPaymentsPage />} />
             <Route path="receivables" element={<AdminReceivablesPage />} />
             <Route path="payouts" element={<AdminPayoutsPage />} />
+            <Route path="marketplace-fees" element={<AdminMarketplaceFeesPage />} />
             <Route path="announcements" element={<AdminAnnouncementsPage />} />
             <Route path="content" element={<AdminContentPage />} />
             <Route path="signup-alerts" element={<AdminSignupAlertsPage />} />

@@ -6,6 +6,7 @@ import { downloadImportTemplate, importTemplates } from "@/lib/import-templates"
 import { parseCsvPreview, type CsvPreview } from "@/lib/import-preview";
 import { useCustomerMutations, useVendorMutations } from "@/hooks/use-directory-data";
 import { upsertWorkspacePayoutAccount } from "@/lib/workspace-payout-routing";
+import { useWorkspacePayoutRoutingConfig } from "@/hooks/use-workspace-payout-routing";
 
 type OnboardingChecklistProps = {
   businessReady: boolean;
@@ -21,6 +22,7 @@ const OnboardingChecklist = ({ businessId, businessReady, customerCount, vendorC
   const navigate = useNavigate();
   const customerMutations = useCustomerMutations(businessId, userId);
   const vendorMutations = useVendorMutations(businessId, userId);
+  const routingQuery = useWorkspacePayoutRoutingConfig(businessId);
   const payoutDestinationMutation = useMutation({
     mutationFn: (row: Record<string, string>) => upsertWorkspacePayoutAccount(businessId, {
       accountName: row.account_name,
@@ -40,9 +42,9 @@ const OnboardingChecklist = ({ businessId, businessReady, customerCount, vendorC
     { complete: businessReady, description: "Add your business name and operating details.", label: "Complete workspace profile", to: "/settings?tab=profile" },
     { complete: customerCount > 0, description: "Create the customer records you will bill.", label: "Add your first customer", to: "/customers" },
     { complete: vendorCount > 0, description: "Add vendors for your payable workflows.", label: "Add your first vendor", to: "/vendors" },
+    { complete: routingQuery.data?.routingReady === true, description: "Connect and verify the bank account that should receive invoice payments, then confirm Moniger routing is ready.", label: "Set up invoice payment routing", to: "/marketplace-routing" },
     { complete: invoiceCount > 0, description: "Issue an invoice and start tracking receivables.", label: "Create your first invoice", to: "/invoices" },
     { complete: billCount > 0, description: "Record a bill and review the payable path.", label: "Record your first bill", to: "/bills" },
-    { complete: false, description: "Review the payout destination before routing incoming funds.", label: "Review payout routing", to: "/marketplace-routing" },
   ];
   const roleGuidance = [
     { label: "Owner / Admin", description: "Workspace control, team access, billing, and payout-routing decisions." },

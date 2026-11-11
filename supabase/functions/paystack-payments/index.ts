@@ -7,6 +7,7 @@ import {
   type MarketplaceRoutingConfig,
   type PayoutRoutingAccountRow,
   type PayoutRoutingSplitConfigRow,
+  type PlatformMarketplaceFeeRow,
 } from "../_shared/paystack-marketplace-routing.ts";
 import {
   fetchInvoiceContextByPaymentToken,
@@ -121,16 +122,21 @@ const loadMarketplaceRoutingConfig = async ({
   const [payoutAccountResponse, splitConfigResponse] = await Promise.all([
     adminClient
       .from("business_payout_accounts")
-      .select("id, status, provider_subaccount_code, provider_metadata")
+      .select("id, status, currency, provider_subaccount_code, provider_metadata")
       .eq("business_id", businessId)
       .maybeSingle<PayoutRoutingAccountRow>(),
     adminClient
       .from("business_payment_split_configs")
-      .select("id, status, split_mode, moniger_fee_flat_amount, provider_split_code, provider_metadata")
+      .select("id, status, split_mode, moniger_fee_flat_amount, moniger_fee_percentage_basis_points, currency, payout_account_id, provider_subaccount_code, provider_split_code, provider_metadata")
       .eq("business_id", businessId)
       .eq("currency", currency)
       .maybeSingle<PayoutRoutingSplitConfigRow>(),
   ]);
+  const platformFeeResponse = await adminClient
+    .from("platform_marketplace_fee_settings")
+    .select("currency, fee_mode, flat_amount, percentage_basis_points, status")
+    .eq("singleton", true)
+    .maybeSingle<PlatformMarketplaceFeeRow>();
 
   if (payoutAccountResponse.error) {
     throw payoutAccountResponse.error;
@@ -139,10 +145,13 @@ const loadMarketplaceRoutingConfig = async ({
   if (splitConfigResponse.error) {
     throw splitConfigResponse.error;
   }
+  if (platformFeeResponse.error) throw platformFeeResponse.error;
 
   return resolveMarketplaceRoutingConfig({
     amountKobo,
+    currency,
     payoutAccount: payoutAccountResponse.data,
+    platformFee: platformFeeResponse.data,
     splitConfig: splitConfigResponse.data,
     toKobo,
   });
@@ -367,6 +376,10 @@ Deno.serve(async (request) => {
     } catch (routingError) {
       console.error("Unable to resolve marketplace routing for payment initialization", routingError);
       return json({ error: "This workspace payment routing is not configured correctly yet." }, 500);
+    }
+
+    if (marketplaceRouting.status !== "ready") {
+      return json({ error: "This invoice cannot be paid yet. The workspace must verify its receiving bank account and configure an active Moniger routing fee first." }, 409);
     }
 
     const routingPayload = buildMarketplaceInitializationPayload(marketplaceRouting);

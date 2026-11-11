@@ -39,6 +39,8 @@ This review was based on the current repo state, especially:
 - [x] Dashboard, reports, and payments already read confirmed payment data and refresh on a short live interval.
 - [x] Vendor bank data foundation exists in the schema and UI.
 - [x] Initial marketplace-routing schema foundation now exists for payout accounts and Paystack split configuration.
+- [x] Basic incoming invoice payment routing and receiving-account setup are available on Starter as well as paid plans; workspace owners/admins manage the destination while platform admins retain fee-rule control.
+- [x] Platform-wide default Moniger routing fee, workspace-specific fee overrides, verified-subaccount refresh, and fail-closed invoice send/payment-link/checkout gates are implemented. Migration `20261111150000_global_marketplace_fee_and_routing_readiness.sql` and Edge Functions `workspace-payout-routing`, `paystack-payments`, and `workspace-email-delivery` were applied/deployed to linked Supabase project `qfhjlqskucabzxepqbpl` on 2026-11-11. The platform default is active at 15% NGN, matching the existing ready workspace fee. Standalone `/admin/marketplace-fees` is live in Vercel production deployment `dpl_9hhEbznGRMTiiN2j3BQG644fn2ms`, independent of workspace selection. UAT passed per user confirmation on 2026-11-11.
 - [x] Marketplace routing of customer payments directly to workspace subscriber bank accounts is now implemented in sandbox-tested form with Paystack subaccounts and split configuration.
 - [x] Paid Growth and Business workspace operations are locked until the subscription is active; Dashboard and Settings remain available so owners can renew.
 - [ ] Live production rollout and full end-to-end verification are not fully closed in the repo docs yet.
@@ -158,17 +160,18 @@ That changes the implementation priority:
 - [x] Confirm SPA rewrites are live for `/pay/:paymentToken` and `/pay/:paymentToken/confirmed`.
 - [x] Set `VITE_PUBLIC_APP_URL` in the frontend environment.
 - [x] Confirm `APP_BASE_URL` in Supabase Edge Function secrets matches production behavior.
-- [ ] Confirm live Paystack secrets are present for `paystack-payments`, `paystack-webhook`, and `workspace-subscriptions`.
+- [x] Confirmed the linked Supabase project has `PAYSTACK_SECRET_KEY`; a successful invoice webhook with `payload.data.domain=live` proves the configured key is operating in Paystack Live mode for invoice checkout.
 - [x] Confirm receipt email secrets are present if live receipt delivery is required.
-- [ ] Run a full live invoice-payment test from copied link to webhook-confirmed settlement.
+- [x] Ran a ₦100 live invoice payment on 2026-11-11: payment status `completed`, invoice status `paid`, amount paid ₦100, and `charge.success` webhook processed with zero retries. The receipt email still needs user confirmation.
 - [ ] Run a full live workspace-subscription test from pricing page to verified subscription sync.
 
 Live cutover checklist after Paystack approval:
 
-- [ ] Replace the production `PAYSTACK_SECRET_KEY` with the live key for `paystack-payments`, `paystack-webhook`, and `workspace-subscriptions`.
-- [ ] Confirm the Paystack dashboard webhook for the live environment still points to `https://qfhjlqskucabzxepqbpl.supabase.co/functions/v1/paystack-webhook`.
+- [x] Replace the production `PAYSTACK_SECRET_KEY` with the live key. The successful live invoice payment confirms the payment and webhook path uses Live; workspace subscription checkout still needs its own end-to-end verification.
+- [x] Confirmed live webhook delivery to `https://qfhjlqskucabzxepqbpl.supabase.co/functions/v1/paystack-webhook` by the processed live `charge.success` event (2026-11-11).
 - [ ] Re-run `npm run verify:production:routes` after the live-key swap to confirm the production domain still serves the expected callback routes.
-- [ ] Run one intentional low-value live invoice payment on `moniger.net` and confirm callback success, webhook capture, `payments.status = completed`, and `invoices.status = paid`.
+- [x] Run one intentional low-value live invoice payment on `moniger.net`; callback succeeded per user report, and linked database confirms live webhook capture, `payments.status = completed`, and `invoices.status = paid` (₦100, 2026-11-11).
+- [ ] Confirm the customer received the live invoice payment receipt.
 - [ ] Run one intentional low-value live workspace subscription checkout on `moniger.net` and confirm callback success, `subscription_checkout_sessions.status = completed`, and `business_subscriptions.status = active`.
 - [ ] Confirm the live invoice-payment receipt flow still succeeds if production receipt delivery is enabled.
 - [ ] Record the exact live references and outcomes here once both live checks pass.
@@ -337,4 +340,4 @@ Live cutover checklist after Paystack approval:
 - [x] Added searchable bank selectors with logos for vendor bank details, customer bank records, and workspace payout routing. Logo URLs use a pinned jsDelivr-hosted logo catalog; 279 active rows have institution-specific assets and the remaining 24 use the catalog's generic mark.
 - [x] Applied `20261111120000_seed_paystack_nigerian_banks.sql` to the linked project and verified 303 active bank rows with 292 distinct provider codes. All 297 provider names are searchable, including five names sharing a provider code; 11 legacy rows without verified codes are unavailable for payout selection.
 - [ ] Reconcile the 11 skipped bank rows with authoritative provider/bank information before marking bank-code coverage complete.
-- [ ] Retire the remote-only `admin-backfill-bank-codes` function after the tracked process completes. No app caller was found; its source is not tracked and its sync token can be passed in the query string.
+- [x] Retired the remote-only `admin-backfill-bank-codes` function and removed its unused `BANK_CODES_SYNC_TOKEN` secret from linked project `qfhjlqskucabzxepqbpl` on 2026-11-11 after confirming no repository callers or database cron jobs; its deployed implementation accepted the sync token in the URL and used fuzzy bank-code matching. The tracked dry-run-first script is the supported backfill path.

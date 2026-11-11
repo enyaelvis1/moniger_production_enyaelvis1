@@ -8,17 +8,17 @@ This checklist is based on the current repository, the implementation source of 
 
 - [x] Frontend deployed to Vercel production and aliased to `https://www.moniger.net` on 2026-10-08 (deployment `dpl_9hjQTdGkNoyxhXAW7an2LhQAR4Gx`).
 - [x] `develop` and `main` were aligned and pushed for that release (`develop` `e52faa9`, `main` `0468799`).
-- [x] Linked Supabase project migration history matches all 75 local migrations through `20261002173000` (checked 2026-11-10).
+- [x] Linked Supabase project `qfhjlqskucabzxepqbpl` migration history matches all 78 local migration entries through `20261111150000` (reconfirmed 2026-11-11).
 - [x] Deployed `paystack-webhook` v21 and `workspace-wallet-funding` v8 on 2026-11-10; downloaded source matches the repository for each changed entrypoint and helper.
 - [x] Deployed `workspace-email-delivery` source matches the repository, including invoice subtotal and tax breakdown.
-- [ ] Reconcile the bank directory before live payouts: 11 legacy rows still have no provider match; vendor and workspace payout selectors disable rows without verified codes.
+- [ ] Reconcile the bank directory before live payouts: 11 legacy rows still have no authoritative provider match; vendor and workspace payout selectors disable rows without verified codes.
 - [x] Apply and verify `20261111120000_seed_paystack_nigerian_banks.sql` on the linked Supabase project (2026-11-11): 303 active directory rows, including all 292 current Paystack Nigerian NGN bank codes. The five additional provider names that share codes remain searchable as aliases; 11 legacy entries without provider codes are disabled for payout selection.
 - [x] Add a tracked dry-run-first backfill script and runbook; it proposes only unique literal, provider-declared alias, or normalized-name matches and skips fuzzy candidates.
 - [x] Add searchable bank selectors with logo imagery for vendor bank details, customer bank records, and workspace payout routing. Logo URLs are pinned to an MIT-licensed jsDelivr-hosted logo repository revision, with a generic logo fallback.
 - [x] Run the read-only bank-code preview (2026-11-11): 29 initial unique matches, then exact Access Bank and provider-declared OPay alias matches; 11 rows remain without a supported match.
 - [x] Apply 31 reviewed exact/declared-alias matches after typed confirmation; a fresh preview confirms exactly 11 unmatched rows remain.
 - [ ] Resolve the 11 skipped rows with authoritative provider/bank information before considering the directory complete.
-- [ ] Retire remote-only `admin-backfill-bank-codes` after the tracked backfill is complete. No app caller was found; its deployed source is not in the repo and it accepts its sync token in the query string.
+- [x] Retire remote-only `admin-backfill-bank-codes` after confirming there are no repository callers or database cron jobs (2026-11-11); the deployed endpoint accepted its sync token in the query string and used fuzzy matching. Verified absent from the linked function list after deletion and removed its now-unused `BANK_CODES_SYNC_TOKEN` secret.
 - [ ] Do not treat the app as cleared for public live-money use yet: the implementation tracker and UAT guide still report Paystack production TEST mode and no completed low-value live charge evidence.
 - [ ] Reconfirm all deployment, migration, and function states against the linked production project before launch; repository checkboxes alone are not proof of current remote state.
 
@@ -46,16 +46,20 @@ Public launch with live payments is **NO-GO** until every P0 gate below has an o
 
 ### Payments, billing, and money movement
 
-- [ ] Replace Paystack test credentials with approved live credentials for invoice payments, webhooks, and workspace subscriptions.
-- [ ] Confirm production Vercel variables and Supabase secrets belong to the intended production project and contain no test/staging values; verify values by name and environment without copying secret values into logs or tickets.
+- [x] Set the linked Supabase project's `PAYSTACK_SECRET_KEY` to the approved live key; a `charge.success` event recorded `payload.data.domain=live` for the ₦100 invoice payment on 2026-11-11.
+- [ ] Confirm all production Vercel variables and Supabase secrets belong to the intended production project and contain no test/staging values. 2026-11-11 review: Supabase has `PAYSTACK_SECRET_KEY` and `SUPABASE_SERVICE_ROLE_KEY` configured, and the successful live event confirms the payment path used Paystack Live. Vercel production env listing contains the public Supabase connection values and `SUPABASE_DB_PASSWORD` scoped to Production and Preview; no repository use for the database password was found, so the project owner must confirm its purpose before launch.
 - [x] Confirm the deployed `workspace-email-delivery` function contains the invoice subtotal/tax email change by comparing its downloaded deployed source with the repository (2026-11-10).
-- [ ] Perform and record one low-value live invoice payment: public link → Paystack checkout → callback → webhook → completed payment → paid invoice → receipt.
+- [x] Perform and record one low-value live invoice payment: the user reported successful checkout/callback; linked database confirms a ₦100 NGN payment `completed`, invoice `paid` with ₦100 paid, and Paystack `charge.success` with `domain=live` processed at 2026-11-11 06:24:29 UTC with zero retries.
+- [ ] Confirm the customer received the live invoice receipt email.
 - [ ] Perform and record one low-value live Growth checkout and one Business checkout: pricing → Paystack recurring checkout → callback → webhook → active subscription.
-- [ ] Verify live webhook delivery, signature validation, idempotency, retries, and failure alerting.
+- [x] Confirmed one live `charge.success` webhook was accepted and processed with zero retries for the ₦100 payment (2026-11-11).
+- [ ] Verify webhook idempotency, retry behavior, and failure alerting in a safe test environment.
 - [ ] Verify wallet funding and outgoing payout provider settlement in the live environment, including failed, reversed, scheduled, cancelled, and retried states.
 - [ ] Confirm Paystack recipient, transfer, balance, compliance, and operational limits with the account owner.
 - [ ] Confirm outgoing vendor payout capability is enabled and approved on the live Paystack account; verify recipient creation, transfer limits, fees, prefunding, reversals, and reconciliation with Paystack support/account owner.
 - [ ] Confirm the public invoice payment flow is correctly configured for the intended payment type (including any marketplace subaccount/split rules), amount/currency, fee calculation, and settlement destination.
+- [x] UAT passed per user confirmation on 2026-11-11 for the global fee and routing-readiness rollout. The migration and affected Edge Functions were applied/deployed to linked project `qfhjlqskucabzxepqbpl`; the platform-wide default is active at 15% NGN, and standalone Admin fee management is live on Vercel production deployment `dpl_9hhEbznGRMTiiN2j3BQG644fn2ms`.
+- [x] User confirmed UAT passed for draft saving, invoice-send/payment-link routing gates, Paystack verification refresh, global fee fallback, workspace fee override, currency mismatch, and flat fee greater than invoice total (2026-11-11).
 - [ ] Run duplicate callback/webhook and out-of-order event tests in staging; verify no duplicate invoice payment, wallet credit, payout, or subscription entitlement is created.
 - [ ] Verify customer-visible handling for abandoned, declined, pending, timed-out, reversed, and disputed payments.
 - [ ] Confirm subscription access gates match the plan catalogue and define the grace period for failed renewals.
