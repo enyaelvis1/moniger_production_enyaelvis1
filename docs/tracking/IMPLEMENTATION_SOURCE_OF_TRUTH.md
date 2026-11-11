@@ -322,3 +322,19 @@ Live cutover checklist after Paystack approval:
 - [x] Added database-enforced financial actor, workspace, amount, currency, idempotency, source-event, and payout-transition invariants through security-definer mutation triggers.
 - [x] Added configuration validation tests for `APP_BASE_URL`, malicious notification-link regression coverage, and hostile chart-style tests. The changed functions are deployed.
 - [x] Linked Supabase migrations are applied and the changed functions are deployed. Disposable two-workspace authorization, storage, and provider replay matrices remain release follow-up work documented in `docs/SECURITY_REMEDIATION_CHECKLIST_2026-10-02.md`; production-mutating verification scripts must run only against staging/disposable fixtures.
+
+### 2026-11-10 — Production Supabase deployment audit
+
+- [x] Compared linked project `qfhjlqskucabzxepqbpl` migration history with the repository: all 75 local migrations match through `20261002173000`; no pending migrations were reported.
+- [x] Downloaded deployed `workspace-email-delivery` source and confirmed it includes the invoice item, subtotal, and tax breakdown updates.
+- [x] Redeployed `paystack-webhook` from the current repository and confirmed deployed version 21 is active.
+- [x] Redeployed `workspace-wallet-funding` from the current repository and confirmed deployed version 8 is active.
+- [x] Downloaded both redeployed functions and confirmed their entrypoints and relevant shared helpers match the repository.
+- [x] Added `scripts/backfill-bank-codes.mjs` and `docs/payouts/BANK_CODE_BACKFILL_RUNBOOK.md` as a tracked dry-run-first replacement. It accepts unique literal, provider-declared alias, or normalized-name matches and requires an explicit `--apply` flag plus typed confirmation for writes.
+- [x] Ran the tracked read-only preview on 2026-11-11: 29 initial exact normalized matches, then an exact Access Bank match and provider-declared OPay alias; exactly 11 rows remain without a supported provider code.
+- [x] Applied 31 reviewed exact/declared-alias matches after typed confirmation and verified with a fresh read-only preview; exactly 11 rows remain without codes.
+- [x] Vendor payout bank selection disables banks without a verified provider code and explains why.
+- [x] Added searchable bank selectors with logos for vendor bank details, customer bank records, and workspace payout routing. Logo URLs use a pinned jsDelivr-hosted logo catalog; 279 active rows have institution-specific assets and the remaining 24 use the catalog's generic mark.
+- [x] Applied `20261111120000_seed_paystack_nigerian_banks.sql` to the linked project and verified 303 active bank rows with 292 distinct provider codes. All 297 provider names are searchable, including five names sharing a provider code; 11 legacy rows without verified codes are unavailable for payout selection.
+- [ ] Reconcile the 11 skipped bank rows with authoritative provider/bank information before marking bank-code coverage complete.
+- [ ] Retire the remote-only `admin-backfill-bank-codes` function after the tracked process completes. No app caller was found; its source is not tracked and its sync token can be passed in the query string.
