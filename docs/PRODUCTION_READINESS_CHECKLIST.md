@@ -1,8 +1,38 @@
 # Moniger Production Readiness Checklist
 
-Last reviewed: 2026-09-19
+Last reviewed: 2026-11-11
 
-This checklist is based on the current repository, the implementation source of truth, and a Playwright smoke review of `https://www.moniger.net`. It separates work that is already implemented from work that still needs product, engineering, or operational completion.
+This checklist is based on the current repository, the implementation source of truth, the security/UAT checklists, and the latest recorded production deployment. It separates verified implementation/deployment work from live-money, access, operational, and hosted-test gates that still need evidence.
+
+## Current production snapshot
+
+- [x] Frontend deployed to Vercel production and aliased to `https://www.moniger.net` on 2026-10-08 (deployment `dpl_9hjQTdGkNoyxhXAW7an2LhQAR4Gx`).
+- [x] `develop` and `main` were aligned and pushed for that release (`develop` `e52faa9`, `main` `0468799`).
+- [x] Linked Supabase project migration history matches all 75 local migrations through `20261002173000` (checked 2026-11-10).
+- [x] Deployed `paystack-webhook` v21 and `workspace-wallet-funding` v8 on 2026-11-10; downloaded source matches the repository for each changed entrypoint and helper.
+- [x] Deployed `workspace-email-delivery` source matches the repository, including invoice subtotal and tax breakdown.
+- [ ] Reconcile the bank directory before live payouts: 11 legacy rows still have no provider match; vendor and workspace payout selectors disable rows without verified codes.
+- [x] Apply and verify `20261111120000_seed_paystack_nigerian_banks.sql` on the linked Supabase project (2026-11-11): 303 active directory rows, including all 292 current Paystack Nigerian NGN bank codes. The five additional provider names that share codes remain searchable as aliases; 11 legacy entries without provider codes are disabled for payout selection.
+- [x] Add a tracked dry-run-first backfill script and runbook; it proposes only unique literal, provider-declared alias, or normalized-name matches and skips fuzzy candidates.
+- [x] Add searchable bank selectors with logo imagery for vendor bank details, customer bank records, and workspace payout routing. Logo URLs are pinned to an MIT-licensed jsDelivr-hosted logo repository revision, with a generic logo fallback.
+- [x] Run the read-only bank-code preview (2026-11-11): 29 initial unique matches, then exact Access Bank and provider-declared OPay alias matches; 11 rows remain without a supported match.
+- [x] Apply 31 reviewed exact/declared-alias matches after typed confirmation; a fresh preview confirms exactly 11 unmatched rows remain.
+- [ ] Resolve the 11 skipped rows with authoritative provider/bank information before considering the directory complete.
+- [ ] Retire remote-only `admin-backfill-bank-codes` after the tracked backfill is complete. No app caller was found; its deployed source is not in the repo and it accepts its sync token in the query string.
+- [ ] Do not treat the app as cleared for public live-money use yet: the implementation tracker and UAT guide still report Paystack production TEST mode and no completed low-value live charge evidence.
+- [ ] Reconfirm all deployment, migration, and function states against the linked production project before launch; repository checkboxes alone are not proof of current remote state.
+
+## Go / no-go decision
+
+Public launch with live payments is **NO-GO** until every P0 gate below has an owner, dated evidence, and a passing result. A limited public launch that does not accept live money still requires security, support, privacy, recovery, and incident-response gates to pass. Record the final decision, approver, launch date, and any accepted risks in the release notes.
+
+### Release owner sign-off
+
+- [ ] Name one release owner and one backup who can stop or roll back the launch.
+- [ ] Record the exact Git commit, Vercel deployment, Supabase project, deployed Edge Function versions, and applied migration version for the release.
+- [ ] Confirm the public product copy, plan names/prices/limits, fees, cancellation terms, privacy notice, terms, and support contact are accurate and approved.
+- [ ] Confirm the public launch geography, supported currencies, customer eligibility, and provider restrictions.
+- [ ] Record unresolved risks with severity, mitigation, owner, and review date; no unowned critical/high issue remains.
 
 ## Release decision
 
@@ -17,31 +47,57 @@ This checklist is based on the current repository, the implementation source of 
 ### Payments, billing, and money movement
 
 - [ ] Replace Paystack test credentials with approved live credentials for invoice payments, webhooks, and workspace subscriptions.
+- [ ] Confirm production Vercel variables and Supabase secrets belong to the intended production project and contain no test/staging values; verify values by name and environment without copying secret values into logs or tickets.
+- [x] Confirm the deployed `workspace-email-delivery` function contains the invoice subtotal/tax email change by comparing its downloaded deployed source with the repository (2026-11-10).
 - [ ] Perform and record one low-value live invoice payment: public link → Paystack checkout → callback → webhook → completed payment → paid invoice → receipt.
 - [ ] Perform and record one low-value live Growth checkout and one Business checkout: pricing → Paystack recurring checkout → callback → webhook → active subscription.
 - [ ] Verify live webhook delivery, signature validation, idempotency, retries, and failure alerting.
 - [ ] Verify wallet funding and outgoing payout provider settlement in the live environment, including failed, reversed, scheduled, cancelled, and retried states.
 - [ ] Confirm Paystack recipient, transfer, balance, compliance, and operational limits with the account owner.
+- [ ] Confirm outgoing vendor payout capability is enabled and approved on the live Paystack account; verify recipient creation, transfer limits, fees, prefunding, reversals, and reconciliation with Paystack support/account owner.
+- [ ] Confirm the public invoice payment flow is correctly configured for the intended payment type (including any marketplace subaccount/split rules), amount/currency, fee calculation, and settlement destination.
+- [ ] Run duplicate callback/webhook and out-of-order event tests in staging; verify no duplicate invoice payment, wallet credit, payout, or subscription entitlement is created.
+- [ ] Verify customer-visible handling for abandoned, declined, pending, timed-out, reversed, and disputed payments.
 - [ ] Confirm subscription access gates match the plan catalogue and define the grace period for failed renewals.
 - [ ] Add automated coverage for marketplace subaccounts, split initialization, failed onboarding, and settlement reconciliation.
+- [ ] Confirm subscription renewal, 14-day and 48-hour reminders, failed renewal recovery, cancellation, expiry lock, and Super Admin re-enable behavior in staging with delivered emails and audit entries.
 
 ### Security, access, and data protection
 
 - [ ] Confirm `APP_BASE_URL`, frontend public URL, Paystack secrets, Resend secrets, Sentry, and analytics values are correct per environment.
+- [x] Compare linked production migration history with the repository: all 75 migrations match through `20261002173000`; no pending migration was reported (2026-11-10).
+- [ ] Deploy every changed Edge Function and record its deployed version, especially payment, webhook, subscription, payout, routing, email, and admin functions.
+- [ ] Run `npm run verify:release:security` and the relevant production route/webhook/checkout checks against a safe staging or disposable fixture; never run scripts that create financial side effects casually against production.
+- [ ] Complete the remaining two-workspace RLS/storage authorization, public-function abuse, and provider replay tests from `docs/SECURITY_REMEDIATION_CHECKLIST_2026-10-02.md` in staging.
 - [ ] Verify MFA enrollment, recovery, session timeout, password reset, invitation, and sign-out flows on production.
 - [ ] Verify non-admin users cannot access `/admin/*`; verify support and super-admin permissions separately.
 - [ ] Review RLS policies and service-role Edge Functions after the next migration or payout change.
 - [ ] Define retention and recovery rules for deleted users, payments, payouts, invoices, audit logs, and webhook records.
 - [ ] Never expose secret keys, service-role credentials, or provider tokens in browser logs or client bundles.
+- [ ] Confirm production admin and Super Admin accounts are individually assigned, MFA-protected, auditable, and recoverable; remove shared/default credentials and unused privileges.
+- [ ] Confirm data collection, bank-account handling, financial record retention/deletion, user export, and incident/breach notification procedures have an accountable owner and legal review where required.
+- [ ] Verify backups cover Supabase database and private storage objects, retention is configured, and a restore has been rehearsed without overwriting production.
 
 ### Reliability and operations
 
 - [ ] Configure production Sentry and confirm a deliberate test error is visible.
 - [ ] Configure consent-aware analytics and confirm events are not sent when consent is unavailable.
+- [ ] Verify health, database capacity, scheduled jobs/cron, Edge Function errors, email delivery, webhook delivery, wallet balance reconciliation, and payout backlog are observable with alerts.
 - [ ] Verify health checks, webhook failure visibility, email delivery logs, payout reconciliation, and admin audit logs.
 - [ ] Add alert ownership and escalation paths for payment failures, webhook failures, payout failures, email failures, and service downtime.
 - [ ] Create a rollback procedure for frontend, Edge Functions, database migrations, and Paystack configuration.
 - [ ] Back up production data and test a restore or recovery procedure.
+- [ ] Define incident severity, on-call contact, provider escalation contacts, customer status communication, and who can pause checkout/payouts.
+- [ ] Define a launch-day monitoring window and daily reconciliation owner for the first week; document stop conditions and rollback triggers.
+
+### Public-use acceptance and customer support
+
+- [ ] Complete hosted end-to-end UAT for Starter signup, paid Growth/Business signup, invoice creation/email/payment, bill creation/attachment/payout, customer/vendor imports, team permissions, MFA, and mobile layouts using production-like accounts.
+- [ ] Verify support/contact forms deliver to monitored mailboxes and test a customer reply path; verify signup and subscription emails reach inboxes and handle bounces.
+- [ ] Verify public pricing and in-app limits match the billing catalog and server-side enforcement for each plan.
+- [ ] Verify all public routes, payment links, legal pages, email links, and redirects use the canonical production domain and HTTPS.
+- [ ] Complete accessibility, contrast, keyboard, screen-reader, and mobile network/performance review for public signup/payment and core workspace journeys.
+- [ ] Publish support hours, response expectations, billing/cancellation instructions, and a customer-facing service-status/contact route.
 
 ## Requested product work
 
