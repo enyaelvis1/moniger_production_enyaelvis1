@@ -312,6 +312,8 @@ Live cutover checklist after Paystack approval:
 - [x] Authenticated legacy sessions without a confirmed email show a resend-confirmation action and remain restricted from full workspace activation.
 - [x] Signup success now presents a six-digit email OTP field inline, restores pending verification after a same-tab refresh using sessionStorage (email/destination/cooldown only), verifies the address before continuing, and supports a rate-limited resend. Login also retains an OTP fallback for existing unconfirmed accounts. The confirmation email template includes the OTP with a copy icon cue and keeps the confirmation link fallback. Supabase Auth enforces the resend limits; the UI shows a 60-second cooldown.
 - [x] Public landing page content containers are widened to 1,600px on desktop so the hero, proof, feature, testimonial, and footer sections use the available viewport more fully; the hero dashboard preview is framed in a wide crop to make the product UI legible at desktop sizes.
+- [x] Login detects valid-password accounts with unconfirmed email, presents a six-digit signup OTP entry step, and supports resend through Supabase Auth. The confirmation email template includes both the OTP and the existing confirmation link. Resends honor the configured one-email-per-minute project limit and Supabase Auth endpoint rate limits; the UI also shows a 60-second resend countdown.
+- [x] Registration plan selection advances directly to workspace details when a user chooses a plan; Back returns to plan selection so the user can revise it.
 - [ ] Confirm the final production signup behavior with one disposable Starter account and one disposable paid-plan account, including payment and direct dashboard landing.
 
 ### 2026-10-02 — Security remediation branch
