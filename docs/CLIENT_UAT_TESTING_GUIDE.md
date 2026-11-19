@@ -58,15 +58,17 @@ Test steps:
 
 1. Register a new Starter account with an inbox you can access.
 2. Confirm the signup completion page shows an email code field without asking you to go to the login page.
-3. Open the Moniger confirmation email and note the six-digit code and copy icon beside it. The confirmation link remains available as a fallback.
-4. Enter an incorrect code and confirm the app stays on the signup page with a safe error.
-5. Enter the correct code and confirm the account continues to its requested destination (or the existing MFA step, if enabled).
-6. For an older unconfirmed account, sign in with the correct password to reach the login OTP fallback, then request a new code; confirm a second resend is disabled for 60 seconds and Supabase also enforces the project rate limit.
+3. Refresh the signup completion page and confirm the code field and email address are still shown.
+4. Open the Moniger confirmation email and note the six-digit code and copy icon beside it. The confirmation link remains available as a fallback.
+5. Enter an incorrect code and confirm the app stays on the signup page with a safe error.
+6. Enter the correct code and confirm the account continues to its requested destination (or the existing MFA step, if enabled).
+7. For an older unconfirmed account, sign in with the correct password to reach the login OTP fallback, then request a new code; confirm a second resend is disabled for 60 seconds and Supabase also enforces the project rate limit.
 
 Expected result:
 
 - A valid password for an unconfirmed account does not open the workspace before email verification.
 - The user sees a clear inbox prompt and can enter the six-digit code on the signup success page.
+- Refreshing the same tab preserves the pending verification page and its resend cooldown without storing passwords or OTP values.
 - A successful code confirms the email and starts the normal authenticated flow, including MFA when configured.
 - Resend remains rate-limited by Supabase Auth; the client countdown is only a usability aid and not the security boundary.
 

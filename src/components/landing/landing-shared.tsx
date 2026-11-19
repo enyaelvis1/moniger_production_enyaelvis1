@@ -11,7 +11,7 @@ export const navItems = [
   { label: "About", href: "#about" },
 ] as const;
 
-export const containerClass = "mx-auto max-w-[1160px]";
+export const containerClass = "mx-auto max-w-[1600px]";
 
 export type ButtonVariant = "primary" | "ghost" | "light" | "darkGhost";
 export type ButtonSize = "default" | "small" | "form";
