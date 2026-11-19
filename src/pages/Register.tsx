@@ -3,6 +3,15 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { Check, CheckCircle2, ChevronDown, Eye, EyeOff, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import AuthShell, {
   AuthCardHeader,
   authInputClassName,
@@ -20,6 +29,7 @@ import {
   type SubscriptionPlan,
 } from "@/lib/subscriptions";
 import { getRegistrationDestination } from "@/lib/subscription-registration";
+import { privacyDocument, termsDocument } from "@/lib/legal-documents";
 import {
   initializeSignupSubscriptionCheckout,
   initializeWorkspaceSubscriptionCheckout,
@@ -303,6 +313,7 @@ const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [openLegalDocument, setOpenLegalDocument] = useState<"terms" | "privacy" | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successState, setSuccessState] = useState<RegisterSuccessState>(() => {
@@ -366,6 +377,7 @@ const RegisterPage = () => {
   const normalizedFullName = useMemo(() => normalizeWhitespace(form.fullName), [form.fullName]);
   const normalizedEmail = useMemo(() => normalizeEmail(form.email), [form.email]);
   const emailHasValidFormat = useMemo(() => isValidEmailAddress(normalizedEmail), [normalizedEmail]);
+  const activeLegalDocument = openLegalDocument === "terms" ? termsDocument : privacyDocument;
 
   const update = (field: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement>) => {
     if (error) setError("");
@@ -1235,8 +1247,9 @@ const RegisterPage = () => {
               ) : null}
             </div>
 
-            <label className="flex cursor-pointer items-start gap-3 text-[14px] leading-8 text-[#677391]">
+            <div className="flex items-start gap-3 text-[14px] leading-8 text-[#677391]">
               <input
+                id="regAgreement"
                 type="checkbox"
                 checked={agreed}
                 onChange={(event) => {
@@ -1245,26 +1258,29 @@ const RegisterPage = () => {
                 }}
                 className="sr-only"
               />
-              <span
-                aria-hidden="true"
-                className={`mt-1 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border transition-colors ${
-                  agreed ? "border-[#5B67F7] bg-[#5B67F7]" : "border-[#C9D0E6] bg-white"
-                }`}
-              >
-                <Check size={12} className={agreed ? "text-white" : "text-transparent"} />
-              </span>
-              <span>
+              <label htmlFor="regAgreement" className="flex cursor-pointer items-start pt-1">
+                <span
+                  aria-hidden="true"
+                  className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border transition-colors ${
+                    agreed ? "border-[#5B67F7] bg-[#5B67F7]" : "border-[#C9D0E6] bg-white"
+                  }`}
+                >
+                  <Check size={12} className={agreed ? "text-white" : "text-transparent"} />
+                </span>
+                <span className="sr-only">I agree to Moniger&apos;s Terms of Use and Privacy Policy.</span>
+              </label>
+              <p>
                 {t("auth.register.agreement.prefix")}{" "}
-                <Link to="/terms" target="_blank" rel="noreferrer" className="text-[#5864F7] underline-offset-2 hover:underline">
+                <button type="button" onClick={() => setOpenLegalDocument("terms")} className="inline p-0 align-baseline font-[inherit] text-[#5864F7] underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5864F7]">
                   {t("auth.register.agreement.termsOfUse")}
-                </Link>
+                </button>
                 ,{" "}
-                <Link to="/privacy" target="_blank" rel="noreferrer" className="text-[#5864F7] underline-offset-2 hover:underline">
+                <button type="button" onClick={() => setOpenLegalDocument("privacy")} className="inline p-0 align-baseline font-[inherit] text-[#5864F7] underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5864F7]">
                   {t("auth.register.agreement.privacyPolicy")}
-                </Link>
+                </button>
                 , {t("auth.register.agreement.consentSuffix")}
-              </span>
-            </label>
+              </p>
+            </div>
 
             <div className="flex items-center gap-3 pt-2">
               <button
@@ -1285,6 +1301,30 @@ const RegisterPage = () => {
       </form>
         </>
       ) : null}
+      <Dialog open={openLegalDocument !== null} onOpenChange={(open) => setOpenLegalDocument(open ? openLegalDocument : null)}>
+        <DialogContent className="flex max-h-[88dvh] w-[calc(100vw-2rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="border-b border-[#E0DFF0] px-6 py-5 pr-12">
+            <DialogTitle className="text-xl font-bold text-[#15203B]">{activeLegalDocument.title}</DialogTitle>
+            <DialogDescription>
+              {activeLegalDocument.updatedAt}. Read this document without leaving account setup.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5 text-sm leading-6 text-[#4A5675]">
+            {"introduction" in activeLegalDocument ? <p>{activeLegalDocument.introduction}</p> : null}
+            {activeLegalDocument.sections.map((section) => (
+              <section key={section.title}>
+                <h3 className="font-semibold text-[#15203B]">{section.title}</h3>
+                <p className="mt-1">{section.content}</p>
+              </section>
+            ))}
+          </div>
+          <DialogFooter className="border-t border-[#E0DFF0] px-6 py-4">
+            <DialogClose asChild>
+              <button type="button" className={authPrimaryButtonClassName}>Return to signup</button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AuthShell>
   );
 };
