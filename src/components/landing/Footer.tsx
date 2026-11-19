@@ -6,7 +6,7 @@ import { HEART, NigeriaFlagMark, containerClass } from "./landing-shared";
 const Footer = () => (
   <>
     <section className="bg-[#F3F4FB] px-3 py-[80px] text-center sm:px-4 lg:px-6">
-      <div className="mx-auto max-w-[1160px] overflow-hidden rounded-[24px] bg-[#0D1B2A] px-5 py-12 sm:px-10 sm:py-14 lg:px-16 lg:py-20">
+      <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[24px] bg-[#0D1B2A] px-5 py-12 sm:px-10 sm:py-14 lg:px-16 lg:py-20">
         <h2 className="mx-auto max-w-[820px] whitespace-pre-line text-[40px] font-black leading-[1.05] tracking-[-0.03em] text-white md:text-[48px] lg:text-[56px]">
           {"Everything you do with money.\nAll in one place."}
         </h2>
@@ -30,7 +30,7 @@ const Footer = () => (
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#152238] via-[#0D1B2A] to-[#09131F] opacity-90" />
 
       <div className="relative z-10 border-t border-white/10">
-        <div className="mx-auto max-w-[1200px] px-6 py-5 text-center text-[13px] leading-[1.7] text-white/35 md:px-10 lg:px-12">
+        <div className="mx-auto max-w-[1600px] px-6 py-5 text-center text-[13px] leading-[1.7] text-white/35 md:px-10 lg:px-12">
           moniger.net is a financial management platform, not a licensed financial institution. Payment processing is provided by supported third-party providers.
         </div>
       </div>

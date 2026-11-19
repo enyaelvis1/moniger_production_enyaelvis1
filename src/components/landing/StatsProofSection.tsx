@@ -21,7 +21,7 @@ const StatsProofSection = () => (
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}
-      className="mx-auto max-w-[1160px] rounded-[24px] border border-[#E8E4DF] bg-white px-5 py-8 shadow-[0_2px_24px_rgba(0,0,0,0.06)] sm:px-8 sm:py-10 lg:px-16 lg:py-16"
+      className="mx-auto max-w-[1600px] rounded-[24px] border border-[#E8E4DF] bg-white px-5 py-8 shadow-[0_2px_24px_rgba(0,0,0,0.06)] sm:px-8 sm:py-10 lg:px-16 lg:py-16"
     >
       <div className="grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:gap-12">
         <div>

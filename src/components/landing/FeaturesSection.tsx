@@ -449,7 +449,7 @@ const FeaturesSection = () => {
         id="features"
         className="landing-peel-section z-[4] bg-[#F3F4FB] px-3 py-16 sm:px-4 lg:px-6 lg:py-[100px]"
       >
-        <div className="mx-auto max-w-[1160px]">
+        <div className="mx-auto max-w-[1600px]">
           <motion.div
             initial="hidden"
             whileInView="visible"

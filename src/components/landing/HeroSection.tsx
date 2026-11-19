@@ -62,8 +62,8 @@ const HeroSection = () => {
         <div className="hero-orb hero-orb-right" aria-hidden="true" />
         <div className="hero-grid-pattern" aria-hidden="true" />
 
-        <div className="relative z-10 mx-auto w-full max-w-[1160px]">
-          <div className="grid items-center gap-12 md:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)] md:gap-16">
+        <div className="relative z-10 mx-auto w-full max-w-[1600px]">
+          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16 2xl:gap-20">
             <div className="hero-content min-w-0 flex flex-col justify-center text-center md:text-left">
               <div
                 className="hero-badge hero-animate inline-flex items-center gap-2 self-center rounded-full border border-white/80 bg-white/88 py-2 pl-2.5 pr-4 text-[13px] font-semibold text-[#4A5568] shadow-[0_14px_34px_rgba(91,103,247,0.09)] backdrop-blur md:self-start"
@@ -74,7 +74,7 @@ const HeroSection = () => {
               </div>
 
               <h1
-                className="hero-heading hero-animate mx-auto mt-6 max-w-full text-[36px] font-[800] leading-[0.98] tracking-[-0.05em] text-[#10203F] md:mx-0 md:max-w-[560px] md:text-[48px] lg:w-[660px] lg:max-w-none lg:text-[68px]"
+                className="hero-heading hero-animate mx-auto mt-6 max-w-[760px] text-[36px] font-[800] leading-[0.98] tracking-[-0.05em] text-[#10203F] sm:text-[48px] md:text-[58px] lg:mx-0 lg:max-w-[740px] lg:text-[54px] xl:text-[66px] 2xl:text-[76px]"
                 style={heroAnimationStyle("80ms", "600ms")}
               >
                 Finance operations your team can{" "}
@@ -82,7 +82,7 @@ const HeroSection = () => {
               </h1>
 
               <p
-                className="hero-subtext hero-animate mx-auto mt-5 max-w-[500px] text-[18px] font-normal leading-[1.7] text-[#5E6A86] md:mx-0 md:text-[19px]"
+                className="hero-subtext hero-animate mx-auto mt-5 max-w-[640px] text-[18px] font-normal leading-[1.7] text-[#5E6A86] md:text-[20px] lg:mx-0 xl:text-[21px]"
                 style={heroAnimationStyle("160ms", "600ms")}
               >
                 Send invoices, manage vendor bills, and keep every naira visible from one
@@ -108,7 +108,7 @@ const HeroSection = () => {
                 aria-label="Start your Moniger trial"
                 autoComplete="off"
                 onSubmit={handleSubmit}
-                className="hero-email-group hero-animate mx-auto mt-8 flex w-full max-w-[500px] items-center rounded-[18px] border border-white/80 bg-white/92 py-[7px] pl-[20px] pr-[7px] shadow-[0_24px_48px_rgba(91,103,247,0.10),0_6px_16px_rgba(16,32,63,0.05)] backdrop-blur transition-all duration-200 focus-within:border-[#5B67F7] focus-within:shadow-[0_0_0_4px_rgba(91,103,247,0.10),0_24px_48px_rgba(91,103,247,0.10)] md:mx-0"
+                className="hero-email-group hero-animate mx-auto mt-8 flex w-full max-w-[640px] items-center rounded-[18px] border border-white/80 bg-white/92 py-[7px] pl-[20px] pr-[7px] shadow-[0_24px_48px_rgba(91,103,247,0.10),0_6px_16px_rgba(16,32,63,0.05)] backdrop-blur transition-all duration-200 focus-within:border-[#5B67F7] focus-within:shadow-[0_0_0_4px_rgba(91,103,247,0.10),0_24px_48px_rgba(91,103,247,0.10)] md:mx-0"
                 style={heroAnimationStyle("380ms", "500ms")}
               >
                 <label htmlFor="hero-email" className="sr-only">
@@ -166,8 +166,8 @@ const HeroSection = () => {
               </div>
             </div>
 
-            <div className="hidden items-center justify-end md:flex">
-              <div className="landing-hero-frame hero-stage relative w-full max-w-[540px] lg:max-w-[620px]">
+            <div className="hidden items-center justify-end lg:flex">
+              <div className="landing-hero-frame hero-stage relative w-full max-w-[720px] xl:max-w-[780px] 2xl:max-w-[820px]">
                 <div className="hero-stage-backdrop" aria-hidden="true" />
                 <div className="hero-stage-ring" aria-hidden="true" />
                 <div className="hero-stage-grid" aria-hidden="true" />
@@ -179,16 +179,18 @@ const HeroSection = () => {
                     <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
                     <span className="ml-auto text-[11px] font-semibold tracking-[0.10em] text-white/60">MONIGER DASHBOARD</span>
                   </div>
-                  <img
-                    src={dashboardPreview}
-                    alt="moniger.net dashboard showing invoices, payments, and cash flow analytics"
-                    width={1200}
-                    height={800}
-                    loading="eager"
-                    decoding="async"
-                    sizes="(min-width: 1024px) 580px, (min-width: 768px) 520px, 100vw"
-                    className="block w-full"
-                  />
+                  <div className="aspect-[1.5/1] overflow-hidden bg-white">
+                    <img
+                      src={dashboardPreview}
+                      alt="moniger.net dashboard showing invoices, payments, and cash flow analytics"
+                      width={1200}
+                      height={800}
+                      loading="eager"
+                      decoding="async"
+                      sizes="(min-width: 1536px) 820px, (min-width: 1280px) 780px, (min-width: 1024px) 720px, 100vw"
+                      className="block h-full w-full object-cover object-center"
+                    />
+                  </div>
                 </div>
 
                 <div className="hero-float-card absolute -left-8 top-[12%] rounded-[18px] border border-white/75 bg-white/95 px-4 py-3 shadow-[0_18px_40px_rgba(16,32,63,0.14)] backdrop-blur">
@@ -216,7 +218,7 @@ const HeroSection = () => {
         className="landing-peel-section relative z-[2] border-y border-[#D8DDF0] bg-white px-6 py-10 max-md:-mt-7 max-md:rounded-t-[28px] max-md:pt-10 md:-mt-10 md:px-10 lg:px-12 lg:py-12"
         style={{ position: "relative" }}
       >
-        <div className="mx-auto max-w-[1160px]">
+        <div className="mx-auto max-w-[1600px]">
           <p className="text-center text-[14px] font-medium text-[#677391] md:text-[16px]">
             Trusted by businesses across Nigeria
           </p>

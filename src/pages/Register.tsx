@@ -149,8 +149,17 @@ type RegisterSuccessState =
   | {
       email: string;
       redirectToDashboard: boolean;
+      destination?: string;
+      resendAvailableAt?: number;
     }
   | null;
+
+type PendingSignupOtp = {
+  email: string;
+  destination: string;
+  resendAvailableAt: number;
+  expiresAt: number;
+};
 
 type EmailAvailabilityState = {
   email: string;
@@ -158,6 +167,8 @@ type EmailAvailabilityState = {
 };
 
 const DASHBOARD_REDIRECT_DELAY_MS = 6000;
+const SIGNUP_OTP_STORAGE_KEY = "moniger.signup.email-otp.pending.v1";
+const SIGNUP_OTP_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
 const PAID_CHECKOUT_RETRY_DELAY_MS = 1000;
 const PAID_CHECKOUT_MAX_ATTEMPTS = 5;
 
@@ -191,6 +202,67 @@ const getPrefilledEmailFromState = (state: unknown) => {
   return typeof candidateEmail === "string" ? candidateEmail : "";
 };
 
+const readPendingSignupOtp = (): PendingSignupOtp | null => {
+  try {
+    const rawValue = window.sessionStorage.getItem(SIGNUP_OTP_STORAGE_KEY);
+    if (!rawValue) return null;
+
+    const value = JSON.parse(rawValue) as Partial<PendingSignupOtp>;
+    const safeDestination =
+      typeof value.destination === "string" &&
+      value.destination.startsWith("/") &&
+      !value.destination.startsWith("//") &&
+      !value.destination.includes("\\") &&
+      new URL(value.destination, window.location.origin).origin === window.location.origin;
+    if (
+      typeof value.email !== "string" ||
+      !isValidEmailAddress(value.email) ||
+      !safeDestination ||
+      typeof value.expiresAt !== "number" ||
+      value.expiresAt <= Date.now()
+    ) {
+      window.sessionStorage.removeItem(SIGNUP_OTP_STORAGE_KEY);
+      return null;
+    }
+
+    return {
+      email: value.email,
+      destination: value.destination as string,
+      resendAvailableAt: typeof value.resendAvailableAt === "number" ? value.resendAvailableAt : 0,
+      expiresAt: value.expiresAt,
+    };
+  } catch {
+    try {
+      window.sessionStorage.removeItem(SIGNUP_OTP_STORAGE_KEY);
+    } catch {
+      // Ignore storage errors; the registration form remains available.
+    }
+    return null;
+  }
+};
+
+const savePendingSignupOtp = (email: string, destination: string, resendAvailableAt: number) => {
+  try {
+    const pending: PendingSignupOtp = {
+      email,
+      destination,
+      resendAvailableAt,
+      expiresAt: Date.now() + SIGNUP_OTP_PENDING_TTL_MS,
+    };
+    window.sessionStorage.setItem(SIGNUP_OTP_STORAGE_KEY, JSON.stringify(pending));
+  } catch {
+    // Keep signup usable when browser storage is unavailable.
+  }
+};
+
+const clearPendingSignupOtp = () => {
+  try {
+    window.sessionStorage.removeItem(SIGNUP_OTP_STORAGE_KEY);
+  } catch {
+    // Nothing else is required when browser storage is unavailable.
+  }
+};
+
 const RegisterPage = () => {
   const { resendSignupEmailOtp, signUp, verifySignupEmailOtp } = useAuth();
   const location = useLocation();
@@ -220,8 +292,6 @@ const RegisterPage = () => {
   const selectedPlanDetails = defaultSubscriptionCatalog[selectedPlan];
   const selectedPlanLabel = selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1);
   const isPaidPlanSelection = selectedPlan !== "starter";
-  const registrationDestination = getRegistrationDestination(nextPath, selectedPlan);
-  const loginPath = `/login?next=${encodeURIComponent(registrationDestination)}`;
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [form, setForm] = useState({
     businessName: "",
@@ -235,11 +305,26 @@ const RegisterPage = () => {
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [successState, setSuccessState] = useState<RegisterSuccessState>(null);
+  const [successState, setSuccessState] = useState<RegisterSuccessState>(() => {
+    const pendingOtp = readPendingSignupOtp();
+    return pendingOtp
+      ? {
+          email: pendingOtp.email,
+          destination: pendingOtp.destination,
+          resendAvailableAt: pendingOtp.resendAvailableAt,
+          redirectToDashboard: false,
+        }
+      : null;
+  });
+  const registrationDestination = successState?.destination ?? getRegistrationDestination(nextPath, selectedPlan);
+  const loginPath = `/login?next=${encodeURIComponent(registrationDestination)}`;
   const [emailOtp, setEmailOtp] = useState("");
   const [emailOtpError, setEmailOtpError] = useState("");
   const [emailOtpResent, setEmailOtpResent] = useState(false);
-  const [emailOtpCooldown, setEmailOtpCooldown] = useState(0);
+  const [emailOtpCooldown, setEmailOtpCooldown] = useState(() => {
+    const pendingOtp = readPendingSignupOtp();
+    return pendingOtp ? Math.max(0, Math.ceil((pendingOtp.resendAvailableAt - Date.now()) / 1000)) : 0;
+  });
   const [isVerifyingEmailOtp, setIsVerifyingEmailOtp] = useState(false);
   const [isResendingEmailOtp, setIsResendingEmailOtp] = useState(false);
   const [redirectRemainingMs, setRedirectRemainingMs] = useState(DASHBOARD_REDIRECT_DELAY_MS);
@@ -593,8 +678,13 @@ const RegisterPage = () => {
         setEmailOtpError("");
         setEmailOtpResent(false);
         setEmailOtpCooldown(60);
+        const destination = getRegistrationDestination(nextPath, selectedPlan);
+        const resendAvailableAt = Date.now() + 60_000;
+        savePendingSignupOtp(normalizedEmail, destination, resendAvailableAt);
         setSuccessState({
           email: normalizedEmail,
+          destination,
+          resendAvailableAt,
           redirectToDashboard: false,
         });
         return;
@@ -624,6 +714,7 @@ const RegisterPage = () => {
     setIsVerifyingEmailOtp(true);
     try {
       const result = await verifySignupEmailOtp(successState.email, emailOtp);
+      clearPendingSignupOtp();
       if (result.needsMfa) {
         navigate(`/login?mfa=required&next=${encodeURIComponent(registrationDestination)}`, { replace: true });
         return;
@@ -641,6 +732,10 @@ const RegisterPage = () => {
     setEmailOtpError("");
     setIsResendingEmailOtp(true);
     setEmailOtpCooldown(60);
+    const resendAvailableAt = Date.now() + 60_000;
+    const destination = successState.destination ?? registrationDestination;
+    savePendingSignupOtp(successState.email, destination, resendAvailableAt);
+    setSuccessState({ ...successState, destination, resendAvailableAt });
     try {
       await resendSignupEmailOtp(successState.email);
       setEmailOtpResent(true);
@@ -798,6 +893,7 @@ const RegisterPage = () => {
                 <button
                   type="button"
                   onClick={() => {
+                    clearPendingSignupOtp();
                     setSuccessState(null);
                     setStep(1);
                     setForm({

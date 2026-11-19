@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import RegisterPage from "@/pages/Register";
 import { getRegistrationDestination } from "@/lib/subscription-registration";
 
@@ -47,6 +47,10 @@ const renderPage = (initialEntry: string) =>
     </MemoryRouter>,
   );
 
+afterEach(() => {
+  sessionStorage.clear();
+});
+
 describe("RegisterPage plan summary", () => {
   it("continues paid registrations into Paystack intent checkout", () => {
     expect(getRegistrationDestination(null, "growth")).toBe("/pricing?billingCycle=monthly&subscribe=growth");
@@ -89,6 +93,24 @@ describe("RegisterPage plan summary", () => {
 
     expect(screen.getByLabelText("auth.register.businessName")).toBeInTheDocument();
     expect(screen.getByLabelText("auth.register.fullName")).toBeInTheDocument();
+  });
+
+  it("restores pending email verification after a page refresh", () => {
+    sessionStorage.setItem(
+      "moniger.signup.email-otp.pending.v1",
+      JSON.stringify({
+        email: "ada@example.com",
+        destination: "/dashboard",
+        resendAvailableAt: Date.now() + 30_000,
+        expiresAt: Date.now() + 60_000,
+      }),
+    );
+
+    renderPage("/register");
+
+    expect(screen.getByLabelText("auth.register.emailOtp.codeLabel")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /auth.register.emailOtp.verifyAndContinue/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Continue with Starter" })).not.toBeInTheDocument();
   });
 
   it("advances to login details and returns to business details with Back", () => {
