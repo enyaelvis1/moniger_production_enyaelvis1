@@ -310,7 +310,7 @@ Live cutover checklist after Paystack approval:
 - [x] Native Supabase email confirmation is enabled for new accounts; the confirmation link returns to `/dashboard` and the dashboard shows the confirmed state.
 - [x] Signed-out paid checkout confirmation now shows a prominent payment-success state, an automatic sign-in/dashboard fallback, and a manual dashboard link.
 - [x] Authenticated legacy sessions without a confirmed email show a resend-confirmation action and remain restricted from full workspace activation.
-- [x] Login detects valid-password accounts with unconfirmed email, presents a six-digit signup OTP entry step, and supports resend through Supabase Auth. The confirmation email template includes both the OTP and the existing confirmation link. Resends honor the configured one-email-per-minute project limit and Supabase Auth endpoint rate limits; the UI also shows a 60-second resend countdown.
+- [x] Signup success now presents a six-digit email OTP field inline, verifies the address before continuing, and supports a rate-limited resend. Login also retains an OTP fallback for existing unconfirmed accounts. The confirmation email template includes the OTP with a copy icon cue and keeps the confirmation link fallback. Supabase Auth enforces the resend limits; the UI shows a 60-second cooldown.
 - [ ] Confirm the final production signup behavior with one disposable Starter account and one disposable paid-plan account, including payment and direct dashboard landing.
 
 ### 2026-10-02 — Security remediation branch
