@@ -31,6 +31,8 @@ export interface AuthContextType {
   nextAal: AuthenticatorAssuranceLevel;
   refreshMfaState: () => Promise<void>;
   resendEmailConfirmation: () => Promise<void>;
+  resendSignupEmailOtp: (email: string) => Promise<void>;
+  verifySignupEmailOtp: (email: string, token: string) => Promise<AuthSignInResult>;
   session: Session | null;
   signIn: (email: string, password: string) => Promise<AuthSignInResult>;
   signUp: (data: {
@@ -316,6 +318,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const resendSignupEmailOtp = async (email: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      throw new Error("Enter your email address first.");
+    }
+
+    const emailRedirectTo = import.meta.env.VITE_SUPABASE_EMAIL_REDIRECT_TO?.trim() || `${window.location.origin}/dashboard`;
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: normalizedEmail,
+      options: { emailRedirectTo },
+    });
+
+    if (error) throw error;
+  };
+
+  const verifySignupEmailOtp = async (email: string, token: string) => {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: token.trim(),
+      type: "signup",
+    });
+    if (error) throw error;
+
+    const activeSession = data.session;
+    const authUser = data.user ?? activeSession?.user ?? null;
+    setSession(activeSession);
+    setUser(authUser);
+
+    if (!activeSession || !authUser) {
+      throw new Error("Email verified, but we could not start your session. Please log in again.");
+    }
+
+    setMonitoringUser({ email: authUser.email ?? null, id: authUser.id });
+    setMfaLoading(true);
+    let needsMfa = false;
+    try {
+      const nextMfaState = await loadMfaState();
+      const finalMfaState = await applyRecoveryBypass(activeSession, nextMfaState);
+      setMfaState(finalMfaState);
+      persistSessionInventory(activeSession, finalMfaState);
+      needsMfa = finalMfaState.isRequired;
+    } catch {
+      setMfaState(createEmptyMfaState());
+      setIsRecoveryBypassActive(false);
+    } finally {
+      setMfaLoading(false);
+    }
+
+    return { needsMfa };
+  };
+
   const signOut = async (scope: AuthSignOutScope = "local") => {
     trackAnalyticsEvent("sign_out", { scope });
     const { error } = await supabase.auth.signOut({ scope });
@@ -355,12 +409,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         nextAal: mfaState.nextLevel,
         refreshMfaState,
         resendEmailConfirmation,
+        resendSignupEmailOtp,
         session,
         signIn,
         signOut,
         signUp,
         user,
         verifyMfa,
+        verifySignupEmailOtp,
         verifiedMfaFactors: mfaState.verifiedFactors,
       }}
     >

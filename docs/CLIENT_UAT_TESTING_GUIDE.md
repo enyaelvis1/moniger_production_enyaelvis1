@@ -52,7 +52,26 @@ Expected result:
 - Admin users can access admin pages.
 - Non-admin users are blocked from admin pages.
 
-### 1.2 Auto sign-out after inactivity
+### 1.2 Email confirmation OTP
+
+Test steps:
+
+1. Register a new account with an inbox you can access.
+2. Open the Moniger confirmation email and note the six-digit code. The email confirmation link remains available as a fallback.
+3. Before clicking the link, go to `/login` and sign in with the correct email and password.
+4. Confirm login switches to the email verification step and clearly identifies the inbox to check.
+5. Enter an incorrect code and confirm the app stays on the verification step with a safe error.
+6. Enter the correct code and confirm the account continues to its requested destination (or the existing MFA step, if enabled).
+7. For an older unconfirmed account, request a new code; confirm a second resend is disabled for 60 seconds and Supabase also enforces the project rate limit.
+
+Expected result:
+
+- A valid password for an unconfirmed account does not open the workspace before email verification.
+- The user sees a clear inbox prompt and can verify with the six-digit code.
+- A successful code confirms the email and starts the normal authenticated flow, including MFA when configured.
+- Resend remains rate-limited by Supabase Auth; the client countdown is only a usability aid and not the security boundary.
+
+### 1.3 Auto sign-out after inactivity
 
 Test steps:
 
@@ -70,7 +89,7 @@ Expected result:
 - If no action is taken, the app signs out and redirects to `/login`.
 - If `Stay signed in` is used, the session continues.
 
-### 1.3 Forgot password flow
+### 1.4 Forgot password flow
 
 Test steps:
 
@@ -89,7 +108,7 @@ Expected result:
 - The email content is personalized when the user name is available.
 - The browser URL is cleaned after the reset session is prepared.
 
-### 1.4 Paid signup and checkout continuation
+### 1.5 Paid signup and checkout continuation
 
 Test steps:
 
@@ -104,7 +123,7 @@ Expected result:
 - A paid workspace cannot use operational dashboard tabs until Paystack payment is confirmed.
 - After successful payment reconciliation, the user is taken directly to the dashboard.
 
-### 1.4 Session persistence security check
+### 1.6 Session persistence security check
 
 Test steps:
 

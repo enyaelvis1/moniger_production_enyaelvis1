@@ -51,6 +51,22 @@
         "recoveryVerificationFailed": "Recovery code verification failed",
         "switchAccountFailed": "Unable to switch accounts"
       },
+      "emailOtp": {
+        "title": "Confirm your email to continue",
+        "instructions": "Confirm {{email}} to continue. Enter the 6-digit code from your confirmation email, or request a new code below. Check spam or promotions too.",
+        "codeLabel": "Email verification code",
+        "invalidCode": "Enter the 6-digit code from your email.",
+        "verifyFailed": "We could not verify that code. Check it and try again.",
+        "sendFailed": "We could not send a new code. Please wait a moment and try again.",
+        "verifying": "Verifying…",
+        "verifyAndContinue": "Verify email and continue",
+        "sent": "A new verification code has been sent.",
+        "didNotReceive": "No code? Check spam or promotions, then request another code.",
+        "sending": "Sending…",
+        "resendIn": "Resend code in {{seconds}}s",
+        "resend": "Send a new code",
+        "backToLogin": "Back to login"
+      },
       "forgotPassword": "Forgot password?",
       "hidePassword": "Hide password",
       "logIn": "Log in",
@@ -81,7 +97,7 @@
       },
       "openAccount": "Open Account",
       "password": "Password",
-      "registrationMessage": "Check {{email}} to confirm your account before logging in.",
+      "registrationMessage": "Check {{email}} for your 6-digit email verification code. Enter it on the login page to confirm your account.",
       "showPassword": "Show password",
       "subtitle": "Welcome back. Sign in to manage invoices, vendor payments, and your team workspace."
     },
