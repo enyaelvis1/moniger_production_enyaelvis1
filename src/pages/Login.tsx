@@ -30,10 +30,12 @@ const LoginPage = () => {
     isRecoveryBypassActive,
     mfaLoading,
     refreshMfaState,
+    resendSignupEmailOtp,
     session,
     signIn,
     signOut,
     verifyMfa,
+    verifySignupEmailOtp,
     verifiedMfaFactors,
   } = useAuth();
   const navigate = useNavigate();
@@ -50,6 +52,12 @@ const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mfaCode, setMfaCode] = useState("");
+  const [emailOtp, setEmailOtp] = useState("");
+  const [showEmailOtpStep, setShowEmailOtpStep] = useState(false);
+  const [emailOtpResent, setEmailOtpResent] = useState(false);
+  const [otpResendCooldown, setOtpResendCooldown] = useState(0);
+  const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
+  const [verifyingEmailOtp, setVerifyingEmailOtp] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState("");
   const [selectedFactorId, setSelectedFactorId] = useState("");
   const [mfaMethod, setMfaMethod] = useState<"authenticator" | "recovery">("authenticator");
@@ -75,6 +83,12 @@ const LoginPage = () => {
       ? t("auth.login.mfa.subtitles.defaultRecovery")
       : t("auth.login.mfa.subtitles.defaultAuthenticator");
   }, [currentAal, mfaMethod, showMfaStep, t]);
+
+  useEffect(() => {
+    if (otpResendCooldown <= 0) return;
+    const timer = window.setTimeout(() => setOtpResendCooldown((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [otpResendCooldown]);
   const registrationMessage = useMemo(() => {
     if (signupSuccess && signupEmail) {
       return t("auth.login.registrationMessage", { email: signupEmail });
@@ -121,9 +135,51 @@ const LoginPage = () => {
         navigate(nextPath);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t("auth.login.errors.loginFailed"));
+      const authError = err as { code?: unknown; message?: unknown };
+      const code = typeof authError?.code === "string" ? authError.code : "";
+      const message = typeof authError?.message === "string" ? authError.message.toLowerCase() : "";
+      if (code === "email_not_confirmed" || message.includes("email not confirmed")) {
+        setShowEmailOtpStep(true);
+        setEmailOtp("");
+        setEmailOtpResent(false);
+        setError("");
+      } else {
+        setError(err instanceof Error ? err.message : t("auth.login.errors.loginFailed"));
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyEmailOtp = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError("");
+    if (!/^\d{6}$/.test(emailOtp.trim())) {
+      setError(t("auth.login.emailOtp.invalidCode"));
+      return;
+    }
+    setVerifyingEmailOtp(true);
+    try {
+      const result = await verifySignupEmailOtp(email, emailOtp);
+      if (!result.needsMfa) navigate(nextPath, { replace: true });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t("auth.login.emailOtp.verifyFailed"));
+    } finally {
+      setVerifyingEmailOtp(false);
+    }
+  };
+
+  const handleResendEmailOtp = async () => {
+    setError("");
+    setSendingEmailOtp(true);
+    setOtpResendCooldown(60);
+    try {
+      await resendSignupEmailOtp(email);
+      setEmailOtpResent(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t("auth.login.emailOtp.sendFailed"));
+    } finally {
+      setSendingEmailOtp(false);
     }
   };
 
@@ -335,6 +391,55 @@ const LoginPage = () => {
               className={`${authSecondaryButtonClassName} w-full sm:flex-1`}
             >
               {t("auth.login.mfa.useAnotherAccount")}
+            </button>
+          </div>
+        </form>
+      ) : showEmailOtpStep ? (
+        <form onSubmit={handleVerifyEmailOtp} className="space-y-6">
+          <div className="rounded-[18px] border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-4 text-sm text-[#1D4ED8]">
+            <p className="font-semibold">{t("auth.login.emailOtp.title")}</p>
+            <p className="mt-1">{t("auth.login.emailOtp.instructions", { email })}</p>
+          </div>
+          <div>
+            <Label htmlFor="signup-email-otp" className={authLabelClassName}>{t("auth.login.emailOtp.codeLabel")}</Label>
+            <Input
+              id="signup-email-otp"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="one-time-code"
+              value={emailOtp}
+              onChange={(event) => setEmailOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              className={authInputClassName}
+              placeholder="123456"
+              maxLength={6}
+              required
+            />
+          </div>
+          <button type="submit" disabled={verifyingEmailOtp} className={`${authPrimaryButtonClassName} w-full`}>
+            {verifyingEmailOtp ? <Loader2 size={16} className="animate-spin" /> : null}
+            {verifyingEmailOtp ? t("auth.login.emailOtp.verifying") : t("auth.login.emailOtp.verifyAndContinue")}
+          </button>
+          <div className="text-center text-sm text-[#5F6A88]">
+            {emailOtpResent ? <p role="status" className="mb-2 font-medium text-emerald-700">{t("auth.login.emailOtp.sent")}</p> : null}
+            <p>{t("auth.login.emailOtp.didNotReceive")}</p>
+            <button
+              type="button"
+              onClick={() => void handleResendEmailOtp()}
+              disabled={sendingEmailOtp || otpResendCooldown > 0}
+              className="mt-2 font-semibold text-[#15203B] hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {sendingEmailOtp
+                ? t("auth.login.emailOtp.sending")
+                : otpResendCooldown > 0
+                  ? t("auth.login.emailOtp.resendIn", { seconds: otpResendCooldown })
+                  : t("auth.login.emailOtp.resend")}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowEmailOtpStep(false); setEmailOtp(""); setError(""); }}
+              className="ml-4 font-semibold text-[#15203B] hover:underline"
+            >
+              {t("auth.login.emailOtp.backToLogin")}
             </button>
           </div>
         </form>

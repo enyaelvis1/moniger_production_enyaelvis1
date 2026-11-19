@@ -52,6 +52,22 @@
         "recoveryVerificationFailed": "Échec de la vérification du code de récupération",
         "switchAccountFailed": "Impossible de changer de compte"
       },
+      "emailOtp": {
+        "title": "Confirmez votre e-mail pour continuer",
+        "instructions": "Confirmez {{email}} pour continuer. Saisissez le code à 6 chiffres reçu dans l'e-mail de confirmation ou demandez un nouveau code ci-dessous. Vérifiez aussi les courriers indésirables ou promotions.",
+        "codeLabel": "Code de vérification par e-mail",
+        "invalidCode": "Saisissez le code à 6 chiffres reçu par e-mail.",
+        "verifyFailed": "Impossible de vérifier ce code. Vérifiez-le et réessayez.",
+        "sendFailed": "Impossible d'envoyer un nouveau code. Patientez un instant puis réessayez.",
+        "verifying": "Vérification…",
+        "verifyAndContinue": "Vérifier l'e-mail et continuer",
+        "sent": "Un nouveau code de vérification a été envoyé.",
+        "didNotReceive": "Aucun code ? Vérifiez les courriers indésirables ou promotions, puis demandez un nouveau code.",
+        "sending": "Envoi…",
+        "resendIn": "Renvoyer le code dans {{seconds}} s",
+        "resend": "Envoyer un nouveau code",
+        "backToLogin": "Retour à la connexion"
+      },
       "forgotPassword": "Mot de passe oublié ?",
       "hidePassword": "Masquer le mot de passe",
       "logIn": "Se connecter",
@@ -82,7 +98,7 @@
       },
       "openAccount": "Créer un compte",
       "password": "Mot de passe",
-      "registrationMessage": "Consultez {{email}} pour confirmer votre compte avant de vous connecter.",
+      "registrationMessage": "Consultez {{email}} pour obtenir votre code de vérification à 6 chiffres. Saisissez-le sur la page de connexion pour confirmer votre compte.",
       "showPassword": "Afficher le mot de passe",
       "subtitle": "Bon retour. Connectez-vous pour gérer les factures, les paiements fournisseurs et l'espace de travail de votre équipe."
     },
