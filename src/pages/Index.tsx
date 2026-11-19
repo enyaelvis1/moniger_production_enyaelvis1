@@ -14,7 +14,7 @@ const TestimonialsSection = lazyWithReload(() => import("@/components/landing/Te
 const PricingSection = lazyWithReload(() => import("@/components/landing/PricingSection"));
 
 const sectionSkeletonClassName =
-  "mx-auto w-full max-w-[1160px] rounded-[24px] border border-[#E8E4DF] bg-white/70 shadow-[0_2px_24px_rgba(0,0,0,0.04)]";
+  "mx-auto w-full max-w-[1600px] rounded-[24px] border border-[#E8E4DF] bg-white/70 shadow-[0_2px_24px_rgba(0,0,0,0.04)]";
 
 const LandingSectionPlaceholder = ({
   accentClassName,
@@ -69,7 +69,7 @@ const Index = () => {
       <SkipToMainContent />
       {!isOnline ? (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 md:px-6 lg:px-8">
-          <div className="mx-auto flex w-full max-w-[1160px] flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold">You&apos;re offline</p>
               <p className="text-sm text-amber-900/80">Check your connection and refresh once you&apos;re back online.</p>
