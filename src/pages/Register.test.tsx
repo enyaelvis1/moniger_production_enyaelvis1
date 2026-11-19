@@ -71,28 +71,26 @@ describe("RegisterPage plan summary", () => {
     expect(screen.getAllByText(price).length).toBeGreaterThan(0);
   });
 
-  it("lets a new customer choose a paid plan before continuing", () => {
+  it("moves to account setup immediately when a customer chooses a paid plan", () => {
     renderPage("/register");
 
-    const businessPlanButton = screen.getAllByRole("button", { name: /business/i })[0];
-    expect(businessPlanButton).toHaveAttribute("aria-pressed", "false");
-
-    fireEvent.click(businessPlanButton);
-
-    expect(businessPlanButton).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getAllByText("Pay with Paystack").length).toBeGreaterThan(0);
-  });
-
-  it("keeps business details on the next step after plan selection", () => {
-    renderPage("/register");
-
-    expect(screen.queryByLabelText("Business name")).not.toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: /starter plan selected/i })[0]);
-    expect(screen.getByRole("button", { name: "Continue with Starter" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Continue with Starter" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Choose business plan and continue" })[0]);
 
     expect(screen.getByLabelText("auth.register.businessName")).toBeInTheDocument();
     expect(screen.getByLabelText("auth.register.fullName")).toBeInTheDocument();
+    expect(screen.getByText("Business")).toBeInTheDocument();
+  });
+
+  it("lets the customer go back and change the plan", () => {
+    renderPage("/register");
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Choose business plan and continue" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "auth.register.back" }));
+
+    expect(screen.getAllByRole("button", { name: "Choose starter plan and continue" })[0]).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Choose starter plan and continue" })[0]);
+    expect(screen.getByLabelText("auth.register.businessName")).toBeInTheDocument();
+    expect(screen.getAllByText("Starter").length).toBeGreaterThan(0);
   });
 
   it("restores pending email verification after a page refresh", () => {
@@ -116,7 +114,7 @@ describe("RegisterPage plan summary", () => {
   it("advances to login details and returns to business details with Back", () => {
     renderPage("/register");
 
-    fireEvent.click(screen.getByRole("button", { name: "Continue with Starter" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Choose starter plan and continue" })[0]);
     fireEvent.change(screen.getByLabelText("auth.register.businessName"), { target: { value: "Acme Ltd" } });
     fireEvent.change(screen.getByLabelText("auth.register.fullName"), { target: { value: "Ada Lovelace" } });
     fireEvent.click(screen.getByRole("button", { name: "auth.register.next" }));

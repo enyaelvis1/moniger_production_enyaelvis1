@@ -437,6 +437,12 @@ const RegisterPage = () => {
     return getRegistrationDestination(nextPath, selectedPlan);
   };
 
+  const choosePlanAndContinue = (plan: SubscriptionPlan) => {
+    setSelectedPlan(plan);
+    setError("");
+    setStep(2);
+  };
+
   const openDashboard = () => {
     navigate(getPostSignupPath(), { replace: true });
   };
@@ -771,7 +777,7 @@ const RegisterPage = () => {
               step === 1 ? t("auth.register.planSelectionSubtitle") : step === 2 ? t("auth.register.stepOneSubtitle") : t("auth.register.stepTwoSubtitle")
             }
           />
-          <div className="mt-5 hidden items-center justify-between gap-4 rounded-[14px] border border-[#DDE2FF] bg-[#F5F6FF] px-4 py-3 md:flex">
+          <div className="mt-5 flex items-center justify-between gap-4 rounded-[14px] border border-[#DDE2FF] bg-[#F5F6FF] px-4 py-3">
             <div>
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#5B67F7]">Selected plan</p>
               <p className="mt-1 text-[15px] font-semibold text-[#15203B]">{selectedPlanLabel}</p>
@@ -931,13 +937,10 @@ const RegisterPage = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {step === 1 ? (
           <>
-            <button type="submit" className={`${authPrimaryButtonClassName} w-full sm:w-auto`}>
-              {isPaidPlanSelection ? "Continue to account setup" : "Continue with Starter"}
-            </button>
-            <fieldset className="space-y-3">
+            <fieldset className="space-y-4">
               <legend className="text-[14px] font-semibold text-[#15203B]">Choose your workspace plan</legend>
               <p className="text-[13px] leading-6 text-[#677391]">
-                Start with Starter for free, or choose Growth or Business and complete secure Paystack recurring checkout after creating your account. Paid plans do not include a trial.
+                Choose a plan to continue. You can change it on the next step. Growth and Business checkout happens securely after account setup; paid plans do not include a trial.
               </p>
               <div className="space-y-2 md:hidden">
                 {registrationPlanOptions.map(({ eyebrow, paymentLabel, plan }) => {
@@ -948,12 +951,8 @@ const RegisterPage = () => {
                     <button
                       type="button"
                       key={plan}
-                      aria-label={isSelected ? `${plan} plan selected` : `Choose ${plan} plan`}
-                      aria-pressed={isSelected}
-                      onClick={() => {
-                        setSelectedPlan(plan);
-                        if (error) setError("");
-                      }}
+                      aria-label={`Choose ${plan} plan and continue`}
+                      onClick={() => choosePlanAndContinue(plan)}
                       className={`flex w-full items-center gap-3 rounded-[16px] border px-4 py-3 text-left transition-colors ${
                         isSelected
                           ? "border-[#5B67F7] bg-[#F5F6FF] shadow-[0_8px_20px_rgba(91,103,247,0.1)]"
@@ -992,12 +991,8 @@ const RegisterPage = () => {
                     <button
                       type="button"
                       key={plan}
-                      aria-label={isSelected ? `${plan} plan selected` : `Choose ${plan} plan`}
-                      aria-pressed={isSelected}
-                      onClick={() => {
-                        setSelectedPlan(plan);
-                        if (error) setError("");
-                      }}
+                      aria-label={`Choose ${plan} plan and continue`}
+                      onClick={() => choosePlanAndContinue(plan)}
                       className={`flex h-full flex-col rounded-[18px] border p-4 text-left transition-colors sm:p-5 ${
                         isSelected
                           ? "border-[#5B67F7] bg-[#F8F9FF] shadow-[0_12px_28px_rgba(91,103,247,0.12)]"
@@ -1042,7 +1037,7 @@ const RegisterPage = () => {
                             : "border border-[#D8DDF0] bg-white text-[#15203B] hover:border-[#9EA9D8] hover:bg-[#FAFBFF]"
                         }`}
                       >
-                        {isSelected ? "Selected plan" : "Choose plan"}
+                        Continue with {plan.charAt(0).toUpperCase() + plan.slice(1)}
                       </span>
                     </button>
                   );
