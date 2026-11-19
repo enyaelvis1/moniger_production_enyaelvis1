@@ -56,18 +56,17 @@ Expected result:
 
 Test steps:
 
-1. Register a new account with an inbox you can access.
-2. Open the Moniger confirmation email and note the six-digit code. The email confirmation link remains available as a fallback.
-3. Before clicking the link, go to `/login` and sign in with the correct email and password.
-4. Confirm login switches to the email verification step and clearly identifies the inbox to check.
-5. Enter an incorrect code and confirm the app stays on the verification step with a safe error.
-6. Enter the correct code and confirm the account continues to its requested destination (or the existing MFA step, if enabled).
-7. For an older unconfirmed account, request a new code; confirm a second resend is disabled for 60 seconds and Supabase also enforces the project rate limit.
+1. Register a new Starter account with an inbox you can access.
+2. Confirm the signup completion page shows an email code field without asking you to go to the login page.
+3. Open the Moniger confirmation email and note the six-digit code and copy icon beside it. The confirmation link remains available as a fallback.
+4. Enter an incorrect code and confirm the app stays on the signup page with a safe error.
+5. Enter the correct code and confirm the account continues to its requested destination (or the existing MFA step, if enabled).
+6. For an older unconfirmed account, sign in with the correct password to reach the login OTP fallback, then request a new code; confirm a second resend is disabled for 60 seconds and Supabase also enforces the project rate limit.
 
 Expected result:
 
 - A valid password for an unconfirmed account does not open the workspace before email verification.
-- The user sees a clear inbox prompt and can verify with the six-digit code.
+- The user sees a clear inbox prompt and can enter the six-digit code on the signup success page.
 - A successful code confirms the email and starts the normal authenticated flow, including MFA when configured.
 - Resend remains rate-limited by Supabase Auth; the client countdown is only a usability aid and not the security boundary.
 

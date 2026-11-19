@@ -192,7 +192,7 @@ const getPrefilledEmailFromState = (state: unknown) => {
 };
 
 const RegisterPage = () => {
-  const { signUp } = useAuth();
+  const { resendSignupEmailOtp, signUp, verifySignupEmailOtp } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useLocalization();
@@ -236,6 +236,12 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successState, setSuccessState] = useState<RegisterSuccessState>(null);
+  const [emailOtp, setEmailOtp] = useState("");
+  const [emailOtpError, setEmailOtpError] = useState("");
+  const [emailOtpResent, setEmailOtpResent] = useState(false);
+  const [emailOtpCooldown, setEmailOtpCooldown] = useState(0);
+  const [isVerifyingEmailOtp, setIsVerifyingEmailOtp] = useState(false);
+  const [isResendingEmailOtp, setIsResendingEmailOtp] = useState(false);
   const [redirectRemainingMs, setRedirectRemainingMs] = useState(DASHBOARD_REDIRECT_DELAY_MS);
   const [emailAvailability, setEmailAvailability] = useState<EmailAvailabilityState>({
     email: "",
@@ -243,6 +249,12 @@ const RegisterPage = () => {
   });
   const signUpInFlightRef = useRef(false);
   const emailCheckRequestRef = useRef(0);
+
+  useEffect(() => {
+    if (emailOtpCooldown <= 0) return;
+    const timer = window.setTimeout(() => setEmailOtpCooldown((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [emailOtpCooldown]);
 
   const setEmailAvailabilityStatus = (
     email: string,
@@ -577,6 +589,10 @@ const RegisterPage = () => {
       }
 
       if (result.needsEmailConfirmation) {
+        setEmailOtp("");
+        setEmailOtpError("");
+        setEmailOtpResent(false);
+        setEmailOtpCooldown(60);
         setSuccessState({
           email: normalizedEmail,
           redirectToDashboard: false,
@@ -593,6 +609,45 @@ const RegisterPage = () => {
     } finally {
       signUpInFlightRef.current = false;
       setLoading(false);
+    }
+  };
+
+  const handleVerifySignupEmailOtp = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!successState || successState.redirectToDashboard) return;
+    setEmailOtpError("");
+    if (!/^\d{6}$/.test(emailOtp.trim())) {
+      setEmailOtpError(t("auth.register.emailOtp.invalidCode"));
+      return;
+    }
+
+    setIsVerifyingEmailOtp(true);
+    try {
+      const result = await verifySignupEmailOtp(successState.email, emailOtp);
+      if (result.needsMfa) {
+        navigate(`/login?mfa=required&next=${encodeURIComponent(registrationDestination)}`, { replace: true });
+        return;
+      }
+      navigate(registrationDestination, { replace: true });
+    } catch (err: unknown) {
+      setEmailOtpError(err instanceof Error ? err.message : t("auth.register.emailOtp.verifyFailed"));
+    } finally {
+      setIsVerifyingEmailOtp(false);
+    }
+  };
+
+  const handleResendSignupEmailOtp = async () => {
+    if (!successState || successState.redirectToDashboard) return;
+    setEmailOtpError("");
+    setIsResendingEmailOtp(true);
+    setEmailOtpCooldown(60);
+    try {
+      await resendSignupEmailOtp(successState.email);
+      setEmailOtpResent(true);
+    } catch (err: unknown) {
+      setEmailOtpError(err instanceof Error ? err.message : t("auth.register.emailOtp.sendFailed"));
+    } finally {
+      setIsResendingEmailOtp(false);
     }
   };
 
@@ -667,20 +722,15 @@ const RegisterPage = () => {
               </>
             ) : (
               <>
-                <p className="text-base font-semibold text-[#1E3A8A]">{isPaidPlanSelection ? "Confirm your email to continue" : t("auth.register.checkInbox")}</p>
+                <p className="text-base font-semibold text-[#1E3A8A]">{t("auth.register.emailOtp.title")}</p>
                 <p className="mt-2 leading-7">
-                  {t("auth.register.successCreatedFor", { email: successState.email })}
-                </p>
-                <p className="mt-2 leading-7 text-[#3157A7]">
-                  {isPaidPlanSelection
-                    ? "After you confirm your email, Moniger will open your dashboard with a secure Paystack payment prompt for your selected plan."
-                    : t("auth.register.inboxHelp")}
+                  {t("auth.register.emailOtp.instructions", { email: successState.email })}
                 </p>
               </>
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex w-full items-center gap-3">
             {successState.redirectToDashboard ? (
               <button
                 type="button"
@@ -690,20 +740,61 @@ const RegisterPage = () => {
                 {isPaidPlanSelection ? t("auth.register.continueToPayment") : t("auth.register.openDashboardNow")}
               </button>
             ) : (
-              <>
+              <form onSubmit={handleVerifySignupEmailOtp} className="w-full space-y-4">
+                <div>
+                  <Label htmlFor="signup-email-otp" className={authLabelClassName}>
+                    {t("auth.register.emailOtp.codeLabel")}
+                  </Label>
+                  <Input
+                    id="signup-email-otp"
+                    autoFocus
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="one-time-code"
+                    value={emailOtp}
+                    onChange={(event) => {
+                      setEmailOtp(event.target.value.replace(/\D/g, "").slice(0, 6));
+                      if (emailOtpError) setEmailOtpError("");
+                    }}
+                    className={`${authInputClassName} text-center text-xl font-semibold tracking-[0.4em]`}
+                    placeholder="123456"
+                    maxLength={6}
+                    required
+                  />
+                  {emailOtpError ? (
+                    <p role="alert" className="mt-2 text-sm text-[#B42318]">{emailOtpError}</p>
+                  ) : null}
+                  {emailOtpResent ? (
+                    <p role="status" className="mt-2 text-sm font-medium text-emerald-700">
+                      {t("auth.register.emailOtp.sent")}
+                    </p>
+                  ) : null}
+                </div>
                 <button
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      `/login?signup=success&email=${encodeURIComponent(successState.email)}&next=${encodeURIComponent(registrationDestination)}`,
-                      { replace: true },
-                    )
-                  }
-                  className={`${authPrimaryButtonClassName} !min-w-0 basis-0 flex-1 px-3 text-sm`}
+                  type="submit"
+                  disabled={isVerifyingEmailOtp}
+                  className={`${authPrimaryButtonClassName} w-full`}
                 >
-                  {t("auth.register.goToLogin")}
+                  {isVerifyingEmailOtp ? <Loader2 size={16} className="animate-spin" /> : null}
+                  {isVerifyingEmailOtp
+                    ? t("auth.register.emailOtp.verifying")
+                    : t("auth.register.emailOtp.verifyAndContinue")}
                 </button>
-
+                <div className="flex flex-col items-center justify-between gap-3 text-sm sm:flex-row">
+                  <p className="text-center text-[#5F6A88]">{t("auth.register.emailOtp.didNotReceive")}</p>
+                  <button
+                    type="button"
+                    onClick={() => void handleResendSignupEmailOtp()}
+                    disabled={isResendingEmailOtp || emailOtpCooldown > 0}
+                    className="shrink-0 font-semibold text-[#4D5CF2] hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isResendingEmailOtp
+                      ? t("auth.register.emailOtp.sending")
+                      : emailOtpCooldown > 0
+                        ? t("auth.register.emailOtp.resendIn", { seconds: emailOtpCooldown })
+                        : t("auth.register.emailOtp.resend")}
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -719,12 +810,15 @@ const RegisterPage = () => {
                     resetEmailAvailability();
                     setAgreed(false);
                     setError("");
+                    setEmailOtpError("");
+                    setEmailOtpResent(false);
+                    setEmailOtpCooldown(0);
                   }}
-                  className={`${authSecondaryButtonClassName} !min-w-0 basis-0 flex-1 px-3 text-sm`}
+                  className={`${authSecondaryButtonClassName} w-full`}
                 >
                   {t("auth.register.useAnotherEmail")}
                 </button>
-              </>
+              </form>
             )}
           </div>
         </div>
