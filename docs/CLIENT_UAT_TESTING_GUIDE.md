@@ -58,13 +58,14 @@ Test steps:
 
 1. Begin registration, choose Starter, Growth, and Business in turn, and confirm each selection advances directly to workspace details.
 2. Use Back to return to plan selection, choose the intended plan, and confirm the selected plan remains reflected in the signup flow.
-3. Register a new Starter account with an inbox you can access.
-4. Confirm the signup completion page shows an email code field without asking you to go to the login page.
-5. Refresh the signup completion page and confirm the code field and email address are still shown.
-6. Open the Moniger confirmation email, select and copy the six-digit code, and confirm the confirmation link remains available as a fallback.
-7. Enter an incorrect code and confirm the app stays on the signup page with a safe error.
-8. Enter the correct code and confirm the account continues to its requested destination (or the existing MFA step, if enabled).
-9. For an older unconfirmed account, sign in with the correct password to reach the login OTP fallback, then request a new code; confirm a second resend is disabled for 60 seconds and Supabase also enforces the project rate limit.
+3. On the account details step, open Terms of Use and Privacy Policy. Confirm each opens in a scrollable dialog, then close it and verify the registration values remain in place without restarting signup.
+4. Register a new Starter account with an inbox you can access.
+5. Confirm the signup completion page shows an email code field without asking you to go to the login page.
+6. Refresh the signup completion page and confirm the code field and email address are still shown.
+7. Open the Moniger confirmation email, select and copy the six-digit code, and confirm the confirmation link remains available as a fallback.
+8. Enter an incorrect code and confirm the app stays on the signup page with a safe error.
+9. Enter the correct code and confirm the account continues to its requested destination (or the existing MFA step, if enabled).
+10. For an older unconfirmed account, sign in with the correct password to reach the login OTP fallback, then request a new code; confirm a second resend is disabled for 60 seconds and Supabase also enforces the project rate limit.
 
 Expected result:
 

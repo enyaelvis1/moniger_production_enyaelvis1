@@ -125,4 +125,25 @@ describe("RegisterPage plan summary", () => {
     expect(screen.getByLabelText("auth.register.businessName")).toHaveValue("Acme Ltd");
     expect(screen.getByLabelText("auth.register.fullName")).toHaveValue("Ada Lovelace");
   });
+
+  it("opens legal documents in a dialog without losing signup details", () => {
+    renderPage("/register");
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Choose starter plan and continue" })[0]);
+    fireEvent.change(screen.getByLabelText("auth.register.businessName"), { target: { value: "Acme Ltd" } });
+    fireEvent.change(screen.getByLabelText("auth.register.fullName"), { target: { value: "Ada Lovelace" } });
+    fireEvent.click(screen.getByRole("button", { name: "auth.register.next" }));
+    fireEvent.click(screen.getByRole("button", { name: "auth.register.agreement.termsOfUse" }));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Terms of Service")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Return to signup" }));
+    fireEvent.click(screen.getByRole("button", { name: "auth.register.agreement.privacyPolicy" }));
+    expect(screen.getByText("Privacy Policy")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Return to signup" }));
+    fireEvent.click(screen.getByRole("button", { name: "auth.register.back" }));
+
+    expect(screen.getByLabelText("auth.register.businessName")).toHaveValue("Acme Ltd");
+    expect(screen.getByLabelText("auth.register.fullName")).toHaveValue("Ada Lovelace");
+  });
 });
