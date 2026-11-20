@@ -64,6 +64,26 @@ const verifyWebhookSignature = async (body: string, providedSignature: string | 
 };
 
 const asString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+const getWebhookErrorDetails = (error: unknown) => {
+  if (error instanceof Error) {
+    return { message: error.message.slice(0, 500), name: error.name, code: null as string | null };
+  }
+
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+    return {
+      message: asString(value.message).slice(0, 500) || "Unknown webhook processing error.",
+      name: asString(value.name).slice(0, 100) || "WebhookError",
+      code: asString(value.code).slice(0, 100) || null,
+    };
+  }
+
+  return {
+    message: typeof error === "string" ? error.slice(0, 500) : "Unknown webhook processing error.",
+    name: "WebhookError",
+    code: null,
+  };
+};
 const asNullableString = (value: unknown) => {
   const normalizedValue = asString(value);
   return normalizedValue || null;
@@ -826,6 +846,7 @@ Deno.serve(async (request) => {
     }).eq("id", webhookEventId);
   };
 
+  let processingStage = "event_processing";
   try {
     if (eventType === "charge.success" && metadataSource === "workspace_wallet_funding") {
       if (!reference) {
@@ -836,6 +857,7 @@ Deno.serve(async (request) => {
         return json({ error: "Missing Paystack reference in webhook payload." }, 400);
       }
 
+      processingStage = "wallet_funding_session_lookup";
       const fundingSession = await loadWalletFundingSessionByReference({
         adminClient,
         reference,
@@ -854,6 +876,7 @@ Deno.serve(async (request) => {
         });
       }
 
+      processingStage = "wallet_lookup";
       const walletResponse = await adminClient
         .from("workspace_wallets")
         .select("id, business_id, currency, balance, reserved_balance")
@@ -880,6 +903,7 @@ Deno.serve(async (request) => {
       }
 
       const wallet = walletResponse.data;
+      processingStage = "paystack_transaction_verification";
       const paystackVerification = await verifyPaystackTransaction(reference, paystackSecretKey);
       const providerStatus = asString(paystackVerification.status).toLowerCase();
       const providerAmount =
@@ -948,6 +972,35 @@ Deno.serve(async (request) => {
         });
       }
 
+      if (asString(providerMetadata.business_id) !== fundingSession.business_id) {
+        await updateWebhookEvent({
+          businessId: fundingSession.business_id,
+          errorMessage: "The wallet funding business does not match the verified Paystack transaction.",
+          status: "failed",
+        });
+        return json({
+          accepted: true,
+          ignored: true,
+          reason: "The wallet funding business does not match the verified Paystack transaction.",
+          reference,
+        });
+      }
+
+      if (asString(providerMetadata.wallet_id) !== fundingSession.wallet_id) {
+        await updateWebhookEvent({
+          businessId: fundingSession.business_id,
+          errorMessage: "The wallet funding destination does not match the verified Paystack transaction.",
+          status: "failed",
+        });
+        return json({
+          accepted: true,
+          ignored: true,
+          reason: "The wallet funding destination does not match the verified Paystack transaction.",
+          reference,
+        });
+      }
+
+      processingStage = "wallet_funding_settlement";
       const completionResponse = await adminClient.rpc("apply_wallet_funding_completion", {
         p_amount: fundingSession.amount,
         p_business_id: fundingSession.business_id,
@@ -1430,17 +1483,29 @@ Deno.serve(async (request) => {
       reason: "Unsupported event type.",
     });
   } catch (error) {
+    const details = getWebhookErrorDetails(error);
+    const safeMessage = [paystackSecretKey, supabaseServiceRoleKey]
+      .filter(Boolean)
+      .reduce((message, secret) => message.replaceAll(secret, "[redacted]"), details.message);
+    const diagnostic = `${processingStage}: ${safeMessage}`;
+    console.error("paystack-webhook processing failed", {
+      eventId: webhookEventId,
+      eventType,
+      errorCode: details.code,
+      errorName: details.name,
+      errorMessage: safeMessage,
+      processingStage,
+    });
     await updateWebhookEvent({
-      errorMessage: error instanceof Error ? error.message : "The Paystack webhook handler failed.",
+      errorMessage: diagnostic,
       status: "failed",
     });
     return json(
       {
-        accepted: true,
-        ignored: false,
-        reason: error instanceof Error ? error.message : "The Paystack webhook handler failed.",
+        accepted: false,
+        error: "Temporary processing error. Paystack may retry this event.",
       },
-      200,
+      500,
     );
   }
 });

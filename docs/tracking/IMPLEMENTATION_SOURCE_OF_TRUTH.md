@@ -74,6 +74,7 @@ That changes the implementation priority:
 - [x] Paid workspace operations use a subscription-aware gate; inactive, cancelled, past-due, and expired Growth/Business workspaces are routed to renewal while Starter remains available.
 - [x] Paid workspace access now fails closed at both the client gate and database RLS boundary: Growth/Business rows require confirmed Paystack subscription/payment evidence, and paid plans do not have a trial state.
 - [x] Starter workspaces can add up to three customers and three vendors; the limit is enforced in the UI and by database triggers.
+- [x] Starter workspaces can access wallet funding; funding remains limited to workspace owners/admins, while inactive paid subscriptions remain locked.
 - [x] Public pricing cards now read from an admin-editable `billing_catalog` value published through a public site config endpoint.
 - [x] The workspace shell now shows a subscription status banner, and `/reports` plus `/audit-trail` now show an in-app workspace upgrade page with direct checkout and a highlighted current-plan summary when the plan is not active.
 - [x] Deployment resilience now uses a non-cacheable HTML app shell, immutable hashed assets, guarded lazy-chunk retry, and an admin action to clear the current browser's app cache without touching authentication or platform data.
@@ -122,8 +123,10 @@ That changes the implementation priority:
 - [x] The wallet migration has been applied to the linked Supabase project `qfhjlqskucabzxepqbpl`.
 - [x] Wallet funding session schema and confirmation/verification code now exist in the repository.
 - [x] Wallet funding top-up flow now exists in code, with callback verification, webhook settlement, and funding history.
+- [x] Pending wallet top-ups can be re-verified by workspace owners/admins through the authenticated funding function; wallet-verification and webhook exceptions record a processing stage and safe diagnostics, and unexpected webhook failures return a retryable 500.
+- [x] Applied `20261120195000_read_financial_actor_from_jwt_claims.sql` to the production Supabase project after logs showed the service-role JWT was not recognized by the financial actor check. Function redeployment alone does not apply this database fix.
 - [x] The wallet funding Edge Functions have been deployed from a Supabase-authenticated CLI session.
-- [x] Live top-up verification has been confirmed end to end in the workspace wallet flow.
+- [x] Re-verified the pending live top-up after applying the financial actor claims migration; the ₦200 payment settled once and the workspace wallet balance updated to ₦200.
 - [x] Only workspace owners and admins can fund the workspace wallet.
 - [x] Bank-code support now exists for the bank directory so vendor payout destinations can be routed through Paystack.
 - [x] Workspace payout reservation schema now exists, and the payout-execution Edge Function has been deployed.

@@ -482,6 +482,16 @@ Expected result:
 - The underlying database does not return Starter data for the locked feature tables.
 - After upgrading to an active Growth or Business subscription, the locked areas become available.
 
+For Starter wallet funding, confirm the Funding tab is enabled, open `/wallet`, and start a top-up as the workspace owner or admin. Confirm funding history and the wallet balance update only after Paystack confirms the payment. Non-finance roles must not be able to initialize funding.
+
+For an initialized top-up that Paystack shows as successful but Moniger still shows as pending, sign in as the workspace owner/admin and click **Verify payment** on that funding-history row. Confirm the authenticated server-side verification checks the Paystack reference, amount, currency, business, and wallet before crediting the wallet. Repeating the action must not credit the same reference twice. A non-finance member should not see the action, and direct requests from that role must be rejected.
+
+If Supabase logs show `errorCode: 42501`, `Financial mutation is not authorized for this workspace.`, and `processingStage: wallet_funding_settlement`, apply migration `20261120195000_read_financial_actor_from_jwt_claims.sql` to the same production project as the Edge Function. Redeploying the Edge Function alone cannot update the database actor-check function. Then verify the pending reference again and confirm exactly one completed funding session, one ledger entry, and a wallet balance increase equal to the verified amount.
+
+If verification fails, inspect the `workspace-wallet-funding` Edge Function invocation logs for that click (not only `paystack-webhook`). The log should identify the stage and safe error code/message; keep the customer-facing response generic.
+
+For webhook retry behavior in staging, cause a temporary processing failure after signature validation. Confirm the webhook records the failing stage and safe diagnostic, returns a retryable non-2xx response, and a repeated delivery settles at most once. Do not simulate this against production money.
+
 ### 5.7 Invoice creation and Starter invoice limits
 
 Test steps:

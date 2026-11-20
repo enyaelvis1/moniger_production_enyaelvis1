@@ -218,6 +218,7 @@ const WalletPage = () => {
   const fundingHistoryEmpty = walletFundingQuery.isLoading ? false : fundingHistory.length === 0;
   const payoutHistoryEmpty = payoutHistoryQuery.isLoading ? false : payoutHistory.length === 0;
   const canApprovePayouts = settingsQuery.data?.membership?.role === "owner" || settingsQuery.data?.membership?.role === "admin";
+  const canManageFunding = canApprovePayouts;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -507,6 +508,27 @@ const WalletPage = () => {
     }
   };
 
+  const handleVerifyFunding = async (reference: string) => {
+    try {
+      const result = await walletFundingMutations.verifyFunding.mutateAsync(reference);
+      toast({
+        title: result.status === "completed" ? "Funding confirmed" : "Payment still pending",
+        description:
+          result.message ??
+          (result.status === "completed"
+            ? "The verified payment has been added to your workspace wallet."
+            : "Paystack has not confirmed this payment yet. You can check again shortly."),
+        variant: result.status === "completed" ? "default" : undefined,
+      });
+    } catch (error) {
+      toast({
+        title: "Could not verify funding",
+        description: getWorkspaceWalletFundingErrorMessage(error, "Please try again in a moment."),
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleExportHistoryCsv = async () => {
     const hasFundingHistory = fundingHistory.length > 0;
     const hasPayoutHistory = payoutHistory.length > 0;
@@ -786,9 +808,28 @@ const WalletPage = () => {
                         {session.completed_at ? ` · Completed ${formatDateTime(session.completed_at)}` : ""}
                       </p>
                     </div>
-                    <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setFundWorkspaceDialogOpen(true)}>
-                      Fund again
-                    </Button>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      {session.status === "initialized" && canManageFunding ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                          onClick={() => void handleVerifyFunding(session.provider_reference)}
+                          disabled={walletFundingMutations.verifyFunding.isPending}
+                        >
+                          {walletFundingMutations.verifyFunding.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
+                          )}
+                          Verify payment
+                        </Button>
+                      ) : null}
+                      <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setFundWorkspaceDialogOpen(true)}>
+                        Fund again
+                      </Button>
+                    </div>
                   </div>
                   {session.failure_reason ? (
                     <p className="mt-3 text-sm text-destructive">{session.failure_reason}</p>
