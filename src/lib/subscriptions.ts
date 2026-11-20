@@ -58,12 +58,11 @@ const subscriptionBillingCycles = new Set<SubscriptionBillingCycle>(["monthly", 
 export const defaultSubscriptionCatalog: SubscriptionCatalog = {
   business: {
     defaultBillingCycle: "monthly",
-    description: "Advanced finance operations for teams that need scale, permissions, funding, and guided rollout.",
+    description: "Advanced finance operations for teams that need scale, permissions, and guided rollout.",
     features: [
       "Everything in Growth",
       "Unlimited team members",
       "Advanced permissions",
-      "Funding",
       "Dedicated onboarding",
     ],
     priceLabel: "NGN 89,000/mo",
@@ -88,6 +87,7 @@ export const defaultSubscriptionCatalog: SubscriptionCatalog = {
       "Up to 3 customers",
       "Up to 3 vendors",
       "Basic payment tracking",
+      "Workspace funding",
       "Route invoice payments to your bank account",
       "Email support",
     ],

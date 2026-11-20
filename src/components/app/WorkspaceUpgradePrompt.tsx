@@ -69,7 +69,7 @@ const WorkspaceUpgradePrompt = ({
     reason === "manage-subscription"
       ? "Review your current plan and upgrade securely with recurring Paystack billing."
       : reason === "starter-feature-locked"
-      ? "Starter includes the core dashboard, invoices, customers, payment tracking, and up to 3 vendors. Upgrade to unlock bills, team collaboration, funding, and advanced workspace tools."
+      ? "Starter includes the core dashboard, invoices, customers, payment tracking, workspace funding, and up to 3 vendors. Upgrade to unlock bills, team collaboration, reports, and other advanced workspace tools."
       : reason === "inactive-plan"
       ? isCancelled
         ? "Renew or upgrade your workspace subscription to restore access to premium features."

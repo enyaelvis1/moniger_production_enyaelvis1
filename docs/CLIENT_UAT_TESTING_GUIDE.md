@@ -472,8 +472,8 @@ Test steps:
 
 1. Sign in to a Starter workspace.
 2. Confirm Dashboard, Customers, Invoices, and Payments are available.
-3. Confirm Bills, Vendors, Reports, Team, Audit Trail, Funding, and Marketplace Routing are visible but dimmed with a lock icon.
-4. Open a locked route directly, for example `/vendors`.
+3. Confirm Bills, Reports, Team, and Audit Trail are visible but dimmed with a lock icon. Vendors and Funding should be available on Starter within their existing limits and role checks; Marketplace Routing remains available as documented.
+4. Open a locked route directly, for example `/bills`.
 
 Expected result:
 
