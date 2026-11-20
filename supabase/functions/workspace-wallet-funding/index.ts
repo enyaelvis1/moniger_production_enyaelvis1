@@ -85,6 +85,26 @@ const json = (body: Record<string, unknown>, status = 200) =>
   });
 
 const asString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+const getFundingErrorDetails = (error: unknown) => {
+  if (error instanceof Error) {
+    return { code: null as string | null, message: error.message.slice(0, 500), name: error.name };
+  }
+
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+    return {
+      code: asString(value.code).slice(0, 100) || null,
+      message: asString(value.message).slice(0, 500) || "Unknown wallet funding error.",
+      name: asString(value.name).slice(0, 100) || "WalletFundingError",
+    };
+  }
+
+  return {
+    code: null,
+    message: typeof error === "string" ? error.slice(0, 500) : "Unknown wallet funding error.",
+    name: "WalletFundingError",
+  };
+};
 const asNullableString = (value: unknown) => {
   const normalizedValue = asString(value);
   return normalizedValue || null;
@@ -340,6 +360,10 @@ Deno.serve(async (request) => {
     return json({ error: "Supabase environment variables are not configured for wallet funding." }, 500);
   }
 
+  if (!paystackSecretKey) {
+    return json({ error: "Wallet funding is temporarily unavailable. Please contact an administrator." }, 500);
+  }
+
   const authHeader = request.headers.get("Authorization");
   if (!authHeader) {
     return json({ error: "Missing authorization header." }, 401);
@@ -388,6 +412,8 @@ Deno.serve(async (request) => {
     null;
   const returnUrl = payload.action === "self.initialize-topup" ? asNullableString(payload.returnUrl) : null;
 
+  let processingStage = "request_processing";
+  let diagnosticReference = "";
   try {
     if (payload.action === "self.initialize-topup") {
       const amount = asNumber(payload.amount);
@@ -460,6 +486,7 @@ Deno.serve(async (request) => {
         reference,
       };
 
+      processingStage = "paystack_checkout_initialization";
       const initializationPayload = await sendPaystackRequest<{
         data?: { access_code?: string; authorization_url?: string; reference?: string };
       }>("/transaction/initialize", checkoutPayload, paystackSecretKey);
@@ -467,11 +494,13 @@ Deno.serve(async (request) => {
       const authorizationUrl = initializationPayload.data?.authorization_url?.trim();
       const accessCode = initializationPayload.data?.access_code?.trim() ?? null;
       const resolvedReference = initializationPayload.data?.reference?.trim() || reference;
+      diagnosticReference = resolvedReference;
 
       if (!authorizationUrl) {
         return json({ error: "The payment provider did not return a checkout URL." }, 500);
       }
 
+      processingStage = "funding_session_creation";
       const { data: fundingSession, error: fundingSessionError } = await adminClient
         .from("workspace_wallet_funding_sessions")
         .insert({
@@ -527,10 +556,12 @@ Deno.serve(async (request) => {
     }
 
     const reference = asString(payload.reference);
+    diagnosticReference = reference;
     if (!reference) {
       return json({ error: "Missing wallet funding reference." }, 400);
     }
 
+    processingStage = "funding_session_lookup";
     const fundingSession = await loadFundingSessionByReference({
       adminClient,
       reference,
@@ -540,6 +571,7 @@ Deno.serve(async (request) => {
       return json({ error: "We could not find that wallet funding session." }, 404);
     }
 
+    processingStage = "workspace_authorization";
     const business = await loadManagedBusiness({
       adminClient,
       businessId: fundingSession.business_id,
@@ -550,6 +582,7 @@ Deno.serve(async (request) => {
       return json({ error: "Only workspace owners and admins can verify wallet funding." }, 403);
     }
 
+    processingStage = "wallet_lookup";
     const wallet = await loadWallet({
       adminClient,
       businessId: fundingSession.business_id,
@@ -559,6 +592,7 @@ Deno.serve(async (request) => {
       return json({ error: "We could not find the workspace wallet." }, 404);
     }
 
+    processingStage = "paystack_transaction_verification";
     const providerVerification = await verifyPaystackTransaction(reference, paystackSecretKey);
     const providerStatus = asString(providerVerification.status).toLowerCase();
     const providerAmount = asNumber(providerVerification.amount);
@@ -607,6 +641,7 @@ Deno.serve(async (request) => {
       return json({ error: "The wallet funding destination does not match this workspace wallet." }, 400);
     }
 
+    processingStage = "wallet_funding_settlement";
     const settlement = await applyFundingCompletion({
       adminClient,
       amount: fundingSession.amount,
@@ -627,6 +662,7 @@ Deno.serve(async (request) => {
       walletId: fundingSession.wallet_id,
     });
 
+    processingStage = "funding_session_reload";
     const updatedFundingSession = await loadFundingSessionByReference({
       adminClient,
       reference,
@@ -647,10 +683,21 @@ Deno.serve(async (request) => {
       status: settlement?.status ?? fundingSession.status,
     });
   } catch (error) {
-    console.error("workspace-wallet-funding error", error);
+    const details = getFundingErrorDetails(error);
+    const safeMessage = [paystackSecretKey, supabaseServiceRoleKey]
+      .filter(Boolean)
+      .reduce((message, secret) => message.replaceAll(secret, "[redacted]"), details.message);
+    console.error("workspace-wallet-funding processing failed", {
+      action: payload.action,
+      errorCode: details.code,
+      errorMessage: safeMessage,
+      errorName: details.name,
+      processingStage,
+      reference: diagnosticReference || null,
+    });
     return json(
       {
-        error: error instanceof Error ? error.message : "The wallet funding handler failed.",
+        error: "The wallet funding handler failed.",
       },
       500,
     );
